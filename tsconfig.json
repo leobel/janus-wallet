@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2020",
-    "module": "es2022",
+    "module": "esnext",
     "lib": ["dom", "esnext"],
     "outDir": "./build",
     "rootDir": ".",
@@ -19,6 +19,7 @@
     "noFallthroughCasesInSwitch": true,
     "allowSyntheticDefaultImports": true,
     "useDefineForClassFields": false,
+    "resolveJsonModule": true
   },
   "include": ["./src"],
 }

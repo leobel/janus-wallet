@@ -6,7 +6,11 @@ use aiken/crypto/bls12_381/g1
 use aiken/crypto/bls12_381/g2
 use aiken/crypto/bls12_381/scalar.{Scalar} as scalar
 use aiken/primitive/bytearray
-use cardano/transaction.{OutputReference, Transaction}
+use cardano/address.{Address, Script}
+use cardano/assets.{PolicyId} as assets
+use cardano/transaction.{
+  InlineDatum, Input, Output, OutputReference, Transaction,
+}
 
 pub type ZkVerificationKey {
   // G1Element
@@ -44,15 +48,39 @@ pub type Redeemer {
   proof: Proof,
 }
 
-validator janus_wallet {
+pub type Parameters {
+  // policy: ByteArray,
+  nounce: ByteArray,
+}
+
+validator wallet(_params: Parameters) {
+  mint(_r: Data, _policy_id: PolicyId, _tx: Transaction) {
+    True
+  }
+
+  else(_) {
+    fail
+  }
+}
+
+pub type AccountParameters {
+  nftRef: OutputReference,
+}
+
+validator account(params: AccountParameters) {
   spend(
-    datum: Option<Datum>,
+    _datum: Option<Datum>,
     redeemer: Redeemer,
-    _own_ref: OutputReference,
-    _self: Transaction,
+    _self_ref: OutputReference,
+    self_tx: Transaction,
   ) {
     let Redeemer { signals, proof } = redeemer
-    expect Some(Datum { verifiedUserId, verifiedChallenge, zkey }) = datum
+    expect Some(accountInput) =
+      self_tx.reference_inputs
+        |> transaction.find_input(params.nftRef)
+    let Input { output, .. } = accountInput
+    expect InlineDatum(data) = output.datum
+    expect Datum { verifiedUserId, verifiedChallenge, zkey } = data
     expect
       verifiedUserId == signals.userId && verifiedChallenge == signals.challenge
     expect Some(userId) = scalar.from_bytearray_big_endian(signals.userId)
@@ -120,6 +148,17 @@ pub fn pairing(g1: G1Element, g2: G2Element) -> MillerLoopResult {
   bls12_381_miller_loop(g1, g2)
 }
 
+test mint_ok() {
+  let params =
+    Parameters {
+      // policy: #"000000000000000000000000",
+      nounce: #"000000000000000000000000",
+    }
+  let data = #"000000000000000000000000"
+  let policyId = #"92f2a8a5a3d76c31623ef7919b90d7bae4ad9176787f0883dd8c2f51"
+  wallet.mint(params, data, policyId, transaction.placeholder)
+}
+
 test verify_ok() {
   let userId = bytearray.from_int_big_endian(567, 32)
   let challenge = bytearray.from_int_big_endian(890, 32)
@@ -144,8 +183,13 @@ test verify_ok() {
         #"a6b5d4a12faf84ac46dba1793716cdb14009af64d0edcd5f1c0ca872fa53bc5732da912222fc3d4fc7ea2fc1b9fbff41",
       ],
     }
-  let datum =
+  let data =
     Datum { zkey, verifiedUserId: userId, verifiedChallenge: challenge }
+  let txId = #"0000000000000000000000000000000000000000000000000000000000000000"
+  let index = 0
+  let outputReference =
+    OutputReference { transaction_id: txId, output_index: index }
+  let params = AccountParameters { nftRef: outputReference }
   let signals = PubSignals { userId, challenge, hash }
   let pA =
     #"818c07417be4d158fdc3604892f140dff244e2161012aa91352114ab94b74be21cf4f3cf57fac49cb9aa4985fdd194cd"
@@ -155,11 +199,18 @@ test verify_ok() {
     #"b7551e8d80c741853a16fbb135c86263adaace362e76cd5aaf5264cd920b2839a3ce728656a7743e12fa2625e8fea9cf"
   let proof = Proof { pA, pB, pC }
   let redeemer = Redeemer { signals, proof }
-  let placeholder_utxo = OutputReference { transaction_id: "", output_index: 0 }
-  janus_wallet.spend(
-    Some(datum),
-    redeemer,
-    placeholder_utxo,
-    transaction.placeholder,
-  )
+  let spendUtxo = OutputReference { transaction_id: "", output_index: 0 }
+  let scriptHash = #"000000000000"
+  let address =
+    Address { payment_credential: Script(scriptHash), stake_credential: None }
+  let output =
+    Output {
+      address,
+      value: assets.zero,
+      datum: InlineDatum(data),
+      reference_script: None,
+    }
+  let input = Input { output_reference: outputReference, output }
+  let tx = Transaction { ..transaction.placeholder, reference_inputs: [input] }
+  account.spend(params, None, redeemer, spendUtxo, tx)
 }
