@@ -27,8 +27,7 @@ pub type ZkVerificationKey {
 
 pub type Datum {
   zkey: ZkVerificationKey,
-  verifiedUserId: ByteArray,
-  verifiedChallenge: ByteArray,
+  userId: ByteArray,
 }
 
 pub type PubSignals {
@@ -55,6 +54,7 @@ pub type Parameters {
 
 validator wallet(_params: Parameters) {
   mint(_r: Data, _policy_id: PolicyId, _tx: Transaction) {
+    // Validate token data (inline for now) contains holder utxo_ref (txId#index) and all other necessary data needed for spending script
     True
   }
 
@@ -69,27 +69,24 @@ pub type AccountParameters {
 
 validator account(params: AccountParameters) {
   spend(
-    _datum: Option<Datum>,
+    _datum: Option<Data>,
     redeemer: Redeemer,
     _self_ref: OutputReference,
     self_tx: Transaction,
   ) {
     let Redeemer { signals, proof } = redeemer
+    let Transaction { id, reference_inputs, .. } = self_tx
+    expect signals.challenge == id
     expect Some(accountInput) =
-      self_tx.reference_inputs
+      reference_inputs
         |> transaction.find_input(params.nftRef)
     let Input { output, .. } = accountInput
     expect InlineDatum(data) = output.datum
-    expect Datum { verifiedUserId, verifiedChallenge, zkey } = data
-    expect
-      verifiedUserId == signals.userId && verifiedChallenge == signals.challenge
+    expect Datum { userId: verifiedUserId, zkey } = data
+    expect verifiedUserId == signals.userId
     expect Some(userId) = scalar.from_bytearray_big_endian(signals.userId)
     expect Some(hash) = scalar.from_bytearray_big_endian(signals.hash)
     expect Some(challenge) = scalar.from_bytearray_big_endian(signals.challenge)
-    expect Some(_verifiedChallenge) =
-      scalar.from_bytearray_big_endian(verifiedChallenge)
-    expect Some(_verifiedUserId) =
-      scalar.from_bytearray_big_endian(verifiedUserId)
     let public = [userId, hash, challenge, userId, challenge, hash]
     zk_verify(proof, public, zkey)
   }
@@ -183,13 +180,7 @@ test verify_ok() {
         #"a6b5d4a12faf84ac46dba1793716cdb14009af64d0edcd5f1c0ca872fa53bc5732da912222fc3d4fc7ea2fc1b9fbff41",
       ],
     }
-  let data =
-    Datum { zkey, verifiedUserId: userId, verifiedChallenge: challenge }
-  let txId = #"0000000000000000000000000000000000000000000000000000000000000000"
-  let index = 0
-  let outputReference =
-    OutputReference { transaction_id: txId, output_index: index }
-  let params = AccountParameters { nftRef: outputReference }
+  let data = Datum { zkey, userId }
   let signals = PubSignals { userId, challenge, hash }
   let pA =
     #"818c07417be4d158fdc3604892f140dff244e2161012aa91352114ab94b74be21cf4f3cf57fac49cb9aa4985fdd194cd"
@@ -210,7 +201,17 @@ test verify_ok() {
       datum: InlineDatum(data),
       reference_script: None,
     }
+  let txId = #"0000000000000000000000000000000000000000000000000000000000000000"
+  let index = 0
+  let outputReference =
+    OutputReference { transaction_id: txId, output_index: index }
   let input = Input { output_reference: outputReference, output }
-  let tx = Transaction { ..transaction.placeholder, reference_inputs: [input] }
+  let tx =
+    Transaction {
+      ..transaction.placeholder,
+      id: challenge,
+      reference_inputs: [input],
+    }
+  let params = AccountParameters { nftRef: outputReference }
   account.spend(params, None, redeemer, spendUtxo, tx)
 }
