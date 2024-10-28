@@ -149,8 +149,8 @@ async function generateProof(input: snarkjs.CircuitSignals, baseDir = 'bls12381'
         const { proof, publicSignals } = await snarkjs.groth16.fullProve(input, wasmBuffer, zkeyBuffer);
         // const { proof, publicSignals } = await snarkjs.groth16.prove(zKeyFileName, wtnsFileName);
 
-        console.log("Proof:", proof);
-        console.log("Public Signals:", publicSignals);
+        // console.log("Proof:", proof);
+        // console.log("Public Signals:", publicSignals);
         // const isValid = await snarkjs.groth16.verify(vk, publicSignals, proof);
         const _proof = {
             pi_a: [
@@ -179,8 +179,8 @@ async function generateProof(input: snarkjs.CircuitSignals, baseDir = 'bls12381'
             protocol: 'groth16',
             curve: 'bls12381'
         }
-        const isValid = await snarkjs.groth16.verify(vk, publicSignals, proof);
-        console.log('Is Valid?:', isValid);
+        // const isValid = await snarkjs.groth16.verify(vk, publicSignals, proof);
+        // console.log('Is Valid?:', isValid);
 
         // console.log("Public Signals:", publicSignals);
 

@@ -263,9 +263,9 @@ export type CompleteOptions = {
 // TODO: this func is a **direct** copy from Lucid-Evolution, we should create a PR to expose and use it directly
 function evalTransaction(
     config: TxBuilderConfig,
-    txRedeemerBuilder: CML.TxRedeemerBuilder,
+    tx: CML.Transaction,
     walletInputs: UTxO[]): Uint8Array[] {
-    const txEvaluation = setRedeemerstoZero(txRedeemerBuilder.draft_tx())!;
+    const txEvaluation = setRedeemerstoZero(tx)!;
     const txUtxos = [
         ...walletInputs,
         ...config.collectedInputs,
@@ -424,7 +424,7 @@ export async function submitTx(
 
     let uplcEval: Uint8Array[] | EvalRedeemer[] = [];
     if (options?.localUPLCEval !== false) {
-        uplcEval = evalTransaction(config, txRedeemerBuilder, walletInfo.inputs);
+        uplcEval = evalTransaction(config, txRedeemerBuilder.draft_tx(), walletInfo.inputs);
     } else {
         uplcEval = await evalTransactionProvider(config, txRedeemerBuilder.draft_tx(), evalInputs);
         // uplcEval[0].ex_units.mem = 8455482;
@@ -475,12 +475,6 @@ export async function submitTx(
         true,
     );
 
-    console.log('Tx:', config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress)).draft_tx().to_json());
-
-    // TODO: remove this
-    // txRedeemerBuilder = config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress));
-    // evalTransaction(config, txRedeemerBuilder, walletInfo.inputs);
-
     // final build
     let tx = config.txBuilder
         .build(
@@ -488,17 +482,16 @@ export async function submitTx(
             CML.Address.from_bech32(walletAddress),
         )
         .build_unchecked();
-    console.log('Tx:', tx.to_json());
 
     // changes to check started here ......
     if (options?.localUPLCEval !== false) {
-        uplcEval = evalTransaction(config, txRedeemerBuilder, walletInfo.inputs);
+        uplcEval = evalTransaction(config, tx, walletInfo.inputs);
     } else {
         uplcEval = await evalTransactionProvider(config, tx);
     }
 
     // build final tx again with this new exUnits
-    redeemer = await buildRedeemer(tx.body(), zkInput);
+    // redeemer = await buildRedeemer(tx.body(), zkInput);
     config = await makeTxBuilderConfig(lucid, reference_inputs, inputs, redeemer, spend, walletAddress, lovelace, validTo);
 
     // Set collateral input if there are script executions
@@ -526,7 +519,6 @@ export async function submitTx(
         .build_unchecked();
 
     redeemer = await buildRedeemer(tx.body(), zkInput);
-
     config = await makeTxBuilderConfig(lucid, reference_inputs, inputs, redeemer, spend, walletAddress, lovelace, validTo);
 
     // Set collateral input if there are script executions
@@ -552,9 +544,6 @@ export async function submitTx(
             CML.Address.from_bech32(walletAddress),
         )
         .build_unchecked();
-
-    redeemer = await buildRedeemer(tx.body(), zkInput);
-
 
     const txSignBuilder = makeTxSignBuilder(config.lucidConfig, tx);
     const txSigned = await txSignBuilder.sign.withWallet().complete();
