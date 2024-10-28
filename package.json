@@ -17,12 +17,16 @@
   "author": "leobelizquierdo@gmail.com",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^22.7.4",
+    "@types/node": "^22.8.0",
+    "@types/snarkjs": "^0.7.8",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2"
   },
   "dependencies": {
     "@lucid-evolution/lucid": "^0.3.49",
-    "o1js": "^1.8.0"
+    "effect": "^3.5.6",
+    "ffjavascript": "^0.3.1",
+    "o1js": "^1.8.0",
+    "snarkjs": "^0.7.5"
   }
 }
