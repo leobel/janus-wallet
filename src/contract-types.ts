@@ -151,13 +151,21 @@ const RedeemerSchema = Data.Object({
 export type Redeemer = Data.Static<typeof RedeemerSchema>;
 export const Redeemer = RedeemerSchema as unknown as Redeemer;
 
-const NeverSchema =  Data.Nullable(Data.Integer()); // always instantiate to null
+const PublishRedeemerSchema = Data.Enum([
+    Data.Literal("Register"),
+    Data.Literal("RegisterAndDelegate"),
+    Data.Literal("Delegate"),
+]);
+export type PublishRedeemer = Data.Static<typeof PublishRedeemerSchema>;
+export const PublishRedeemer = PublishRedeemerSchema as unknown as PublishRedeemer;
+
+const NeverSchema = Data.Nullable(Data.Integer()); // always instantiate to null
 
 const DelegateBlockProductionSchema = Data.Object({
     stake_pool: StakePoolIdSchema,
 });
 const DelegateRepresentativeSchema = Data.Enum([
-    Data.Object({ Registered:  Data.Tuple([CredentialSchema], { hasConstr: true }) }),
+    Data.Object({ Registered: CredentialSchema }),
     Data.Object({ AlwaysAbstain: Data.Literal("AlwaysAbstain") }),
     Data.Object({ AlwaysNoConfidence: Data.Literal("AlwaysNoConfidence") }),
 ]);
@@ -172,9 +180,9 @@ const DelegateBothSchema = Data.Object({
     delegate_representative: DelegateRepresentativeSchema
 });
 const DelegateSchema = Data.Enum([
-    Data.Object({ DelegateBlockProduction: Data.Tuple([DelegateBlockProductionSchema], { hasConstr: true }) }),
-    Data.Object({ DelegateVote: Data.Tuple([DelegateVoteSchema], { hasConstr: true }) }),
-    Data.Object({ DelegateBoth: Data.Tuple([DelegateBothSchema], { hasConstr: true }) }),
+    Data.Object({ DelegateBlockProduction: DelegateBlockProductionSchema }),
+    Data.Object({ DelegateVote: DelegateVoteSchema }),
+    Data.Object({ DelegateBoth: DelegateBothSchema }),
 ]);
 
 const RegisterCredentialSchema = Data.Object({
@@ -222,17 +230,17 @@ const RetireFromConstitutionalCommitteeSchema = Data.Object({
 })
 
 const CertificateSchema = Data.Enum([
-    Data.Object({ RegisterCredential: Data.Tuple([RegisterCredentialSchema], { hasConstr: true }) }),
-    Data.Object({ UnRegisterCredential: Data.Tuple([UnRegisterCredentialSchema], { hasConstr: true }) }),
-    Data.Object({ DelegateCredential: Data.Tuple([DelegateCredentialSchema], { hasConstr: true }) }),
-    Data.Object({ RegisterAndDelegateCredential: Data.Tuple([RegisterAndDelegateCredentialSchema], { hasConstr: true }) }),
-    Data.Object({ RegisterDelegateRepresentative: Data.Tuple([RegisterDelegateRepresentativeSchema], { hasConstr: true }) }),
-    Data.Object({ UpdateDelegateRepresentative: Data.Tuple([UpdateDelegateRepresentativeSchema], { hasConstr: true }) }),
-    Data.Object({ UnregisterDelegateRepresentative: Data.Tuple([UnregisterDelegateRepresentativeSchema], { hasConstr: true }) }),
-    Data.Object({ RegisterStakePool: Data.Tuple([RegisterStakePoolSchema], { hasConstr: true }) }),
-    Data.Object({ RetireStakePool: Data.Tuple([RetireStakePoolSchema], { hasConstr: true }) }),
-    Data.Object({ AuthorizeConstitutionalCommitteeProxy: Data.Tuple([AuthorizeConstitutionalCommitteeProxySchema], { hasConstr: true }) }),
-    Data.Object({ RetireFromConstitutionalCommittee: Data.Tuple([RetireFromConstitutionalCommitteeSchema], { hasConstr: true }) }),
+    Data.Object({ RegisterCredential: RegisterCredentialSchema }),
+    Data.Object({ UnRegisterCredential: UnRegisterCredentialSchema }),
+    Data.Object({ DelegateCredential: DelegateCredentialSchema }),
+    Data.Object({ RegisterAndDelegateCredential: RegisterAndDelegateCredentialSchema }),
+    Data.Object({ RegisterDelegateRepresentative: RegisterDelegateRepresentativeSchema }),
+    Data.Object({ UpdateDelegateRepresentative: UpdateDelegateRepresentativeSchema }),
+    Data.Object({ UnregisterDelegateRepresentative: UnregisterDelegateRepresentativeSchema }),
+    Data.Object({ RegisterStakePool: RegisterStakePoolSchema }),
+    Data.Object({ RetireStakePool: RetireStakePoolSchema }),
+    Data.Object({ AuthorizeConstitutionalCommitteeProxy: AuthorizeConstitutionalCommitteeProxySchema }),
+    Data.Object({ RetireFromConstitutionalCommittee: RetireFromConstitutionalCommitteeSchema }),
 ]);
 export type Certificate = Data.Static<typeof CertificateSchema>;
 export const Certificate = CertificateSchema as unknown as Certificate;

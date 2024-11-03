@@ -1,5 +1,5 @@
 import { Blockfrost, CML, Data, fromText, getAddressDetails, Lucid, UTxO } from "@lucid-evolution/lucid";
-import { generateSpendScript, getRedeemer, readValidators, getInput, serialiseReferenceInputs, serialiseBody, generateMintPolicy } from "./prepare-contracts";
+import { generateSpendScript, getSpendRedeemer, readValidators, getInput, serialiseReferenceInputs, serialiseBody, generateMintPolicy } from "./prepare-contracts";
 import * as fs from 'fs';
 import { OutputReference, Proof } from "./contract-types";
 
@@ -41,7 +41,7 @@ let hash = 103436611631842193132723549196359838757112472230112661584623289489316
 let pA = "a49039e4c25fb4191caea2e625177fccced340a5a65206e5402815a8b49d8bbb378f914548e16270fb701e973b4b66da"
 let pB = "8d091b31ed91a73aa626b2a32c245eeea57d4d971d65e0afe057bcaddb10edbf7fc9d68d276cd0c4704d87d519d11d55003ea0bd5e3bc096523e2307ad2da0461ccb27ea234e18b8342c272abb6d3daf840c63a6f414b1f48b79924137f7a1a3"
 let pC = "b4883a55867b148110643951367044feca119cb3815fa7660a96fe87ff229a2778b6be20f2811f76ad5d83f00987679d"
-let spendRedeemer = getRedeemer(userId, hash, txId, pA, pB, pC);
+let spendRedeemer = getSpendRedeemer(userId, hash, txId, pA, pB, pC);
 
 let aikenProofCbor = "D8799F5830818C07417BE4D158FDC3604892F140DFF244E2161012AA91352114AB94B74BE21CF4F3CF57FAC49CB9AA4985FDD194CD5F5840ADCCA26FDD822728B1F7B63E3C7018D02FEBD9ADA51B546FB221EB0B980344D05452AD38674CA06190A5780F05DD482819CDE2464912C3AA0D847CD708722977582014A19851DDB787FBC041EC1FF09F8CE38B6231327F151B20F364F1304AA0E971FF5830B7551E8D80C741853A16FBB135C86263ADAACE362E76CD5AAF5264CD920B2839A3CE728656A7743E12FA2625E8FEA9CFFF".toLowerCase();
 
@@ -134,7 +134,7 @@ console.log('Tx Id:', txSigned.toHash());
 
 txId = txSigned.toHash();
 // TODO: update proof
-spendRedeemer = getRedeemer(userId, hash, txId, pA, pB, pC);
+spendRedeemer = getSpendRedeemer(userId, hash, txId, pA, pB, pC);
 
 
 

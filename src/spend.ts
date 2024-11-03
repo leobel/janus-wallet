@@ -1,5 +1,5 @@
-import { Blockfrost, CML, Data, fromText, getAddressDetails, Lucid, UTxO } from "@lucid-evolution/lucid";
-import { generateSpendScript, getRedeemer, readValidators, getInput, serialiseReferenceInputs, serialiseBody, generateMintPolicy, submitTx, ZKProof, ZkInput } from "./prepare-contracts";
+import { Blockfrost, CML, Data, fromText, getAddressDetails, Lucid, Maestro, UTxO } from "@lucid-evolution/lucid";
+import { generateSpendScript, getSpendRedeemer, readValidators, getInput, serialiseReferenceInputs, serialiseBody, generateMintPolicy, spendTx, ZKProof, ZkInput } from "./prepare-contracts";
 import * as fs from 'fs';
 import {} from "@lucid-evolution/lucid/dist/index"
 
@@ -12,18 +12,27 @@ import {} from "@lucid-evolution/lucid/dist/index"
 // console.log("TX", CML.Transaction.from_cbor_hex("").to_json());
 
 const network = "Preview";
+// const network = "Preprod";
 const lucid = await Lucid(
     new Blockfrost(
         "https://cardano-preview.blockfrost.io/api/v0",
         "preview1OQSKlQ6tb3WYBx9bqlz7kDFhuglmfvL"
+        // "https://cardano-preprod.blockfrost.io/api/v0",
+        // "preprodNQK7GqWxfMkWg9x5j4bHOVBNNGpjmxQv"
     ),
     network
 );
+// const lucid = await Lucid(
+//     new Maestro({
+//         apiKey: "M4tGNWFPzrC35t3HW5LVEkcH8tvO0FkS",
+//         network
+//     }),
+//     network
+// );
+
 const prvKey = fs.readFileSync('./src/me.sk').toString();
 lucid.selectWallet.fromPrivateKey(prvKey);
 const walletAddress = await lucid.wallet().address();
-
-console.log('Address details', getAddressDetails("addr_test1xqlvgp0uhwfxzace35xsscdx806qlqvkazkpgqfsvwyu08e7cszlewujv9m3nrgdpps6vwl5p7qed69vzsqnqcufc70shf73et"));
 
 const policyId = "b8a5e329b500a66376047165cdfce62c3ecf245fd81d101533f81422";
 const lovelace = 10_000_000n;
@@ -48,7 +57,7 @@ const utxoRef: UTxO = {
     // datum: "D8799F58200000000000000000000000000000000000000000000000000000000000000237D8799F5830B18DB01619508D589BA45CDCC9C9AB4DBDDC33E08BC4DBDDEA565C10DC743FD66510D3F49C6343999CAF540EAA0C4E035F5840845F7A4F6D0FBCAF0648D9C2657F19A33F4E2124C284D68688F209ABF54D5A1D1AFC47DE55C24E662C47F7632A760A8016E8BA01EB4B0D4A2DB67FE5ABED5AE15820A09E035DBE984A1426E440A4F0038276792F87CDB2BC35DC185A618D352D7F54FF5F584093E02B6052719F607DACD3A088274F65596BD0D09920B61AB5DA61BBDC7F5049334CF11213945D57E5AC7D055D042B7E024AA2B2F08F0A91260805272DC510515820C6E47AD4FA403B02B4510B647AE3D1770BAC0326A805BBEFD48056C8C121BDB8FF5F5840A2341A098A95305955386A3E0E4E2879E6206342B9C9A8DA0559190E82F3ED1478158F2CA1EF4DB7DEAB124B7C85B0F403D1A968B4812E6C9C9392D926B86DA5582001E23F6C94CFFCC62B02393D7807A6F381E40CA49A9B4A2B522518F72927CA15FF9F5830AC2FCD68B85B64E6C3BC11A9DADD1B24E7786738475CF2FE0ACDD9B41F773AF18EC12601E368D2E920F299F9E6BED4805830A33061A2549EA773D275539B2E92CAA6F936404635DB1DA3199EC71F06FAF2CBA8EFFEF6860BCB0376259A681EF043C35830A3F6177EA5EF5797249DF745BE266271BD65A6A1C9C9FAE2DF3DD2C7E9E6B5751F288FBA11950455A9A1F9A054BAD8545830A5D227C013957479BE181BF43C394A49E8BF14585FD04A4CA72102E3E5AB41661411EEB15986AD3D3A09EB25BB2B7B12583093A152A9CD7D4B81A08989F67FCB958E96B14EF4D3CEFD26AD992059DF4D252A9F00B5F9F2B5B8A59CF4ECA9D78848935830B8CD6DACEEAA3B53D707AE2B99DC87E0DBBF58A1E310CFF5CD3BEA151D90962372DE834A519A879C05BC470A016202D65830A6B5D4A12FAF84AC46DBA1793716CDB14009AF64D0EDCD5F1C0CA872FA53BC5732DA912222FC3D4FC7EA2FC1B9FBFF41FFFFFF"
 }
 
-const validTo = 1730070639036 + (22 * 60 * 60 * 1000); // 10 hour
+const validTo = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
 
 
 // User Id (could be tokenName directly). All data passed to sc are hex representation 
@@ -101,7 +110,8 @@ console.log('Wallet Address', walletAddress);
 
 const utxo: UTxO = {
     address: spendAddress,
-    txHash: "ee2ea749ec5ea5ce93a350fe3eb9fb9968c07e35623a8c2e7882854bbfa66e37",
+    txHash: "b9331a0ca1d5786e6b437013098f73a676fa6e3afdadd0c0aa8fe01a6769f225",
+    // txHash: "69667b3128ca08d307b29989b976f5cefeddd15b5e3b5517611aaddd1316c6a4",
     outputIndex: 0,
     assets: { lovelace: BigInt(50_000_000) }
 }
@@ -113,4 +123,4 @@ const zkInput: ZkInput = {
     // pwd: "12345"
 }
 
-await submitTx(lucid, [utxoRef], [utxo], spendAddress, spend, lovelace, validTo, walletAddress, zkInput, policyId, tokenName, network, { localUPLCEval: false });
+await spendTx(lucid, [utxoRef], [utxo], spendAddress, spend, lovelace, validTo, walletAddress, zkInput, policyId, tokenName, network, { localUPLCEval: true });
