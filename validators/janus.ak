@@ -87,7 +87,19 @@ validator account(params: AccountParameters) {
     trace @"challenge (number)": challenge
     trace @"overflow": overflow
     let public = [userId, hash, challenge, userId, challenge, hash]
-    zk_verify(proof, public, zkey)?
+    if params.for_evaluation {
+      // NOTE: we're passing maximum values as public which are the only affecting exUnits dynamically (pA. pB, pC cost is constant)
+      // Since we're using Poseidon.hash we can't determine which password generate hash equal to scalar.field_prime - 1, therefore 
+      // proof isn't valid.
+      // builtin.bls12_381_g1_scalar_mul(scalar.to_int(e), point) // scalar.to_int(e) is each number in public
+      // bls12_381_g1_scalar_mul: TwoArgumentsCosting::new(
+      //    TwoArgumentsCosting::constant_cost(18),
+      //    TwoArgumentsCosting::linear_in_x(76433006, 8868), // TwoArguments::LinearInX(l) => l.slope(=8868) * x(=scalar.to_int(e)) + l.intercept(=76433006),
+      // ) 
+      !zk_verify(proof, public, zkey)?
+    } else {
+      zk_verify(proof, public, zkey)?
+    }
   }
 
   publish(
@@ -246,12 +258,6 @@ test verify_ok() {
     }
   let challenge = build_challenge(tx) |> hash_challenge
   let signals = PubSignals { userId, challenge, hash }
-  // let pA =
-  //   #"b2ca44138d818eb078a146407b2fedee4e8856900e23ddbeb9a9faf676bc74e46bfa1e4cdf7e8a3bfab3d739515a9c30"
-  // let pB =
-  //   #"a69467ebfb61184e431423caa74cdb1650ac47521364de6375fa3ec843915faaefd2847bede0d6319a3b7bb274bfc738159711da78cb72bacc60b23db9292d787421d97f7bd78a3df29f912c36431cea29c3091b457fb1d74954cde324807ef0"
-  // let pC =
-  //   #"b03d49a68e2cc13e85e6dbb99b947f77ddf8242e267c9e87389c072a6c18dc414bfb51d1da5940f5c04d2a3651c96d4a"
   let pA =
     #"b5954b04ea1d2956fac946a3dabbe826cc4651322c23423a245d65f528bd5adead5aee7cbcfc3d86ae96a9ecfc40d3e8"
   let pB =

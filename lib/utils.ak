@@ -152,6 +152,7 @@ pub fn zk_verify(
     }
   // pairing
   let eAB = pairing(pA, pB)
+  // this value is already in zkey, it's alphabeta
   let eAlphaBeta =
     pairing(g1.decompress(zkey.vk_alpha1), g2.decompress(zkey.vk_beta2))
   let eIGamma = pairing(vk_acc, g2.decompress(zkey.vk_gamma2))
@@ -162,9 +163,11 @@ pub fn zk_verify(
   let mlr2 = bls12_381_mul_miller_loop_result(mlr1, eCDelta)
 
   // verify
+  // A1 * B2 = α1 * β2 + (w0*L0(τ)/y + w1*L1(τ)/y + … + wl*Ll(τ)/y)1 * y2 + C1 * δ2 
   bls12_381_final_verify(eAB, mlr2)
 }
 
+// lineal combination of public list of scalars: SUM (ic)^(pi)
 pub fn derive(
   vk_ic: List<ByteArray>,
   public: List<Scalar>,

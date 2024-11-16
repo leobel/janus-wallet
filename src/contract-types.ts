@@ -159,6 +159,13 @@ const PublishRedeemerSchema = Data.Enum([
 export type PublishRedeemer = Data.Static<typeof PublishRedeemerSchema>;
 export const PublishRedeemer = PublishRedeemerSchema as unknown as PublishRedeemer;
 
+const WithdrawRedeemerSchema = Data.Enum([
+    Data.Literal("Withdraw"),
+    Data.Literal("Fails"), // TODO: use only one literal
+]);
+export type WithdrawRedeemer = Data.Static<typeof WithdrawRedeemerSchema>;
+export const WithdrawRedeemer = WithdrawRedeemerSchema as unknown as WithdrawRedeemer;
+
 const NeverSchema = Data.Nullable(Data.Integer()); // always instantiate to null
 
 const DelegateBlockProductionSchema = Data.Object({
