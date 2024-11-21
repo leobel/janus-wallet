@@ -11,8 +11,8 @@ import {} from "@lucid-evolution/lucid/dist/index"
 // console.log("TX", CML.Transaction.from_cbor_hex("").to_json());
 // console.log("TX", CML.Transaction.from_cbor_hex("").to_json());
 
-const network = "Preview";
 // const network = "Preprod";
+const network = "Preview";
 const lucid = await Lucid(
     new Blockfrost(
         "https://cardano-preview.blockfrost.io/api/v0",
@@ -32,7 +32,8 @@ const lucid = await Lucid(
 
 const prvKey = fs.readFileSync('./src/me.sk').toString();
 lucid.selectWallet.fromPrivateKey(prvKey);
-const walletAddress = await lucid.wallet().address();
+// const walletAddress = await lucid.wallet().address();
+const walletAddress = "addr_test1qzw567xyzgqchtyddeha90ugsr8uyu7h4uh8wg5su8qz7yykq2ndwcmedv72l7263vj96tl6cyn74l2mw5kp8h7fk8rq66qtae";
 
 const policyId = "b8a5e329b500a66376047165cdfce62c3ecf245fd81d101533f81422";
 const lovelace = 10_000_000n;
@@ -110,10 +111,10 @@ console.log('Wallet Address', walletAddress);
 
 const utxo: UTxO = {
     address: spendAddress,
-    txHash: "b9331a0ca1d5786e6b437013098f73a676fa6e3afdadd0c0aa8fe01a6769f225",
+    txHash: "70008140f20476fe33cc3a977b3f7a61a08b1e46e994cb6f7179459d0ecb32f0",
     // txHash: "69667b3128ca08d307b29989b976f5cefeddd15b5e3b5517611aaddd1316c6a4",
-    outputIndex: 0,
-    assets: { lovelace: BigInt(50_000_000) }
+    outputIndex: 1,
+    assets: { lovelace: BigInt(38_593_550) }
 }
 
 const zkInput: ZkInput = {

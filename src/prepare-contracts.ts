@@ -347,15 +347,15 @@ function evalTransaction(
         const increments = extraIncrements || new Map<CML.RedeemerTag, Map<number, number>>();
         return uplcEval.map(bytes => {
             const redeemer = CML.LegacyRedeemer.from_cbor_bytes(bytes);
-            const tag =  redeemer.tag();
+            const tag = redeemer.tag();
             const index = redeemer.index();
-            
+
             const increment = 1 + getRedeemerIncrement(increments, tag, Number(index));
             return {
                 tag: tag,
                 index: index,
                 exUnits: CML.ExUnits.new(
-                    BigInt(Math.ceil(Number(redeemer.ex_units().mem()) * increment)), 
+                    BigInt(Math.ceil(Number(redeemer.ex_units().mem()) * increment)),
                     BigInt(Math.ceil(Number(redeemer.ex_units().steps()) * increment))
                 )
             }
@@ -399,10 +399,10 @@ async function evalTransactionProvider(
             const index = evalRedeemer.redeemer_index;
             const increment = 1 + getRedeemerIncrement(increments, tag, index);
             return {
-                tag: tag, 
+                tag: tag,
                 index: BigInt(index),
                 exUnits: CML.ExUnits.new(
-                    BigInt(Math.ceil(evalRedeemer.ex_units.mem * increment)), 
+                    BigInt(Math.ceil(evalRedeemer.ex_units.mem * increment)),
                     BigInt(Math.ceil(evalRedeemer.ex_units.steps * increment))
                 )
             }
@@ -429,7 +429,7 @@ function applyUPLCEval(
     txBuilder: CML.TransactionBuilder,
     changeAddress: string
 ) {
-    for (const {tag, index, exUnits} of uplcEval) {
+    for (const { tag, index, exUnits } of uplcEval) {
         txBuilder.set_exunits(CML.RedeemerWitnessKey.new(tag, index), exUnits);
     }
 
@@ -439,7 +439,7 @@ function applyUPLCEval(
 function getEvalIncrements(scriptIncrements: ScriptIncrements[] | undefined, txBuilder: CML.TransactionBuilder): Map<CML.RedeemerTag, Map<number, number>> {
     const map = new Map<CML.RedeemerTag, Map<number, number>>();
     if (scriptIncrements) {
-        for(const { tag, increment, scriptHash } of scriptIncrements) {
+        for (const { tag, increment, scriptHash } of scriptIncrements) {
         }
     }
 
@@ -471,30 +471,32 @@ const validators = readValidators();
 //     pC: "90c5e42f844fec0cfb72f574d0074bbdbde23adbbbf67db3e73d04a20a116f9919bab3bf7a0198453fa7d2e8c9379096"
 // }
 
-// const evalZkProof = {
-//     userId: "73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000000", // scalar.field_prime - 1
-//     pwdHash: "73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000000", // scalar.field_prime - 1
-//     // Guarantee overflow logic is executed and final value scalar.field_prime - 1, since number is 2 * scalar.field_prime - 1 
-//     challenge: "E7DB4EA6533AFA906673B0101343B00AA77B4805FFFCB7FDFFFFFFFE00000001", 
-//     pA: "af46f51c9067ff3f6ae57ba0f76d9de33e979d01c0f91a40fc600f467b8fd0a3804d1968c2836632d728450b5d2614d4",
-//     pB: "816dc1b644722dcaf92aba79949fb514b19f0289dec36e9d49e9fec755244636e321ac6e6d37cc78381fc37eced6e5d7057e8187d6fd098df9647146154565800cbd3f64a809bb4e565416c967c60ad6e32f83a9def38b0ad5ba826ec45a1e0a",
-//     pC: "8881425d2cf63d3e019a4eb858b79d536804ce76ee499dc562cf0bac94db104963f7599c96ee98b2f47c58a780c62980"
-// }
-// TODO: use more complexity point sin the curve (closer to field upper bound 2^381-1)
-// Then run stress-test to determine a empirical maximum eval proof, meaning will returm bigger exUnits.
-// Apply a 5-10% to increase the likelihood of having an upper bound exUnit
 const evalZkProof = {
-    userId: "466f6e74757323303030",
-    pwdHash: BigInt("10343661163184219313272354919635983875711247223011266158462328948931637363678").toString(16),
-    challenge: "B2005F8E22E380F580A3E2378F3AE546A95E4BB9B30BCA6A67F22A9607C65461",
+    userId: "73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000000", // scalar.field_prime - 1
+    pwdHash: "73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000000", // scalar.field_prime - 1
+    // Guarantee overflow logic is executed and final value scalar.field_prime - 1, since number is 2 * scalar.field_prime - 1 
+    challenge: "E7DB4EA6533AFA906673B0101343B00AA77B4805FFFCB7FDFFFFFFFE00000001",
     pA: "af46f51c9067ff3f6ae57ba0f76d9de33e979d01c0f91a40fc600f467b8fd0a3804d1968c2836632d728450b5d2614d4",
     pB: "816dc1b644722dcaf92aba79949fb514b19f0289dec36e9d49e9fec755244636e321ac6e6d37cc78381fc37eced6e5d7057e8187d6fd098df9647146154565800cbd3f64a809bb4e565416c967c60ad6e32f83a9def38b0ad5ba826ec45a1e0a",
     pC: "8881425d2cf63d3e019a4eb858b79d536804ce76ee499dc562cf0bac94db104963f7599c96ee98b2f47c58a780c62980"
 }
+// TODO: use more complexity point sin the curve (closer to field upper bound 2^381-1)
+// Then run stress-test to determine a empirical maximum eval proof, meaning will returm bigger exUnits.
+// Apply a 5-10% to increase the likelihood of having an upper bound exUnit
+// const evalZkProof = {
+//     userId: "466f6e74757323303030",
+//     pwdHash: BigInt("10343661163184219313272354919635983875711247223011266158462328948931637363678").toString(16),
+//     challenge: "B2005F8E22E380F580A3E2378F3AE546A95E4BB9B30BCA6A67F22A9607C65461",
+//     pA: "af46f51c9067ff3f6ae57ba0f76d9de33e979d01c0f91a40fc600f467b8fd0a3804d1968c2836632d728450b5d2614d4",
+//     pB: "816dc1b644722dcaf92aba79949fb514b19f0289dec36e9d49e9fec755244636e321ac6e6d37cc78381fc37eced6e5d7057e8187d6fd098df9647146154565800cbd3f64a809bb4e565416c967c60ad6e32f83a9def38b0ad5ba826ec45a1e0a",
+//     pC: "8881425d2cf63d3e019a4eb858b79d536804ce76ee499dc562cf0bac94db104963f7599c96ee98b2f47c58a780c62980"
+// }
+
+const evalReferenceDatum = "D8799F582073EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000000582073EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000000D8799F5830B18DB01619508D589BA45CDCC9C9AB4DBDDC33E08BC4DBDDEA565C10DC743FD66510D3F49C6343999CAF540EAA0C4E035F5840845F7A4F6D0FBCAF0648D9C2657F19A33F4E2124C284D68688F209ABF54D5A1D1AFC47DE55C24E662C47F7632A760A8016E8BA01EB4B0D4A2DB67FE5ABED5AE15820A09E035DBE984A1426E440A4F0038276792F87CDB2BC35DC185A618D352D7F54FF5F584093E02B6052719F607DACD3A088274F65596BD0D09920B61AB5DA61BBDC7F5049334CF11213945D57E5AC7D055D042B7E024AA2B2F08F0A91260805272DC510515820C6E47AD4FA403B02B4510B647AE3D1770BAC0326A805BBEFD48056C8C121BDB8FF5F5840A2341A098A95305955386A3E0E4E2879E6206342B9C9A8DA0559190E82F3ED1478158F2CA1EF4DB7DEAB124B7C85B0F403D1A968B4812E6C9C9392D926B86DA5582001E23F6C94CFFCC62B02393D7807A6F381E40CA49A9B4A2B522518F72927CA15FF9F5830AC2FCD68B85B64E6C3BC11A9DADD1B24E7786738475CF2FE0ACDD9B41F773AF18EC12601E368D2E920F299F9E6BED4805830A33061A2549EA773D275539B2E92CAA6F936404635DB1DA3199EC71F06FAF2CBA8EFFEF6860BCB0376259A681EF043C35830A3F6177EA5EF5797249DF745BE266271BD65A6A1C9C9FAE2DF3DD2C7E9E6B5751F288FBA11950455A9A1F9A054BAD8545830A5D227C013957479BE181BF43C394A49E8BF14585FD04A4CA72102E3E5AB41661411EEB15986AD3D3A09EB25BB2B7B12583093A152A9CD7D4B81A08989F67FCB958E96B14EF4D3CEFD26AD992059DF4D252A9F00B5F9F2B5B8A59CF4ECA9D78848935830B8CD6DACEEAA3B53D707AE2B99DC87E0DBBF58A1E310CFF5CD3BEA151D90962372DE834A519A879C05BC470A016202D65830A6B5D4A12FAF84AC46DBA1793716CDB14009AF64D0EDCD5F1C0CA872FA53BC5732DA912222FC3D4FC7EA2FC1B9FBFF41FFFFFF";
 
 type SpendTxParams = {
     lucid: LucidEvolution,
-    reference_inputs: UTxO[],
+    referenceInputs: UTxO[],
     inputs: UTxO[],
     redeemers: string[],
     scripts: Script[],
@@ -514,7 +516,7 @@ type SpendTxParams = {
 
 type StakeAndDelegateTxParams = {
     lucid: LucidEvolution,
-    reference_inputs: UTxO[],
+    referenceInputs: UTxO[],
     inputs: UTxO[],
     redeemers: string[],
     scripts: Script[],
@@ -537,16 +539,17 @@ type TxBuilderParams = SpendTxParams | StakeAndDelegateTxParams;
 
 async function buildTx(
     params: TxBuilderParams,
+    evalInputs: UTxO[],
+    evalReferenceInputs: UTxO[],
     makeTxBuilderConfig: (params: TxBuilderParams) => Promise<TxBuilderConfig>,
-    makeEvalInputs: (network: Network, policyId: PolicyId, tokenName: string, scripts?: Script[]) => UTxO[],
     makeFinalRdeemers: (tx: CML.TransactionBody, zkInput: ZkInput) => Promise<string[]>,
 ): Promise<TxSignBuilder> {
-    const { inputs, walletAddress, zkInput, options, network, policyId, tokenName, evalRedeemers, evalScripts, scriptIncrements } = params;
-    const evalInputs = makeEvalInputs(network, policyId, tokenName, evalScripts);
+    const { walletAddress, zkInput, options, network, policyId, tokenName, evalRedeemers, evalScripts, scriptIncrements } = params;
 
     // get evaluation tx
     let config = await makeTxBuilderConfig({
         ...params,
+        referenceInputs: evalReferenceInputs,
         inputs: evalInputs,
         evalRedeemers: evalRedeemers,
         evalScripts: evalScripts
@@ -561,6 +564,7 @@ async function buildTx(
     let txRedeemerBuilder = config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress));
     const increments = getEvalIncrements(scriptIncrements, config.txBuilder);
     let uplcEval: ScriptEvaluation[] = [];
+    const additionalUtxos = evalInputs.concat(evalReferenceInputs);
     if (options?.localUPLCEval !== false) {
         uplcEval = evalTransaction(config, txRedeemerBuilder.draft_tx(), evalInputs, increments);
     } else {
@@ -586,37 +590,117 @@ async function buildTx(
 
     // tx has now final inputs and outputs
     // get final redeemer with the challenge for final tx
-    const finalRedeemers = await makeFinalRdeemers(config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress)).draft_body(), zkInput)
+    const finalRedeemers = await makeFinalRdeemers(config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress)).draft_body(), zkInput);
 
-    config = await makeTxBuilderConfig({ ...params, redeemers: finalRedeemers, evalRedeemers: undefined, evalScripts: undefined });
+     // final build
+    const tx = await buildFinalTx(config, finalRedeemers, walletAddress);
 
-    // Set collateral input if there are script executions
-    setCollateral(config, collateralInput, walletInfo.address);
+    // config = await makeTxBuilderConfig({ ...params, redeemers: finalRedeemers, evalRedeemers: undefined, evalScripts: undefined });
 
-    // update txBuilder exUnits and 
-    // adjust tx inputs and outputs
-    applyUPLCEval(uplcEval, config.txBuilder, walletAddress);
+    // // Set collateral input if there are script executions
+    // setCollateral(config, collateralInput, walletInfo.address);
 
-    // final build
-    let tx = config.txBuilder
-        .build(
-            CML.ChangeSelectionAlgo.Default,
-            CML.Address.from_bech32(walletAddress),
-        )
-        .build_unchecked();
+    // // update txBuilder exUnits and 
+    // // adjust tx inputs and outputs
+    // applyUPLCEval(uplcEval, config.txBuilder, walletAddress);
+
+    // // final build
+    // let tx = config.txBuilder
+    //     .build(
+    //         CML.ChangeSelectionAlgo.Default,
+    //         CML.Address.from_bech32(walletAddress),
+    //     )
+    //     .build_unchecked();
+    
+    // // // const outputs = CML.TransactionOutputList.new();
+    // // // for (let i = 0; i < tx.body().outputs().len() - 1; i++) {
+    // // //     outputs.add(tx.body().outputs().get(i));
+    // // // }
+    // // // outputs.add(change);
+    // // // const body = CML.TransactionBody.new(tx.body().inputs(), outputs, evalFee);
+    // // // tx = CML.Transaction.new(body, tx.witness_set(), tx.is_valid(), tx.auxiliary_data());
+
+    // // const units = evalTransaction(config, tx);
 
     return makeTxSignBuilder(config.lucidConfig, tx);
 }
 
+async function buildFinalTx(config: TxBuilderConfig, finalRedeemers: string[], changeAddress: string): Promise<CML.Transaction> {
+    const tx = config.txBuilder
+        .build(
+            CML.ChangeSelectionAlgo.Default,
+            CML.Address.from_bech32(changeAddress),
+        )
+        .build_unchecked();
+    const redeemers = tx.witness_set().redeemers()!;
+    const redeemerList = CML.LegacyRedeemerList.new();
+    for (let i = 0; i < redeemers.as_arr_legacy_redeemer()!.len(); i++) {
+        const redeemer = redeemers.as_arr_legacy_redeemer()!.get(i);
+        const legacyRedeemer = CML.LegacyRedeemer.new(
+            redeemer.tag(),
+            redeemer.index(),
+            // redeemer.data(),
+            CML.PlutusData.from_cbor_hex(finalRedeemers[i]),
+            redeemer.ex_units(),
+        );
+        redeemerList.add(legacyRedeemer);
+    }
+
+    const witnessSet = tx.witness_set();
+    const usedLanguages = CML.LanguageList.new();
+    if (witnessSet.plutus_v1_scripts()) {
+        usedLanguages.add(CML.Language.PlutusV1);
+    }
+    if (witnessSet.plutus_v2_scripts()) {
+        usedLanguages.add(CML.Language.PlutusV2);
+    }
+    if (witnessSet.plutus_v3_scripts()) {
+        usedLanguages.add(CML.Language.PlutusV3);
+    }
+
+    const newRedeemers = CML.Redeemers.new_arr_legacy_redeemer(redeemerList);
+    const plutusDatums = tx.witness_set().plutus_datums() || CML.PlutusDataList.new();
+    const scriptDataHash = CML.calc_script_data_hash(newRedeemers, plutusDatums, config.lucidConfig.costModels, usedLanguages)!;
+    console.log('New script_data_hash:', scriptDataHash.to_hex());
+
+    witnessSet.set_redeemers(newRedeemers);
+
+    // console.log('Eval witnessSet', tx.witness_set().to_cbor_hex());
+    // console.log('Eval script_data_hash', tx.body().script_data_hash()!.to_hex());
+
+    // console.log('New witnessSet', witnessSet.to_cbor_hex());
+    // console.log('New Redeemers:', newRedeemers.to_cbor_hex());
+    
+    
+    const body = tx.body();
+    body.set_script_data_hash(scriptDataHash);
+
+    return CML.Transaction.new(
+        body,
+        witnessSet,
+        true,
+        tx.auxiliary_data(),
+    );
+    // const w = await config.lucidConfig.wallet?.signTx(_tx);
+    // witnessSet.set_vkeywitnesses(w?.vkeywitnesses()!);
+
+    // return CML.Transaction.new(
+    //     body,
+    //     witnessSet,
+    //     true,
+    //     tx.auxiliary_data(),
+    // );
+}
+
 export async function spendTx(
     lucid: LucidEvolution,
-    reference_inputs: UTxO[],
+    referenceInputs: UTxO[],
     inputs: UTxO[],
     spendAddress: string,
     spend: Script,
     lovelace: bigint,
     validTo: number,
-    walletAddress: string,
+    receiptAddress: string,
     zkInput: ZkInput,
     policyId: string,
     tokenName: string,
@@ -624,11 +708,12 @@ export async function spendTx(
     options?: CompleteOptions) {
 
     // get for validation script
-    const { spend: evalSpend, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, tokenName, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, tokenName, true);
     console.log('Eval Spend Address:', evalSpendAddress);
-    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpend.script))
+    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script))
         .hash()
         .to_hex());
+    const scriptIncrements: ScriptIncrements[] = [];
 
     const evalInputs = inputs.map(input => {
         if (input.address === spendAddress) {
@@ -642,96 +727,64 @@ export async function spendTx(
         }
         return input;
     });
+
     const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
-    const evalRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC);
+    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC);
 
-    // get evaluation tx
-    let config = await makeTxBuilderConfig(lucid, reference_inputs, evalInputs, evalRedeemer, evalSpend, walletAddress, lovelace, validTo);
-    const walletInfo = await getWalletInfo(config);
+    const evalReferenceInputs = referenceInputs.map(input => {
+        return {
+            ...input,
+            datum: evalReferenceDatum
+        }
+    });
 
-    let hasScriptExecutions = config.scripts.size > 0;
-    // Set collateral input if there are script executions
-    if (hasScriptExecutions) {
-        const collateralInput = findCollateral(
-            config.lucidConfig.protocolParameters.coinsPerUtxoByte,
-            walletInfo.inputs,
-        );
-        setCollateral(config, collateralInput, walletInfo.address);
-    }
+    const params: SpendTxParams = {
+        lucid,
+        referenceInputs,
+        inputs,
+        redeemers: [""],
+        scripts: [spend],
+        lovelace,
+        spendAddress,
+        validTo,
+        walletAddress: spendAddress,
+        zkInput,
+        policyId,
+        tokenName,
+        network,
+        evalRedeemers: [evalSpendRedeemer],
+        evalScripts: [evalSpendScript],
+        scriptIncrements,
+        options,
+    };
 
-    // get a new txRedeemerBuilder based on updated redeemer with the challenge for evaluation
-    let txRedeemerBuilder = config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress));
+    const txSignBuilder = await buildTx(params, evalInputs, evalReferenceInputs,
+        (params) => {
+            const { lucid, referenceInputs, inputs, redeemers, scripts, lovelace, validTo, evalRedeemers, evalScripts } = params as SpendTxParams;
+            const [spendRedeemer] = evalRedeemers || redeemers;
+            const [spendScript] = evalScripts || scripts;
 
-    let uplcEval: ScriptEvaluation[] = [];
-    if (options?.localUPLCEval !== false) {
-        uplcEval = evalTransaction(config, txRedeemerBuilder.draft_tx(), evalInputs);
-    } else {
-        uplcEval = await evalTransactionProvider(config, txRedeemerBuilder.draft_tx(), evalInputs);
-        // uplcEval[0].ex_units.mem = 8455482;
-        // uplcEval[0].ex_units.steps = 5283365186;
-    }
+            return makeSpendTxBuilderConfig(lucid, referenceInputs, inputs, spendRedeemer, spendScript, receiptAddress, lovelace, validTo);
+        },
+        async (tx: CML.TransactionBody, zkInput: ZkInput) => {
+            let spendRedeemer = await buildRedeemer(tx, zkInput);
+            return [spendRedeemer];
+        });
 
-    // update txBuilder exUnits and adjust tx inputs and outputs
-    applyUPLCEval(uplcEval, config.txBuilder, walletAddress);
-
-    // get final tx (original inputs but still fake redeemer). We do this to have all inputs and outputs and 
-    // then calculate challenge
-    config = await makeTxBuilderConfig(lucid, reference_inputs, inputs, evalRedeemer, spend, walletAddress, lovelace, validTo);
-
-    hasScriptExecutions = config.scripts.size > 0;
-    // Set collateral input if there are script executions
-    if (hasScriptExecutions) {
-        const collateralInput = findCollateral(
-            config.lucidConfig.protocolParameters.coinsPerUtxoByte,
-            walletInfo.inputs,
-        );
-        setCollateral(config, collateralInput, walletInfo.address);
-    }
-
-    // update txBuilder exUnits and adjust tx inputs and outputs
-    applyUPLCEval(uplcEval, config.txBuilder, walletAddress);
-
-    // tx has now final inputs and  outputs
-    // get final redeemer with the challenge for final tx
-    let redeemer = await buildRedeemer(config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress)).draft_body(), zkInput);
-    config = await makeTxBuilderConfig(lucid, reference_inputs, inputs, redeemer, spend, walletAddress, lovelace, validTo);
-
-    // Set collateral input if there are script executions
-    if (hasScriptExecutions) {
-        const collateralInput = findCollateral(
-            config.lucidConfig.protocolParameters.coinsPerUtxoByte,
-            walletInfo.inputs,
-        );
-        setCollateral(config, collateralInput, walletInfo.address);
-    }
-
-    // update txBuilder exUnits and adjust tx inputs and outputs
-    applyUPLCEval(uplcEval, config.txBuilder, walletAddress);
-
-    // final build
-    let tx = config.txBuilder
-        .build(
-            CML.ChangeSelectionAlgo.Default,
-            CML.Address.from_bech32(walletAddress),
-        )
-        .build_unchecked();
-
-    const txSignBuilder = makeTxSignBuilder(config.lucidConfig, tx);
     const txSigned = await txSignBuilder.sign.withWallet().complete();
 
     console.log('cbor', txSigned.toCBOR());
-    // console.log('cbor (canonical)', txSigned.toCBOR({ canonical: true }));
     console.log('Tx Id:', txSigned.toHash());
 
-    // const txHash = await txSigned.submit();
-    // console.log('Tx Id (Submit):', txHash);
-    // const success = await lucid.awaitTx(txHash);
-    // console.log('Success?', success);
+    const txHash = await txSigned.submit();
+    console.log('Tx Id (Submit):', txHash);
+    const success = await lucid.awaitTx(txHash);
+    console.log('Success?', success);
 }
 
 export async function registerAndDelegateTx(
     lucid: LucidEvolution,
-    reference_inputs: UTxO[],
+    referenceInputs: UTxO[],
     inputs: UTxO[],
     rewardAddress: string,
     stake: Script,
@@ -760,9 +813,27 @@ export async function registerAndDelegateTx(
     const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
     const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC);
 
+    const evalInputs = inputs.map(input => {
+        if (input.address === spendAddress) {
+            return {
+                ...input,
+                txHash: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // this is to force the mock evaluation to use additional UTxOs. This way 
+                address: evalSpendAddress
+            }
+        }
+        return input;
+    });
+
+    const evalReferenceInputs = referenceInputs.map(input => {
+        return {
+            ...input,
+            datum: evalReferenceDatum
+        }
+    });
+
     const params: StakeAndDelegateTxParams = {
         lucid,
-        reference_inputs,
+        referenceInputs,
         inputs,
         redeemers: [publishRedeemer, ""],
         scripts: [stake, spend],
@@ -780,30 +851,17 @@ export async function registerAndDelegateTx(
         options,
     };
 
-    const txSignBuilder = await buildTx(params, (params) => {
-        const { lucid, reference_inputs, inputs, redeemers, poolId, scripts, rewardAddress, validTo, evalRedeemers, evalScripts } = params as StakeAndDelegateTxParams;
+    const txSignBuilder = await buildTx(params, evalInputs, evalReferenceInputs, (params) => {
+        const { lucid, referenceInputs, inputs, redeemers, poolId, scripts, rewardAddress, validTo, evalRedeemers, evalScripts } = params as StakeAndDelegateTxParams;
         const [rRedeemer, sRedeemer] = evalRedeemers || redeemers;
         const [stakeScript, spendScript] = evalScripts || scripts;
         const rAddress = evalScripts ? evalRewardAddress : rewardAddress
-        return makeRegisterStakeTxBuilderConfig(lucid, reference_inputs, inputs, rRedeemer, sRedeemer, poolId, stakeScript, spendScript, rAddress, validTo)
-    }, () => {
-        const evalInputs = inputs.map(input => {
-            if (input.address === spendAddress) {
-                return {
-                    ...input,
-                    txHash: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // this is to force the mock evaluation to use additional UTxOs. This way evaluation will refer to the "fake" script
-                    // txHash: "29e0b0742664ea8f8aacd4696323146c5e4685b92d98a2982fdf561e71918262", // this is to force the mock evaluation to use additional UTxOs. This way evaluation will refer to the "fake" script
-                    // outputIndex: 2,
-                    address: evalSpendAddress
-                }
-            }
-            return input;
+        return makeRegisterStakeTxBuilderConfig(lucid, referenceInputs, inputs, rRedeemer, sRedeemer, poolId, stakeScript, spendScript, rAddress, validTo)
+    },
+        async (tx: CML.TransactionBody, zkInput: ZkInput) => {
+            let spendRedeemer = await buildRedeemer(tx, zkInput);
+            return [publishRedeemer, spendRedeemer];
         });
-        return evalInputs;
-    }, async (tx: CML.TransactionBody, zkInput: ZkInput) => {
-        let spendRedeemer = await buildRedeemer(tx, zkInput);
-        return [publishRedeemer, spendRedeemer];
-    });
 
     const txSigned = await txSignBuilder.sign.withWallet().complete();
 
@@ -819,7 +877,7 @@ export async function registerAndDelegateTx(
 
 export async function withdrawTx(
     lucid: LucidEvolution,
-    reference_inputs: UTxO[],
+    referenceInputs: UTxO[],
     inputs: UTxO[],
     amount: Lovelace,
     rewardAddress: string,
@@ -856,9 +914,27 @@ export async function withdrawTx(
     const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
     const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC);
 
+    const evalInputs = inputs.map(input => {
+        if (input.address === spendAddress) {
+            return {
+                ...input,
+                txHash: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // this is to force the mock evaluation to use additional UTxOs. This way 
+                address: evalSpendAddress
+            }
+        }
+        return input;
+    });
+
+    const evalReferenceInputs = referenceInputs.map(input => {
+        return {
+            ...input,
+            datum: evalReferenceDatum
+        }
+    });
+
     const params: StakeAndDelegateTxParams = {
         lucid,
-        reference_inputs,
+        referenceInputs,
         inputs,
         redeemers: [withdrawRedeemer, ""],
         scripts: [stake, spend],
@@ -877,30 +953,18 @@ export async function withdrawTx(
         options,
     };
 
-    const txSignBuilder = await buildTx(params, (params) => {
-        const { lucid, reference_inputs, inputs, redeemers, poolId, scripts, rewardAddress, validTo, evalRedeemers, evalScripts } = params as StakeAndDelegateTxParams;
-        const [rRedeemer, sRedeemer] = evalRedeemers || redeemers;
-        const [stakeScript, spendScript] = evalScripts || scripts;
-        const rAddress = evalScripts ? evalRewardAddress : rewardAddress
-        return makeWithdrawTxBuilderConfig(lucid, reference_inputs, inputs, rRedeemer, sRedeemer, poolId, stakeScript, spendScript, rAddress, amount, validTo)
-    }, () => {
-        const evalInputs = inputs.map(input => {
-            if (input.address === spendAddress) {
-                return {
-                    ...input,
-                    txHash: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // this is to force the mock evaluation to use additional UTxOs. This way evaluation will refer to the "fake" script
-                    // txHash: "29e0b0742664ea8f8aacd4696323146c5e4685b92d98a2982fdf561e71918262", // this is to force the mock evaluation to use additional UTxOs. This way evaluation will refer to the "fake" script
-                    // outputIndex: 2,
-                    address: evalSpendAddress
-                }
-            }
-            return input;
+    const txSignBuilder = await buildTx(params, evalInputs, evalReferenceInputs,
+        (params) => {
+            const { lucid, referenceInputs, inputs, redeemers, poolId, scripts, rewardAddress, validTo, evalRedeemers, evalScripts } = params as StakeAndDelegateTxParams;
+            const [rRedeemer, sRedeemer] = evalRedeemers || redeemers;
+            const [stakeScript, spendScript] = evalScripts || scripts;
+            const rAddress = evalScripts ? evalRewardAddress : rewardAddress
+            return makeWithdrawTxBuilderConfig(lucid, referenceInputs, inputs, rRedeemer, sRedeemer, poolId, stakeScript, spendScript, rAddress, amount, validTo)
+        },
+        async (tx: CML.TransactionBody, zkInput: ZkInput) => {
+            let spendRedeemer = await buildRedeemer(tx, zkInput);
+            return [withdrawRedeemer, spendRedeemer];
         });
-        return evalInputs;
-    }, async (tx: CML.TransactionBody, zkInput: ZkInput) => {
-        let spendRedeemer = await buildRedeemer(tx, zkInput);
-        return [withdrawRedeemer, spendRedeemer];
-    });
 
     const txSigned = await txSignBuilder.sign.withWallet().complete();
 
@@ -1168,7 +1232,7 @@ async function buildRedeemer(txBody: CML.TransactionBody, zkInput: ZkInput) {
     return redeemer;
 }
 
-function makeTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[], inputs: UTxO[], spendRedeemer: string, spend: Script, walletAddress: string, lovelace: bigint, validTo: number) {
+function makeSpendTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[], inputs: UTxO[], spendRedeemer: string, spend: Script, walletAddress: string, lovelace: bigint, validTo: number) {
     return lucid
         .newTx()
         .readFrom(reference_inputs)
