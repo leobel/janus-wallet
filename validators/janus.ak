@@ -45,7 +45,7 @@ validator account(params: AccountParameters) {
     let challengeId = build_challenge(self_tx) |> hash_challenge
     trace @"challengeId": challengeId
     trace @"signals challengeId": signals.challenge
-    trace @"is for evaluetion?": if params.for_evaluation {
+    trace @"is for evaluation?": if params.for_evaluation {
       @"true"
     } else {
       @"false"
@@ -88,7 +88,7 @@ validator account(params: AccountParameters) {
     trace @"overflow": overflow
     let public = [userId, hash, challenge, userId, challenge, hash]
     if params.for_evaluation {
-      // NOTE: we're passing maximum values as public which are the only affecting exUnits dynamically (pA. pB, pC cost is constant)
+      // NOTE: we're passing maximum values as public which are the only one affecting exUnits dynamically (pA, pB, pC cost is constant)
       // Since we're using Poseidon.hash we can't determine which password generate hash equal to scalar.field_prime - 1, therefore 
       // proof isn't valid.
       // builtin.bls12_381_g1_scalar_mul(scalar.to_int(e), point) // scalar.to_int(e) is each number in public
@@ -96,6 +96,8 @@ validator account(params: AccountParameters) {
       //    TwoArgumentsCosting::constant_cost(18),
       //    TwoArgumentsCosting::linear_in_x(76433006, 8868), // TwoArguments::LinearInX(l) => l.slope(=8868) * x(=scalar.to_int(e)) + l.intercept(=76433006),
       // ) 
+      // max exUnit (cpu/steps): 10,000,000,000
+      // max exUnit (mem): 14,000,000
       !zk_verify(proof, public, zkey)?
     } else {
       zk_verify(proof, public, zkey)?
@@ -166,10 +168,10 @@ test mint_ok() {
 }
 
 test verify_ok() {
-  trace @"userId": scalar.from_bytearray_big_endian(#"466f6e74757323303030")
-  trace @"hash": scalar.from_bytearray_big_endian(
-    #"16de4e0412334a7a78664ef6307117e601c9db5213b7ea96a1edf1d1fab543de",
-  )
+  // trace @"userId": scalar.from_bytearray_big_endian(#"466f6e74757323303030")
+  // trace @"hash": scalar.from_bytearray_big_endian(
+  //   #"16de4e0412334a7a78664ef6307117e601c9db5213b7ea96a1edf1d1fab543de",
+  // )
   let userId = #"466f6e74757323303030"
   let hash =
     bytearray.from_int_big_endian(
