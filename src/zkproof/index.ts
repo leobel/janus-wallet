@@ -214,9 +214,3 @@ const input = {
     // "hash": 10343661163184219313272354919635983875711247223011266158462328948931637363678n,
     // "pwd": 1234n
 }
-
-generate(input).then(({proof}) => {
-    console.log('[pA, pB, pC]:', proof);
-    // console.log('[vk_alpha_1, vk_beta_2, vk_gamma_2, vk_delta_2, ...IC]:', verification);
-
-});

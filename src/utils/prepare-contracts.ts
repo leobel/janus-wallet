@@ -1,10 +1,14 @@
-import { applyDoubleCborEncoding, applyParamsToScript, Data, MintingPolicy, Network, SpendingValidator, Credential, validatorToAddress, validatorToScriptHash, Blockfrost, Lucid, getAddressDetails, UTxO, Assets, CML, TxBuilderConfig, Wallet, utxoToTransactionInput, utxoToTransactionOutput, SLOT_CONFIG_NETWORK, LucidEvolution, Script, makeTxSignBuilder, TxBuilderError, stringify, isEqualUTxO, selectUTxOs, assetsToValue, sortUTxOs, utxoToCore, EvalRedeemer, toCMLRedeemerTag, PROTOCOL_PARAMETERS_DEFAULT, createCostModels, CertificateValidator, validatorToRewardAddress, PoolId, TxSignBuilder, PolicyId, Lovelace, CBORHex, RedeemerTag } from "@lucid-evolution/lucid";
+import { applyDoubleCborEncoding, applyParamsToScript, Data, MintingPolicy, Network, SpendingValidator, Credential, validatorToAddress, validatorToScriptHash,
+     Blockfrost, Lucid, getAddressDetails, UTxO, Assets, CML, TxBuilderConfig, Wallet, utxoToTransactionInput, 
+     utxoToTransactionOutput, SLOT_CONFIG_NETWORK, LucidEvolution, Script, makeTxSignBuilder, 
+     TxBuilderError, stringify, isEqualUTxO, selectUTxOs, assetsToValue, sortUTxOs, utxoToCore, 
+     EvalRedeemer, toCMLRedeemerTag, PROTOCOL_PARAMETERS_DEFAULT, createCostModels, CertificateValidator, 
+     validatorToRewardAddress, PoolId, TxSignBuilder, PolicyId, Lovelace, CBORHex, RedeemerTag } from "@lucid-evolution/lucid";
 import * as UPLC from "@lucid-evolution/uplc";
-import blueprint from "../plutus.json" assert { type: 'json' };
+import blueprint from "../../plutus.json" assert { type: 'json' };
 import { Address, Certificate, Challenge, ChallengeOutput, Credential as ContractCredential, Datum, DelegateRepresentative, Input, Mint, Output, OutputReference, Proof, PublishRedeemer, Redeemer, ReferenceInputs, Signals, Spend, StakeCredential, Value, WithdrawRedeemer, ZkDatum } from "./contract-types";
-import * as fs from 'fs';
 import { pipe, Record, Array as _Array, BigInt as _BigInt, Option } from "effect";
-import { generate } from "./zkproof";
+import { generate } from "../zkproof";
 
 export type Validators = {
     spend: SpendingValidator;
@@ -76,20 +80,6 @@ export function readFooValidator() {
 
 }
 
-// const lucid = await Lucid(
-//     new Blockfrost(
-//         "https://cardano-preview.blockfrost.io/api/v0",
-//         "preview1OQSKlQ6tb3WYBx9bqlz7kDFhuglmfvL"
-//     ),
-//     "Preview"
-// );
-
-// const prvKey = fs.readFileSync('./src/me.sk').toString();
-// lucid.selectWallet.fromPrivateKey(prvKey);
-// const walletAddress = await lucid.wallet().address();
-// const walletPaymentHash = getAddressDetails(walletAddress).paymentCredential!.hash;
-// const walletStakeHash = getAddressDetails(walletAddress).stakeCredential?.hash;
-
 export function generateMintPolicy(mint_script: string, nonce?: string) {
     const params = Data.to({
         nonce: nonce || randomNonce()
@@ -123,12 +113,12 @@ export function generateSpendScript(
     assetName: string,
     forEvaluation = false,
 ) {
-
     const params = Data.to({
         policyId,
         assetName,
         forEvaluation: forEvaluation
     }, Spend);
+  
     console.log('Spend params:', params);
     const spendParams = Data.from(params);
     console.log('Spend params:', spendParams.toString());
@@ -457,7 +447,7 @@ export interface ZKProof {
 export interface ZkInput {
     userId: string,
     hash: string,
-    pwd: string,
+    pwd?: string,
 }
 
 const validators = readValidators();
@@ -1204,6 +1194,10 @@ function calculateMinLovelace(
 
 async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
     const { userId, hash, pwd } = zkInput;
+
+    if (!pwd) {
+        throw new Error('Password is required');
+    }
 
     const challengeId = serialiseBody(txBody);
     console.log('serialise (challenge id):', challengeId.toUpperCase());

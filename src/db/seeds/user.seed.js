@@ -1,0 +1,29 @@
+/**
+ * @param { import("knex").Knex } knex
+ * @returns { Promise<void> } 
+*/
+
+const seedUsers = [
+    {
+        id: 'b2c67a6f-bc77-4d13-a3e7-521086960fe7',
+        user_id: '466f6e74757323303030', // BigInt(`0x${fromText('Fontus#000')}`).toString(16)
+        pwd_hash: '16de4e0412334a7a78664ef6307117e601c9db5213b7ea96a1edf1d1fab543de', // pwd 12345
+        zk_verification_ref: {
+            address: 'addr_test1vq7uu7zy7d4j8wxrly90hfq25xyw0uwn7m52e5w4gnk3m2gprf2za',
+            tx_hash: 'd6da036c1aeb7680323258c763a2a6e25be9b280c2a8fedd5e43cb89730fdadf',
+            output_index: 0,
+            lovelace: 4_366_030,
+            policy_id: 'b8a5e329b500a66376047165cdfce62c3ecf245fd81d101533f81422',
+            token_name: 'Fontus#000',
+            datum: 'd8799f4a466f6e74757323303030582016de4e0412334a7a78664ef6307117e601c9db5213b7ea96a1edf1d1fab543ded8799f5830b18db01619508d589ba45cdcc9c9ab4dbddc33e08bc4dbddea565c10dc743fd66510d3f49c6343999caf540eaa0c4e035f5840845f7a4f6d0fbcaf0648d9c2657f19a33f4e2124c284d68688f209abf54d5a1d1afc47de55c24e662c47f7632a760a8016e8ba01eb4b0d4a2db67fe5abed5ae15820a09e035dbe984a1426e440a4f0038276792f87cdb2bc35dc185a618d352d7f54ff5f584093e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc510515820c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8ff5f5840a2341a098a95305955386a3e0e4e2879e6206342b9c9a8da0559190e82f3ed1478158f2ca1ef4db7deab124b7c85b0f403d1a968b4812e6c9c9392d926b86da5582001e23f6c94cffcc62b02393d7807a6f381e40ca49a9b4a2b522518f72927ca15ff9f5830ac2fcd68b85b64e6c3bc11a9dadd1b24e7786738475cf2fe0acdd9b41f773af18ec12601e368d2e920f299f9e6bed4805830a33061a2549ea773d275539b2e92caa6f936404635db1da3199ec71f06faf2cba8effef6860bcb0376259a681ef043c35830a3f6177ea5ef5797249df745be266271bd65a6a1c9c9fae2df3dd2c7e9e6b5751f288fba11950455a9a1f9a054bad8545830a5d227c013957479be181bf43c394a49e8bf14585fd04a4ca72102e3e5ab41661411eeb15986ad3d3a09eb25bb2b7b12583093a152a9cd7d4b81a08989f67fcb958e96b14ef4d3cefd26ad992059df4d252a9f00b5f9f2b5b8a59cf4eca9d78848935830b8cd6daceeaa3b53d707ae2b99dc87e0dbbf58a1e310cff5cd3bea151d90962372de834a519a879c05bc470a016202d65830a6b5d4a12faf84ac46dba1793716cdb14009af64d0edcd5f1c0ca872fa53bc5732da912222fc3d4fc7ea2fc1b9fbff41ffffff'
+        },
+        created_at: new Date(),
+        updated_at: new Date()
+    }
+];
+
+export async function seed(knex) {
+    // Deletes ALL existing entries
+    await knex('users').del()
+    await knex('users').insert(seedUsers);
+};
