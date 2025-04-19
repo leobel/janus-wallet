@@ -9,6 +9,7 @@ import blueprint from "../../plutus.json" assert { type: 'json' };
 import { Address, Certificate, Challenge, ChallengeOutput, Credential as ContractCredential, Datum, DelegateRepresentative, Input, Mint, Output, OutputReference, Proof, PublishRedeemer, Redeemer, ReferenceInputs, Signals, Spend, StakeCredential, Value, WithdrawRedeemer, ZkDatum } from "./contract-types";
 import { pipe, Record, Array as _Array, BigInt as _BigInt, Option } from "effect";
 import { generate } from "../zkproof";
+import { getCollaterls, signCollateral } from "../api/services/collateral.service";
 
 export type Validators = {
     spend: SpendingValidator;
@@ -527,6 +528,8 @@ type StakeAndDelegateTxParams = {
 
 type TxBuilderParams = SpendTxParams | StakeAndDelegateTxParams;
 
+
+
 async function buildTx(
     params: TxBuilderParams,
     evalInputs: UTxO[],
@@ -544,11 +547,12 @@ async function buildTx(
         evalRedeemers: evalRedeemers,
         evalScripts: evalScripts
     });
-    const walletInfo = await getWalletInfo(config);
-    const collateralInput = findCollateral(config.lucidConfig.protocolParameters.coinsPerUtxoByte, walletInfo.inputs);
+    // TODO: use getCollateralsProvider
+    const collaterals = await getCollaterls(config);
+    // const collateralInput = findCollateral(config.lucidConfig.protocolParameters.coinsPerUtxoByte, walletInfo.inputs);
 
     // Set collateral input if there are script executions
-    setCollateral(config, collateralInput, walletInfo.address);
+    setCollateral(config, collaterals.inputs, collaterals.address);
 
     // get a new txRedeemerBuilder based on updated redeemer with the challenge for evaluation
     let txRedeemerBuilder = config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress));
@@ -572,7 +576,7 @@ async function buildTx(
     config = await makeTxBuilderConfig({ ...params, evalRedeemers: evalRedeemers, evalScripts: undefined });
 
     // Set collateral input if there are script executions
-    setCollateral(config, collateralInput, walletInfo.address);
+    setCollateral(config, collaterals.inputs, collaterals.address);
 
     // update txBuilder exUnits and 
     // adjust tx inputs and outputs
@@ -583,7 +587,13 @@ async function buildTx(
     const finalRedeemers = await makeFinalRdeemers(config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress)).draft_body(), zkInput);
 
      // final build
-    const tx = await buildFinalTx(config, finalRedeemers, walletAddress);
+     const _tx = config.txBuilder
+        .build(
+            CML.ChangeSelectionAlgo.Default,
+            CML.Address.from_bech32(walletAddress),
+        )
+        .build_unchecked()
+    const tx = await buildFinalTx(_tx, finalRedeemers, config.lucidConfig.costModels)
 
     // config = await makeTxBuilderConfig({ ...params, redeemers: finalRedeemers, evalRedeemers: undefined, evalScripts: undefined });
 
@@ -615,14 +625,13 @@ async function buildTx(
     return makeTxSignBuilder(config.lucidConfig, tx);
 }
 
-async function buildFinalTx(config: TxBuilderConfig, finalRedeemers: string[], changeAddress: string): Promise<CML.Transaction> {
-    const tx = config.txBuilder
-        .build(
-            CML.ChangeSelectionAlgo.Default,
-            CML.Address.from_bech32(changeAddress),
-        )
-        .build_unchecked();
-    const redeemers = tx.witness_set().redeemers()!;
+async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costModels: CML.CostModels): Promise<CML.Transaction> {
+    const body = tx.body();
+    const witnessSet = tx.witness_set();
+
+
+
+    const redeemers = witnessSet.redeemers()!;
     const redeemerList = CML.LegacyRedeemerList.new();
     for (let i = 0; i < redeemers.as_arr_legacy_redeemer()!.len(); i++) {
         const redeemer = redeemers.as_arr_legacy_redeemer()!.get(i);
@@ -635,8 +644,7 @@ async function buildFinalTx(config: TxBuilderConfig, finalRedeemers: string[], c
         );
         redeemerList.add(legacyRedeemer);
     }
-
-    const witnessSet = tx.witness_set();
+    
     const usedLanguages = CML.LanguageList.new();
     if (witnessSet.plutus_v1_scripts()) {
         usedLanguages.add(CML.Language.PlutusV1);
@@ -649,8 +657,8 @@ async function buildFinalTx(config: TxBuilderConfig, finalRedeemers: string[], c
     }
 
     const newRedeemers = CML.Redeemers.new_arr_legacy_redeemer(redeemerList);
-    const plutusDatums = tx.witness_set().plutus_datums() || CML.PlutusDataList.new();
-    const scriptDataHash = CML.calc_script_data_hash(newRedeemers, plutusDatums, config.lucidConfig.costModels, usedLanguages)!;
+    const plutusDatums = witnessSet.plutus_datums() || CML.PlutusDataList.new();
+    const scriptDataHash = CML.calc_script_data_hash(newRedeemers, plutusDatums, costModels, usedLanguages)!;
     console.log('New script_data_hash:', scriptDataHash.to_hex());
 
     witnessSet.set_redeemers(newRedeemers);
@@ -661,9 +669,14 @@ async function buildFinalTx(config: TxBuilderConfig, finalRedeemers: string[], c
     // console.log('New witnessSet', witnessSet.to_cbor_hex());
     // console.log('New Redeemers:', newRedeemers.to_cbor_hex());
     
-    
-    const body = tx.body();
     body.set_script_data_hash(scriptDataHash);
+
+    // add collateral signature
+    const collateralWitness = signCollateral(body)
+    const vKeyWitnesses = witnessSet.vkeywitnesses() || CML.VkeywitnessList.new()
+    vKeyWitnesses.add(collateralWitness)
+
+    witnessSet.set_vkeywitnesses(vKeyWitnesses)
 
     return CML.Transaction.new(
         body,
@@ -682,7 +695,7 @@ async function buildFinalTx(config: TxBuilderConfig, finalRedeemers: string[], c
     // );
 }
 
-export async function spendTx(
+export async function buildUncheckedTx(
     lucid: LucidEvolution,
     referenceInputs: UTxO[],
     inputs: UTxO[],
@@ -748,28 +761,101 @@ export async function spendTx(
         options,
     };
 
-    const txSignBuilder = await buildTx(params, evalInputs, evalReferenceInputs,
+    return _buildUncheckedTx(params, evalInputs, evalReferenceInputs,
         (params) => {
             const { lucid, referenceInputs, inputs, redeemers, scripts, lovelace, validTo, evalRedeemers, evalScripts } = params as SpendTxParams;
             const [spendRedeemer] = evalRedeemers || redeemers;
             const [spendScript] = evalScripts || scripts;
-
+            
             return makeSpendTxBuilderConfig(lucid, referenceInputs, inputs, spendRedeemer, spendScript, receiptAddress, lovelace, validTo);
-        },
-        async (tx: CML.TransactionBody, zkInput: ZkInput) => {
-            let spendRedeemer = await buildRedeemer(tx, zkInput);
-            return [spendRedeemer];
-        });
+        })
+}
+    
 
-    const txSigned = await txSignBuilder.sign.withWallet().complete();
+async function _buildUncheckedTx(
+    params: TxBuilderParams,
+    evalInputs: UTxO[],
+    evalReferenceInputs: UTxO[],
+    makeTxBuilderConfig: (params: TxBuilderParams) => Promise<TxBuilderConfig>,
+): Promise<CML.Transaction> {
+    const { walletAddress, zkInput, options, network, policyId, tokenName, evalRedeemers, evalScripts, scriptIncrements } = params;
 
-    console.log('cbor', txSigned.toCBOR());
-    console.log('Tx Id:', txSigned.toHash());
+    // get evaluation tx
+    let config = await makeTxBuilderConfig({
+        ...params,
+        referenceInputs: evalReferenceInputs,
+        inputs: evalInputs,
+        evalRedeemers: evalRedeemers,
+        evalScripts: evalScripts
+    });
+    const collaterals = await getCollaterls(config);
 
-    const txHash = await txSigned.submit();
+    // Set collateral input if there are script executions
+    setCollateral(config, collaterals.inputs, collaterals.address);
+
+    // get a new txRedeemerBuilder based on updated redeemer with the challenge for evaluation
+    let txRedeemerBuilder = config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress));
+    const increments = getEvalIncrements(scriptIncrements, config.txBuilder);
+    let uplcEval: ScriptEvaluation[] = [];
+    const additionalUtxos = evalInputs.concat(evalReferenceInputs);
+    if (options?.localUPLCEval !== false) {
+        uplcEval = evalTransaction(config, txRedeemerBuilder.draft_tx(), evalInputs, increments);
+    } else {
+        uplcEval = await evalTransactionProvider(config, txRedeemerBuilder.draft_tx(), evalInputs, increments);
+        // uplcEval[0].ex_units.mem = 8455482;
+        // uplcEval[0].ex_units.steps = 5283365186;
+    }
+
+    // update txBuilder exUnits and 
+    // adjust tx inputs and outputs
+    applyUPLCEval(uplcEval, config.txBuilder, walletAddress);
+
+    // get final tx (original inputs but still fake redeemer). We do this to have all inputs and outputs and 
+    // then calculate challenge
+    config = await makeTxBuilderConfig({ ...params, evalRedeemers: evalRedeemers, evalScripts: undefined });
+
+    // Set collateral input if there are script executions
+    setCollateral(config, collaterals.inputs, collaterals.address);
+
+    // update txBuilder exUnits and 
+    // adjust tx inputs and outputs
+    applyUPLCEval(uplcEval, config.txBuilder, walletAddress);
+
+    const tx = config.txBuilder
+    .build(
+        CML.ChangeSelectionAlgo.Default,
+        CML.Address.from_bech32(walletAddress),
+    )
+    .build_unchecked();
+    return tx;
+}
+
+export function buildZKProofRedeemer(txCbor: string, zkInput: ZkInput): Promise<string> {
+    const txBody = CML.Transaction.from_cbor_hex(txCbor).body()
+    return buildRedeemer(txBody, zkInput)
+}
+
+export async function spendTx(
+    lucid: LucidEvolution,
+    redeemer: string,
+    txCbor: string) {
+
+    const config = lucid.config()
+    const provider = config.provider
+    const tx = await buildFinalTx(CML.Transaction.from_cbor_hex(txCbor), [redeemer], config.costModels)
+
+
+    const cbor = tx.to_cbor_hex()
+    console.log('cbor', cbor);
+    const txId = CML.hash_transaction(tx.body()).to_hex();
+    console.log('Tx Id:', txId);
+
+
+    const txHash = await provider.submitTx(cbor)
     console.log('Tx Id (Submit):', txHash);
-    const success = await lucid.awaitTx(txHash);
-    console.log('Success?', success);
+    // const success = await lucid.awaitTx(txHash);
+    // console.log('Success?', success);
+    return txId;
 }
 
 export async function registerAndDelegateTx(
@@ -1219,10 +1305,8 @@ async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
 }
 
 async function buildRedeemer(txBody: CML.TransactionBody, zkInput: ZkInput) {
-    const { userId, hash } = zkInput;
     const [challengeId, pA, pB, pC] = await generateProof(txBody, zkInput);
-
-    const redeemer = getSpendRedeemer(userId, hash, challengeId, pA, pB, pC);
+    const redeemer = getSpendRedeemer(zkInput.userId, zkInput.hash, challengeId, pA, pB, pC);
     return redeemer;
 }
 
