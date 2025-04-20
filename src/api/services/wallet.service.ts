@@ -1,7 +1,8 @@
-import { fromText, Network, UTxO } from '@lucid-evolution/lucid';
+import { Assets, fromText, Network, TxOutput, UTxO } from '@lucid-evolution/lucid';
 import { getUserById } from '../../repositories/user.repository.js'
 import { readValidators, generateSpendScript, spendTx, ZkInput, buildUncheckedTx, buildZKProofRedeemer } from '../../utils/prepare-contracts.js';
 import { getLucid } from '../../utils/index.js';
+import { coinSelection } from '../../utils/coin-selection.js';
 
 const validators = readValidators();
 
@@ -11,7 +12,7 @@ function buildUserId(username: string): string {
     return userId
 }
 
-export async function buildSpendTx(username: string, amount: number, receiveAddress: string, network: Network, assets: any) {
+export async function buildSpendTx(username: string, amount: number, receiveAddress: string, network: Network, assets: Assets) {
     const tokenName = fromText(username)
     const userId = buildUserId(username)
     const user = await getUserById(userId)
@@ -43,17 +44,13 @@ export async function buildSpendTx(username: string, amount: number, receiveAddr
 
     const lucid = await getLucid;
 
-    // TODO: use cardano-inputSelection or 
-    // lucid evolution you can pass all UTxOs and it'll only take the necessary ones?. It seems we do need to pass minimum inputs to prevent evaluateTx and other logics depending on tx inputs size to fails due to size too big
-    const utxos = (await lucid.utxosAt(walletAddress)).reduce((acc: {utxos: UTxO[], amount: number}, utxo) => {
-        if (acc.amount < lovelace) {
-            acc.utxos.push(utxo)
-            acc.amount += Number(utxo.assets["lovelace"])
-        }
-        return acc
-        }, {utxos: [], amount: 0}).utxos;
-    console.log('UTXOs:', utxos);
-    const tx = await buildUncheckedTx(lucid, [utxoRef], utxos, walletAddress, spend, BigInt(amount), validTo, receiveAddress, zkInput, policyId, tokenName, network, { localUPLCEval: true })
+    const utxos = (await lucid.utxosAt(walletAddress))
+    console.log('Wallet UTXOs:', utxos);
+    const reqLovelace = BigInt(amount)
+    const outputs: TxOutput[] = [{ address: receiveAddress, assets: {...assets, lovelace: reqLovelace }}] 
+    const { inputs } = coinSelection(utxos, outputs, walletAddress)
+    console.log("Coin Selection Inputs:", inputs)
+    const tx = await buildUncheckedTx(lucid, [utxoRef], inputs, walletAddress, spend, reqLovelace, validTo, receiveAddress, zkInput, policyId, tokenName, network, { localUPLCEval: true })
     return tx.to_cbor_hex()
 }
 

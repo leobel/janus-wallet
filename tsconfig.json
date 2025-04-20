@@ -20,7 +20,7 @@
     "allowSyntheticDefaultImports": true,
     "useDefineForClassFields": false,
     "resolveJsonModule": true,
-    "types": ["node", "./src/types"]
+    "types": ["jest", "node", "./src/types"]
   },
-  "include": ["./src"],
+  "include": ["./test", "./src"],
 }

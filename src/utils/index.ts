@@ -11,4 +11,3 @@ export const getLucid = (async () => {
     );
     return lucid;
 })();
-
