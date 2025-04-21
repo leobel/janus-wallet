@@ -144,8 +144,9 @@ export type Proof = Data.Static<typeof ProofSchema>;
 export const Proof = ProofSchema as unknown as Proof;
 
 const RedeemerSchema = Data.Object({
-    signals: SignalsSchema,
-    proof: ProofSchema
+    idx: Data.Nullable(Data.Integer()),
+    signals: Data.Nullable(SignalsSchema),
+    proof: Data.Nullable(ProofSchema)
 });
 
 export type Redeemer = Data.Static<typeof RedeemerSchema>;

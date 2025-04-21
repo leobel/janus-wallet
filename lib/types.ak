@@ -36,8 +36,9 @@ pub type Proof {
 }
 
 pub type Redeemer {
-  signals: PubSignals,
-  proof: Proof,
+  idx: Option<Int>,
+  signals: Option<PubSignals>,
+  proof: Option<Proof>,
 }
 
 pub type Parameters {

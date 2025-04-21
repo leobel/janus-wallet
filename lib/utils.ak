@@ -25,6 +25,38 @@ use types.{
   PubSignals, Redeemer, ZkDatum, ZkVerificationKey,
 }
 
+pub fn evaluating_script(inputs: List<Input>, self_ref: OutputReference, idx: Option<Int>) -> (Bool, Bool) {
+  expect Some(script_input) = find_script_input(inputs, self_ref)
+  expect Script(script_hash) = script_input.output.address.payment_credential
+  let index = when idx is {
+    None -> 0
+    Some(i) -> i
+  }
+  if evaluating_script_at(inputs, script_hash, index) {
+    (True, evaluating_this_script(inputs, script_input, index))
+  } else {
+    trace @"tx is not evaluating neither this script or at index": index
+    (False, False)
+  }
+}
+
+pub fn evaluating_script_at(inputs: List<Input>, own_script_hash: ScriptHash, idx: Int) -> Bool {
+  expect Some(input) = list.at(inputs, idx)
+  expect Script(script_hash) = input.output.address.payment_credential
+  script_hash == own_script_hash
+}
+
+pub fn evaluating_this_script(inputs: List<Input>, input: Input, idx: Int) -> Bool {
+  expect Some(i) = list.index_of(inputs, input)
+  i == idx
+}
+
+pub fn find_script_input(inputs: List<Input>, output_reference: OutputReference) -> Option<Input> {
+  inputs
+    |> transaction.find_input(output_reference)
+
+}
+
 pub fn build_challenge(tx: Transaction) -> Challenge {
   let Transaction {
     reference_inputs: tx_reference_inputs,

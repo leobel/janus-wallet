@@ -8,6 +8,7 @@ const seedUsers = [
         id: 'b2c67a6f-bc77-4d13-a3e7-521086960fe7',
         user_id: '466f6e74757323303030', // BigInt(`0x${fromText('Fontus#000')}`).toString(16)
         pwd_hash: '16de4e0412334a7a78664ef6307117e601c9db5213b7ea96a1edf1d1fab543de', // pwd 12345
+        wallet_address: 'addr_test1xz268s0adms4pf3cp2jcecp3y3z2qsc880ejf3kjpwl9q85450ql6mhp2znrsz493nsrzfzy5ppswwlnynrdyza72q0q3twllr',
         zk_verification_ref: {
             address: 'addr_test1vq7uu7zy7d4j8wxrly90hfq25xyw0uwn7m52e5w4gnk3m2gprf2za',
             tx_hash: 'd6da036c1aeb7680323258c763a2a6e25be9b280c2a8fedd5e43cb89730fdadf',

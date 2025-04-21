@@ -11,9 +11,9 @@ export default (network: Network) => {
     try {
       const { userId } = req.params;
       const { amount, receive_address: receiveAddress, assets } = req.body;
-      const tx = await buildSpendTx(userId, amount, receiveAddress, network, assets);
+      const result = await buildSpendTx(userId, amount, receiveAddress, network, assets);
 
-      res.status(200).json({ tx });
+      res.status(200).json(result);
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -22,8 +22,8 @@ export default (network: Network) => {
   const spendFunds = async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
-      const { redeemer, tx } = req.body;
-      const txId = await spendWalletFunds(userId, redeemer, tx);
+      const { redeemers, tx } = req.body;
+      const txId = await spendWalletFunds(userId, redeemers, tx);
 
       res.status(200).json({ txId });
     } catch (error: any) {
@@ -53,10 +53,10 @@ export default (network: Network) => {
   const sign = async (req: Request, res: Response) => {
     try {
       const { userId } = req.params
-      const { pwd, tx: txCbor } = req.body
+      const { pwd, tx: txCbor, size } = req.body
 
-      const redeemer = await generateRedeemer(userId, pwd, txCbor)
-      res.status(200).json({ redeemer });
+      const redeemers = await generateRedeemer(userId, pwd, txCbor, size)
+      res.status(200).json({ redeemers });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message })
     }

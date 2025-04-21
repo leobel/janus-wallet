@@ -201,6 +201,7 @@ export function getSpendRedeemer(userId: string, pwdHash: string, challenge: str
     }
 
     const redeemer: Redeemer = {
+        idx: null,
         signals,
         proof
     };
@@ -629,10 +630,10 @@ async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costM
     const body = tx.body();
     const witnessSet = tx.witness_set();
 
-
-
     const redeemers = witnessSet.redeemers()!;
     const redeemerList = CML.LegacyRedeemerList.new();
+    console.log("Redeemers count:", redeemers.as_arr_legacy_redeemer()!.len())
+    console.log('Final Redeemers:', finalRedeemers.length)
     for (let i = 0; i < redeemers.as_arr_legacy_redeemer()!.len(); i++) {
         const redeemer = redeemers.as_arr_legacy_redeemer()!.get(i);
         const legacyRedeemer = CML.LegacyRedeemer.new(
@@ -644,7 +645,7 @@ async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costM
         );
         redeemerList.add(legacyRedeemer);
     }
-    
+    console.log("heererer")
     const usedLanguages = CML.LanguageList.new();
     if (witnessSet.plutus_v1_scripts()) {
         usedLanguages.add(CML.Language.PlutusV1);
@@ -755,7 +756,7 @@ export async function buildUncheckedTx(
         policyId,
         tokenName,
         network,
-        evalRedeemers: [evalSpendRedeemer],
+        evalRedeemers: [evalSpendRedeemer, ...buildDummySpendReedemers(evalInputs.length - 1)], // TODO: make redeemer signals and proof optionals so we can only pass it for the script to evaluate
         evalScripts: [evalSpendScript],
         scriptIncrements,
         options,
@@ -764,10 +765,10 @@ export async function buildUncheckedTx(
     return _buildUncheckedTx(params, evalInputs, evalReferenceInputs,
         (params) => {
             const { lucid, referenceInputs, inputs, redeemers, scripts, lovelace, validTo, evalRedeemers, evalScripts } = params as SpendTxParams;
-            const [spendRedeemer] = evalRedeemers || redeemers;
+            const spendRedeemers = evalRedeemers || redeemers;
             const [spendScript] = evalScripts || scripts;
             
-            return makeSpendTxBuilderConfig(lucid, referenceInputs, inputs, spendRedeemer, spendScript, receiptAddress, lovelace, validTo);
+            return makeSpendTxBuilderConfig(lucid, referenceInputs, inputs, spendRedeemers, spendScript, receiptAddress, lovelace, validTo);
         })
 }
     
@@ -835,14 +836,27 @@ export function buildZKProofRedeemer(txCbor: string, zkInput: ZkInput): Promise<
     return buildRedeemer(txBody, zkInput)
 }
 
+export function buildDummySpendReedemers(size: number): string[] {
+    const emptyRedeemer: Redeemer = {
+        idx: null,
+        signals: null,
+        proof: null
+    };
+
+    const dummyRedeemer = Data.to(emptyRedeemer, Redeemer);
+    return Array(size).fill(dummyRedeemer)
+
+}
+
 export async function spendTx(
     lucid: LucidEvolution,
-    redeemer: string,
+    redeemers: string[],
     txCbor: string) {
 
     const config = lucid.config()
     const provider = config.provider
-    const tx = await buildFinalTx(CML.Transaction.from_cbor_hex(txCbor), [redeemer], config.costModels)
+    const _tx = CML.Transaction.from_cbor_hex(txCbor);
+    const tx = await buildFinalTx(_tx, redeemers, config.costModels)
 
 
     const cbor = tx.to_cbor_hex()
@@ -1310,14 +1324,18 @@ async function buildRedeemer(txBody: CML.TransactionBody, zkInput: ZkInput) {
     return redeemer;
 }
 
-function makeSpendTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[], inputs: UTxO[], spendRedeemer: string, spend: Script, walletAddress: string, lovelace: bigint, validTo: number) {
-    return lucid
+function makeSpendTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[], inputs: UTxO[], spendRedeemers: string[], spend: Script, walletAddress: string, lovelace: bigint, validTo: number) {
+    let txBuilder = lucid
         .newTx()
         .readFrom(reference_inputs)
-        .collectFrom(inputs, spendRedeemer)
+    
+    for (let i = 0; i < inputs.length; i++) {
+        txBuilder = txBuilder.collectFrom([inputs[i]], spendRedeemers[i])
+    }
+    
+    return txBuilder
         // consume script
         .attach.SpendingValidator(spend)
-
         .pay.ToAddress(
             walletAddress,
             {

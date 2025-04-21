@@ -1,6 +1,6 @@
 import { Assets, fromText, Network, TxOutput, UTxO } from '@lucid-evolution/lucid';
 import { getUserById } from '../../repositories/user.repository.js'
-import { readValidators, generateSpendScript, spendTx, ZkInput, buildUncheckedTx, buildZKProofRedeemer } from '../../utils/prepare-contracts.js';
+import { readValidators, generateSpendScript, spendTx, ZkInput, buildUncheckedTx, buildZKProofRedeemer, buildDummySpendReedemers } from '../../utils/prepare-contracts.js';
 import { getLucid } from '../../utils/index.js';
 import { coinSelection } from '../../utils/coin-selection.js';
 
@@ -12,7 +12,7 @@ function buildUserId(username: string): string {
     return userId
 }
 
-export async function buildSpendTx(username: string, amount: number, receiveAddress: string, network: Network, assets: Assets) {
+export async function buildSpendTx(username: string, amount: number, receiveAddress: string, network: Network, assets: Assets): Promise<{tx: string, size: number}> {
     const tokenName = fromText(username)
     const userId = buildUserId(username)
     const user = await getUserById(userId)
@@ -51,10 +51,10 @@ export async function buildSpendTx(username: string, amount: number, receiveAddr
     const { inputs } = coinSelection(utxos, outputs, walletAddress)
     console.log("Coin Selection Inputs:", inputs)
     const tx = await buildUncheckedTx(lucid, [utxoRef], inputs, walletAddress, spend, reqLovelace, validTo, receiveAddress, zkInput, policyId, tokenName, network, { localUPLCEval: true })
-    return tx.to_cbor_hex()
+    return {tx: tx.to_cbor_hex(), size: inputs.length}
 }
 
-export async function generateRedeemer(username: string, pwd: string, txCbor: string): Promise<string> {
+export async function generateRedeemer(username: string, pwd: string, txCbor: string, size: number): Promise<string[]> {
     const userId = buildUserId(username)
     const user = await getUserById(userId)
     if (!user) {
@@ -66,18 +66,18 @@ export async function generateRedeemer(username: string, pwd: string, txCbor: st
         pwd
         // pwd: "12345"
     }
-    return buildZKProofRedeemer(txCbor, zkInput)
+    const redeemer = await buildZKProofRedeemer(txCbor, zkInput)
+    return [redeemer, ...buildDummySpendReedemers(size - 1)]
 }
 
-export async function spendWalletFunds(username: string, redeemer: string, txCbor: string) {
-    const tokenName = fromText(username)
+export async function spendWalletFunds(username: string, redeemers: string[], txCbor: string) {
     const userId = buildUserId(username)
     const user = await getUserById(userId)
     if (!user) {
         throw new Error('User not found')
     }
     const lucid = await getLucid;
-    const txId = await spendTx(lucid, redeemer, txCbor);
+    const txId = await spendTx(lucid, redeemers, txCbor);
 
     return txId;
 };
