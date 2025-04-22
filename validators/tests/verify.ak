@@ -1,20 +1,14 @@
 use aiken/builtin.{bytearray_to_integer, mod_integer}
 use aiken/cbor
 use aiken/crypto/bls12_381/scalar
+use aiken/option
 use aiken/primitive/bytearray
-use cardano/address.{
-  Address, Credential, Inline, Referenced, Script, StakeCredential,
-  VerificationKey, with_delegation_script,
-}
+use cardano/address.{Address, Script, VerificationKey, with_delegation_script}
 use cardano/assets
-use cardano/certificate.{
-  Certificate, DelegateBlockProduction, DelegateCredential,
-  RegisterAndDelegateCredential, RegisterCredential,
-}
+use cardano/certificate.{DelegateBlockProduction, RegisterAndDelegateCredential}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
 }
-use aiken/option
 use types.{Proof, ZkDatum, ZkVerificationKey}
 use utils.{build_challenge, hash_challenge, zk_verify}
 
@@ -105,7 +99,8 @@ test verify_challenge_certs() {
       ],
       certificates: [cert],
     }
-  let challenge = #"6DBF8D3C5BAA10DE47810FE06839674798445CA84AF0236FBA34B661C36A7EA3"
+  let challenge =
+    #"6dbf8d3c5baa10de47810fe06839674798445ca84af0236fba34b661c36a7ea3"
   let build_challenge = build_challenge(tx) |> hash_challenge
   trace @"Cert": cert |> cbor.serialise
   challenge == build_challenge
@@ -136,9 +131,21 @@ test verify_zk_proof_1() {
     #"aa0b4443bb50d1c93ce088b2df5abb315fceb183c709008e071c196ae4e6d1a969ed62b747f4bf84e9d22eea9278dd9a"
   let proof = Proof { pA, pB, pC }
   let userId = option.or_else(scalar.new(332621201508635767746608), scalar.one)
-  let hash = option.or_else(scalar.new(10343661163184219313272354919635983875711247223011266158462328948931637363678), scalar.one)
-  let challenge = option.or_else(scalar.new(51891613829265625378560554888192412376874405841139917857278942238725157370276), scalar.one)
-  let public =[userId, hash, challenge, userId, challenge, hash]
+  let hash =
+    option.or_else(
+      scalar.new(
+        10343661163184219313272354919635983875711247223011266158462328948931637363678,
+      ),
+      scalar.one,
+    )
+  let challenge =
+    option.or_else(
+      scalar.new(
+        51891613829265625378560554888192412376874405841139917857278942238725157370276,
+      ),
+      scalar.one,
+    )
+  let public = [userId, hash, challenge, userId, challenge, hash]
   zk_verify(proof, public, zkey)
 }
 
@@ -167,9 +174,21 @@ test verify_zk_proof_2() {
     #"8881425d2cf63d3e019a4eb858b79d536804ce76ee499dc562cf0bac94db104963f7599c96ee98b2f47c58a780c62980"
   let proof = Proof { pA, pB, pC }
   let userId = option.or_else(scalar.new(332621201508635767746608), scalar.one)
-  let hash = option.or_else(scalar.new(10343661163184219313272354919635983875711247223011266158462328948931637363678), scalar.one)
-  let challenge = option.or_else(scalar.new(28076471370584806019427378065158897909801938413109722386793687859420994098272), scalar.one)
-  let public =[userId, hash, challenge, userId, challenge, hash]
+  let hash =
+    option.or_else(
+      scalar.new(
+        10343661163184219313272354919635983875711247223011266158462328948931637363678,
+      ),
+      scalar.one,
+    )
+  let challenge =
+    option.or_else(
+      scalar.new(
+        28076471370584806019427378065158897909801938413109722386793687859420994098272,
+      ),
+      scalar.one,
+    )
+  let public = [userId, hash, challenge, userId, challenge, hash]
   zk_verify(proof, public, zkey)
 }
 
@@ -197,10 +216,28 @@ test verify_zk_proof_3() {
   let pC =
     #"aec773e18eb01d1772b09dee3f56ccffabc2b6af595f6b8ab7516569f381ec357669997d70eaa37c2869c53093cc5b40"
   let proof = Proof { pA, pB, pC }
-  let userId = option.or_else(scalar.new(52435875175126190479447740508185965837690552500527637822603658699938581184512), scalar.one)
-  let hash = option.or_else(scalar.new(10343661163184219313272354919635983875711247223011266158462328948931637363678), scalar.one)
-  let challenge = option.or_else(scalar.new(28076471370584806019427378065158897909801938413109722386793687859420994098272), scalar.one)
-  let public =[userId, hash, challenge, userId, challenge, hash]
+  let userId =
+    option.or_else(
+      scalar.new(
+        52435875175126190479447740508185965837690552500527637822603658699938581184512,
+      ),
+      scalar.one,
+    )
+  let hash =
+    option.or_else(
+      scalar.new(
+        10343661163184219313272354919635983875711247223011266158462328948931637363678,
+      ),
+      scalar.one,
+    )
+  let challenge =
+    option.or_else(
+      scalar.new(
+        28076471370584806019427378065158897909801938413109722386793687859420994098272,
+      ),
+      scalar.one,
+    )
+  let public = [userId, hash, challenge, userId, challenge, hash]
   zk_verify(proof, public, zkey)
 }
 
@@ -228,16 +265,39 @@ test verify_zk_proof_4() {
   let pC =
     #"aec773e18eb01d1772b09dee3f56ccffabc2b6af595f6b8ab7516569f381ec357669997d70eaa37c2869c53093cc5b40"
   let proof = Proof { pA, pB, pC }
-  let userId = option.or_else(scalar.new(52435875175126190479447740508185965837690552500527637822603658699938581184512), scalar.one)
-  let hash = option.or_else(scalar.new(52435875175126190479447740508185965837690552500527637822603658699938581184512), scalar.one)
-  let challenge = option.or_else(scalar.new(52435875175126190479447740508185965837690552500527637822603658699938581184512), scalar.one)
-  let public =[userId, hash, challenge, userId, challenge, hash]
+  let userId =
+    option.or_else(
+      scalar.new(
+        52435875175126190479447740508185965837690552500527637822603658699938581184512,
+      ),
+      scalar.one,
+    )
+  let hash =
+    option.or_else(
+      scalar.new(
+        52435875175126190479447740508185965837690552500527637822603658699938581184512,
+      ),
+      scalar.one,
+    )
+  let challenge =
+    option.or_else(
+      scalar.new(
+        52435875175126190479447740508185965837690552500527637822603658699938581184512,
+      ),
+      scalar.one,
+    )
+  let public = [userId, hash, challenge, userId, challenge, hash]
   !zk_verify(proof, public, zkey)
 }
 
 test verify_zk_proof_5() {
-  let max = 104871750350252380958895481016371931675381105001055275645207317399877162369025
-  let max_challenge =  bytearray_to_integer(True, #"e7db4ea6533afa906673b0101343b00aa77b4805fffcb7fdfffffffe00000001")
+  let max =
+    104871750350252380958895481016371931675381105001055275645207317399877162369025
+  let max_challenge =
+    bytearray_to_integer(
+      True,
+      #"e7db4ea6533afa906673b0101343b00aa77b4805fffcb7fdfffffffe00000001",
+    )
   expect (Some(challenge), overflow) =
     when scalar.new(max_challenge) is {
       None -> (scalar.new(mod_integer(max_challenge, scalar.field_prime)), 1)
@@ -269,10 +329,28 @@ test verify_zk_proof_performance() {
   let pC =
     #"864f0956fc1f489b1e9fc0ee00a29afea7e19c8ae5e80facfe321bb55c57a2026d504fbddac6cb0b7d7a9e2716701c27"
   let proof = Proof { pA, pB, pC }
-  let userId = option.or_else(scalar.new(52435875175126190479447740508185965837690552500527637822603658699938581184512), scalar.one)
-  let challenge = option.or_else(scalar.new(52435875175126190479447740508185965837690552500527637822603658699938581184512), scalar.one)
+  let userId =
+    option.or_else(
+      scalar.new(
+        52435875175126190479447740508185965837690552500527637822603658699938581184512,
+      ),
+      scalar.one,
+    )
+  let challenge =
+    option.or_else(
+      scalar.new(
+        52435875175126190479447740508185965837690552500527637822603658699938581184512,
+      ),
+      scalar.one,
+    )
   let challengeFlag = scalar.one
-  let hash = option.or_else(scalar.new(52435875175126190479447740508185965837690552500527637822603658699938581184512), scalar.one)
-  let public =[userId, challenge, challengeFlag, hash]
+  let hash =
+    option.or_else(
+      scalar.new(
+        52435875175126190479447740508185965837690552500527637822603658699938581184512,
+      ),
+      scalar.one,
+    )
+  let public = [userId, challenge, challengeFlag, hash]
   !zk_verify(proof, public, zkey)
 }

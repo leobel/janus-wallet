@@ -11,6 +11,7 @@ node --experimental-specifier-resolution=node --loader ts-node/esm src/register-
 
 ## Test
 ```cli
-aiken check -m janus.verify_ok
 aiken check -m tests.verify_zk_proof_per
+aiken check -t silent -m tests/spend.evaluating 
+aiken check . -t silent
 ```

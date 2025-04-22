@@ -3,7 +3,7 @@ import { UTxO, TxOutput, Assets } from '@lucid-evolution/lucid'
 type TokensOnly = Omit<Assets, "lovelace">
 
 // TODO: get limit based on how many SC can be executed (with optimization in place to just evaluate ONCE)
-const COIN_SELECTION_INPUTS_LIMIT = 10
+const COIN_SELECTION_INPUTS_LIMIT = 100
 
 interface CoinSelectionResult {
   inputs: UTxO[]
@@ -129,13 +129,12 @@ export function coinSelection(
     if (inputs.length + selection.length > limit) {
         throw new Error('InputLimitExceeded')
     }
-    const currLovelace = Number(tot.lovelace)
     const v = Number(output.assets.lovelace)
     const ideal = 2 * v
     const max = 3 * v
-
     let improved = true
     while (improved && utxosAvailable.length > 0) {
+      const currLovelace = Number(tot.lovelace)
       improved = false
       const idx = Math.floor(Math.random() * utxosAvailable.length)
       const utxo = utxosAvailable[idx]
@@ -143,7 +142,6 @@ export function coinSelection(
 
       const currDiff = Math.abs(currLovelace - ideal) // tot.lovelace > ideal ? tot.lovelace - ideal : ideal - tot.lovelace
       const newDiff = Math.abs(newAda - ideal) // newAda > ideal ? newAda - ideal : ideal - newAda
-
       if (newAda <= max && newDiff < currDiff && inputs.length + selection.length + 1 <= limit) {
         selection.push(utxo)
         tot = addAssets(tot, utxo.assets)
@@ -159,5 +157,16 @@ export function coinSelection(
     })
   }
 
-  return { inputs, outputs: reqOutputs, change }
+  return { inputs: sortInputs(inputs), outputs: reqOutputs, change }
+}
+
+// Inputs are ordered first by txHash and then by outputIndex, this rule comes from the Ledger itself.
+function sortInputs(inputs: UTxO[]): UTxO[] {
+  return inputs.sort((a, b) => {
+      if (a.txHash == b.txHash) {
+        return a.outputIndex - b.outputIndex
+      } else {
+        return a.txHash.localeCompare(b.txHash)
+      }
+  })
 }

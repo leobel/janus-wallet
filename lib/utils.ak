@@ -4,6 +4,7 @@ use aiken/builtin.{
 }
 use aiken/cbor
 use aiken/collection/list
+use aiken/collection/pairs
 use aiken/crypto.{Blake2b_224, Hash, ScriptHash, blake2b_256}
 use aiken/crypto/bls12_381/g1
 use aiken/crypto/bls12_381/g2
@@ -18,43 +19,61 @@ use cardano/assets.{AssetName, Lovelace, PolicyId, Value} as assets
 use cardano/certificate.{Certificate}
 use cardano/transaction.{
   Datum, DatumHash, InlineDatum, Input, NoDatum, Output, OutputReference,
-  Transaction,
+  Redeemer, ScriptPurpose, Spend, Transaction,
 }
 use types.{
-  AccountParameters, Challenge, ChallengeId, ChallengeOutput, Parameters, Proof,
-  PubSignals, Redeemer, ZkDatum, ZkVerificationKey,
+  Challenge, ChallengeId, ChallengeOutput, Proof, SpendRedeemer,
+  ZkVerificationKey,
 }
 
-pub fn evaluating_script(inputs: List<Input>, self_ref: OutputReference, idx: Option<Int>) -> (Bool, Bool) {
+pub fn evaluating_script(
+  inputs: List<Input>,
+  redeemers: Pairs<ScriptPurpose, Redeemer>,
+  self_ref: OutputReference,
+  idx: Int,
+  jdx: Int,
+) -> (Bool, Bool) {
   expect Some(script_input) = find_script_input(inputs, self_ref)
   expect Script(script_hash) = script_input.output.address.payment_credential
-  let index = when idx is {
-    None -> 0
-    Some(i) -> i
-  }
-  if evaluating_script_at(inputs, script_hash, index) {
-    (True, evaluating_this_script(inputs, script_input, index))
+  if evaluating_script_at(inputs, redeemers, script_hash, idx) {
+    (True, idx == jdx)
   } else {
-    trace @"tx is not evaluating neither this script or at index": index
+    trace @"tx is not evaluating neither this script or at index": idx
     (False, False)
   }
 }
 
-pub fn evaluating_script_at(inputs: List<Input>, own_script_hash: ScriptHash, idx: Int) -> Bool {
-  expect Some(input) = list.at(inputs, idx)
+pub fn evaluating_script_at(
+  inputs: List<Input>,
+  redeemers: Pairs<ScriptPurpose, Redeemer>,
+  own_script_hash: ScriptHash,
+  index: Int,
+) -> Bool {
+  expect Some(input) = list.at(inputs, index)
   expect Script(script_hash) = input.output.address.payment_credential
-  script_hash == own_script_hash
+  script_hash == own_script_hash && {
+    expect Some(redeemer) =
+      pairs.get_first(redeemers, Spend(input.output_reference))
+    expect SpendRedeemer { idx, jdx, .. } = redeemer
+    index == idx && idx == jdx
+  }
 }
 
-pub fn evaluating_this_script(inputs: List<Input>, input: Input, idx: Int) -> Bool {
+pub fn evaluating_this_script(
+  inputs: List<Input>,
+  input: Input,
+  idx: Int,
+) -> Bool {
   expect Some(i) = list.index_of(inputs, input)
   i == idx
 }
 
-pub fn find_script_input(inputs: List<Input>, output_reference: OutputReference) -> Option<Input> {
+pub fn find_script_input(
+  inputs: List<Input>,
+  output_reference: OutputReference,
+) -> Option<Input> {
   inputs
     |> transaction.find_input(output_reference)
-
 }
 
 pub fn build_challenge(tx: Transaction) -> Challenge {

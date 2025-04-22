@@ -45,11 +45,12 @@ export async function buildSpendTx(username: string, amount: number, receiveAddr
     const lucid = await getLucid;
 
     const utxos = (await lucid.utxosAt(walletAddress))
-    console.log('Wallet UTXOs:', utxos);
+    // console.log('Wallet UTXOs:', utxos);
     const reqLovelace = BigInt(amount)
     const outputs: TxOutput[] = [{ address: receiveAddress, assets: {...assets, lovelace: reqLovelace }}] 
     const { inputs } = coinSelection(utxos, outputs, walletAddress)
     console.log("Coin Selection Inputs:", inputs)
+    console.log("Coin Selection Inputs:", inputs.length)
     const tx = await buildUncheckedTx(lucid, [utxoRef], inputs, walletAddress, spend, reqLovelace, validTo, receiveAddress, zkInput, policyId, tokenName, network, { localUPLCEval: true })
     return {tx: tx.to_cbor_hex(), size: inputs.length}
 }
@@ -66,8 +67,8 @@ export async function generateRedeemer(username: string, pwd: string, txCbor: st
         pwd
         // pwd: "12345"
     }
-    const redeemer = await buildZKProofRedeemer(txCbor, zkInput)
-    return [redeemer, ...buildDummySpendReedemers(size - 1)]
+    const redeemer = await buildZKProofRedeemer(txCbor, zkInput, 0, 0)
+    return [redeemer, ...buildDummySpendReedemers(size - 1, 0)]
 }
 
 export async function spendWalletFunds(username: string, redeemers: string[], txCbor: string) {

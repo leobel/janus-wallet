@@ -35,8 +35,9 @@ pub type Proof {
   pC: ByteArray,
 }
 
-pub type Redeemer {
-  idx: Option<Int>,
+pub type SpendRedeemer {
+  idx: Int,
+  jdx: Int,
   signals: Option<PubSignals>,
   proof: Option<Proof>,
 }
