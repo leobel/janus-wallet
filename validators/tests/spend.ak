@@ -39,8 +39,6 @@ test spend_evaluating_script() {
   let data = ZkDatum { userId, hash, zkey }
   let scriptTxId =
     #"3658cf03ab7407f816548e5a465b6f51779be54bb45f57155776864e454804ac"
-  let spendUtxo =
-    OutputReference { transaction_id: scriptTxId, output_index: 0 }
   let scriptHash = #"a1715c515e4b0d213115f5faada8f0daf93598297cfc65166e2bbd2d"
   let addr =
     Address { payment_credential: Script(scriptHash), stake_credential: None }
@@ -65,21 +63,15 @@ test spend_evaluating_script() {
   let scriptOutputReference =
     OutputReference { transaction_id: scriptTxId, output_index: 0 }
   let scriptOutputReference1 =
-    OutputReference {
-      transaction_id: #"b8b523b596040bb749b23848ea976ee238d5693dca8daa3771e17f3874a9c170",
-      output_index: 0,
-    }
+    OutputReference { transaction_id: scriptTxId, output_index: 1 }
   let scriptOutputReference2 =
-    OutputReference {
-      transaction_id: #"b8b523b596040bb749b23848ea976ee238d5693dca8daa3771e17f3874a9c171",
-      output_index: 0,
-    }
+    OutputReference { transaction_id: scriptTxId, output_index: 2 }
   let scriptRedeemer: Redeemer =
-    SpendRedeemer { idx: 0, jdx: 0, signals: None, proof: None }
+    SpendRedeemer { self_idx: 0, idx: 0, jdx: 0, signals: None, proof: None }
   let scriptRedeemer1: Redeemer =
-    SpendRedeemer { idx: 0, jdx: -1, signals: None, proof: None }
+    SpendRedeemer { self_idx: 1, idx: 0, jdx: -1, signals: None, proof: None }
   let scriptRedeemer2: Redeemer =
-    SpendRedeemer { idx: 0, jdx: -1, signals: None, proof: None }
+    SpendRedeemer { self_idx: 2, idx: 0, jdx: -1, signals: None, proof: None }
   let redeemers =
     [
       Pair(Spend(scriptOutputReference), scriptRedeemer),
@@ -152,21 +144,25 @@ test spend_evaluating_script() {
   let proof = Proof { pA, pB, pC }
   // trace @"serialise (challenge)": build_challenge(tx) |> cbor.serialise
   let redeemer =
-    SpendRedeemer { idx: 0, jdx: 0, signals: Some(signals), proof: Some(proof) }
+    SpendRedeemer {
+      self_idx: 0,
+      idx: 0,
+      jdx: 0,
+      signals: Some(signals),
+      proof: Some(proof),
+    }
   let params =
     AccountParameters {
       policy_id: policyId,
       asset_name: assetName,
       for_evaluation: True,
     }
-  janus.account.spend(params, None, redeemer, spendUtxo, tx)
+  janus.account.spend(params, None, redeemer, scriptOutputReference, tx)
 }
 
 test spend_evaluating_bypass() {
   let scriptTxId =
     #"3658cf03ab7407f816548e5a465b6f51779be54bb45f57155776864e454804ac"
-  let spendUtxo =
-    OutputReference { transaction_id: scriptTxId, output_index: 0 }
   let scriptHash = #"a1715c515e4b0d213115f5faada8f0daf93598297cfc65166e2bbd2d"
   let addr =
     Address { payment_credential: Script(scriptHash), stake_credential: None }
@@ -191,21 +187,15 @@ test spend_evaluating_bypass() {
   let scriptOutputReference =
     OutputReference { transaction_id: scriptTxId, output_index: 0 }
   let scriptOutputReference1 =
-    OutputReference {
-      transaction_id: #"b8b523b596040bb749b23848ea976ee238d5693dca8daa3771e17f3874a9c170",
-      output_index: 0,
-    }
+    OutputReference { transaction_id: scriptTxId, output_index: 1 }
   let scriptOutputReference2 =
-    OutputReference {
-      transaction_id: #"b8b523b596040bb749b23848ea976ee238d5693dca8daa3771e17f3874a9c171",
-      output_index: 0,
-    }
+    OutputReference { transaction_id: scriptTxId, output_index: 2 }
   let scriptRedeemer: Redeemer =
-    SpendRedeemer { idx: 0, jdx: 0, signals: None, proof: None }
+    SpendRedeemer { self_idx: 0, idx: 0, jdx: 0, signals: None, proof: None }
   let scriptRedeemer1: Redeemer =
-    SpendRedeemer { idx: 0, jdx: -1, signals: None, proof: None }
+    SpendRedeemer { self_idx: 1, idx: 0, jdx: -1, signals: None, proof: None }
   let scriptRedeemer2: Redeemer =
-    SpendRedeemer { idx: 0, jdx: -1, signals: None, proof: None }
+    SpendRedeemer { self_idx: 2, idx: 0, jdx: -1, signals: None, proof: None }
   let redeemers =
     [
       Pair(Spend(scriptOutputReference), scriptRedeemer),
@@ -267,7 +257,118 @@ test spend_evaluating_bypass() {
       redeemers: redeemers,
       mint: mint,
     }
-  let redeemer = SpendRedeemer { idx: 0, jdx: -1, signals: None, proof: None }
+  let redeemer =
+    SpendRedeemer { self_idx: 1, idx: 0, jdx: -1, signals: None, proof: None }
+  let params =
+    AccountParameters {
+      policy_id: policyId,
+      asset_name: assetName,
+      for_evaluation: True,
+    }
+  janus.account.spend(params, None, redeemer, scriptOutputReference1, tx)
+}
+
+test spend_evaluating_wrong_self_ref() fail {
+  let scriptTxId =
+    #"3658cf03ab7407f816548e5a465b6f51779be54bb45f57155776864e454804ac"
+  let scriptHash = #"a1715c515e4b0d213115f5faada8f0daf93598297cfc65166e2bbd2d"
+  let addr =
+    Address { payment_credential: Script(scriptHash), stake_credential: None }
+  let address = with_delegation_script(addr, scriptHash)
+  let policyId = #"b8a5e329b500a66376047165cdfce62c3ecf245fd81d101533f81422"
+  let assetName = #"466f6e74757323303030"
+  let output =
+    Output {
+      address,
+      value: assets.from_asset_list(
+        [Pair("", [Pair("", 1500000)]), Pair(policyId, [Pair(assetName, 1)])],
+      ),
+      datum: NoDatum,
+      reference_script: None,
+    }
+  let txId = #"b8b523b596040bb749b23848ea976ee238d5693dca8daa3771e17f3874a9c17e"
+  let index = 0
+  let outputReference =
+    OutputReference { transaction_id: txId, output_index: index }
+  let input = Input { output_reference: outputReference, output }
+  let mint = assets.from_asset_list([Pair(policyId, [Pair(assetName, 1)])])
+  let scriptOutputReference =
+    OutputReference { transaction_id: scriptTxId, output_index: 0 }
+  let scriptOutputReference1 =
+    OutputReference { transaction_id: scriptTxId, output_index: 1 }
+  let scriptOutputReference2 =
+    OutputReference { transaction_id: scriptTxId, output_index: 2 }
+  let scriptRedeemer: Redeemer =
+    SpendRedeemer { self_idx: 0, idx: 0, jdx: 0, signals: None, proof: None }
+  let scriptRedeemer1: Redeemer =
+    SpendRedeemer { self_idx: 1, idx: 0, jdx: -1, signals: None, proof: None }
+  let scriptRedeemer2: Redeemer =
+    SpendRedeemer { self_idx: 2, idx: 0, jdx: -1, signals: None, proof: None }
+  let redeemers =
+    [
+      Pair(Spend(scriptOutputReference), scriptRedeemer),
+      Pair(Spend(scriptOutputReference1), scriptRedeemer1),
+      Pair(Spend(scriptOutputReference2), scriptRedeemer2),
+    ]
+  let tx =
+    Transaction {
+      ..transaction.placeholder,
+      reference_inputs: [input],
+      inputs: [
+        Input {
+          output_reference: scriptOutputReference,
+          output: Output {
+            address,
+            value: assets.from_lovelace(50000000),
+            datum: NoDatum,
+            reference_script: None,
+          },
+        },
+        Input {
+          output_reference: scriptOutputReference1,
+          output: Output {
+            address,
+            value: assets.from_lovelace(50000000),
+            datum: NoDatum,
+            reference_script: None,
+          },
+        },
+        Input {
+          output_reference: scriptOutputReference2,
+          output: Output {
+            address,
+            value: assets.from_lovelace(50000000),
+            datum: NoDatum,
+            reference_script: None,
+          },
+        },
+      ],
+      outputs: [
+        Output {
+          address: Address {
+            payment_credential: VerificationKey(
+              #"3dce7844f36b23b8c3f90afba40aa188e7f1d3f6e8acd1d544ed1da9",
+            ),
+            stake_credential: None,
+          },
+          value: assets.from_lovelace(10000000),
+          datum: NoDatum,
+          reference_script: None,
+        },
+        Output {
+          address,
+          value: assets.merge(assets.from_lovelace(39614719), mint),
+          datum: NoDatum,
+          reference_script: None,
+        },
+      ],
+      redeemers: redeemers,
+      mint: mint,
+    }
+  let redeemer =
+    SpendRedeemer { self_idx: 1, idx: 0, jdx: -1, signals: None, proof: None }
+  let spendUtxo =
+    OutputReference { transaction_id: scriptTxId, output_index: 0 }
   let params =
     AccountParameters {
       policy_id: policyId,
@@ -280,8 +381,6 @@ test spend_evaluating_bypass() {
 test spend_evaluating_no_script() fail {
   let scriptTxId =
     #"3658cf03ab7407f816548e5a465b6f51779be54bb45f57155776864e454804ac"
-  let spendUtxo =
-    OutputReference { transaction_id: scriptTxId, output_index: 0 }
   let scriptHash = #"a1715c515e4b0d213115f5faada8f0daf93598297cfc65166e2bbd2d"
   let addr =
     Address { payment_credential: Script(scriptHash), stake_credential: None }
@@ -308,21 +407,15 @@ test spend_evaluating_no_script() fail {
   let scriptOutputReference =
     OutputReference { transaction_id: scriptTxId, output_index: 0 }
   let scriptOutputReference1 =
-    OutputReference {
-      transaction_id: #"b8b523b596040bb749b23848ea976ee238d5693dca8daa3771e17f3874a9c170",
-      output_index: 0,
-    }
+    OutputReference { transaction_id: scriptTxId, output_index: 1 }
   let scriptOutputReference2 =
-    OutputReference {
-      transaction_id: #"b8b523b596040bb749b23848ea976ee238d5693dca8daa3771e17f3874a9c171",
-      output_index: 0,
-    }
+    OutputReference { transaction_id: scriptTxId, output_index: 2 }
   let scriptRedeemer: Redeemer =
-    SpendRedeemer { idx: 0, jdx: 0, signals: None, proof: None }
+    SpendRedeemer { self_idx: 0, idx: 0, jdx: 0, signals: None, proof: None }
   let scriptRedeemer1: Redeemer =
-    SpendRedeemer { idx: 0, jdx: -1, signals: None, proof: None }
+    SpendRedeemer { self_idx: 1, idx: 0, jdx: -1, signals: None, proof: None }
   let scriptRedeemer2: Redeemer =
-    SpendRedeemer { idx: 0, jdx: -1, signals: None, proof: None }
+    SpendRedeemer { self_idx: 2, idx: 0, jdx: -1, signals: None, proof: None }
   let redeemers =
     [
       Pair(Spend(scriptOutputReference), scriptRedeemer),
@@ -396,27 +489,24 @@ test spend_evaluating_no_script() fail {
       redeemers: redeemers,
       mint: mint,
     }
-  let redeemer = SpendRedeemer { idx: 0, jdx: -1, signals: None, proof: None }
+  let redeemer =
+    SpendRedeemer { self_idx: 0, idx: 0, jdx: -1, signals: None, proof: None }
   let params =
     AccountParameters {
       policy_id: policyId,
       asset_name: assetName,
       for_evaluation: True,
     }
-  janus.account.spend(params, None, redeemer, spendUtxo, tx)
+  janus.account.spend(params, None, redeemer, scriptOutputReference, tx)
 }
 
 test spend_evaluating_wrong_target() fail {
   let scriptTxId =
     #"3658cf03ab7407f816548e5a465b6f51779be54bb45f57155776864e454804ac"
-  let spendUtxo =
-    OutputReference { transaction_id: scriptTxId, output_index: 0 }
   let scriptHash = #"a1715c515e4b0d213115f5faada8f0daf93598297cfc65166e2bbd2d"
   let addr =
     Address { payment_credential: Script(scriptHash), stake_credential: None }
   let address = with_delegation_script(addr, scriptHash)
-  let normalAddress =
-    Address { payment_credential: VerificationKey(#""), stake_credential: None }
   let policyId = #"b8a5e329b500a66376047165cdfce62c3ecf245fd81d101533f81422"
   let assetName = #"466f6e74757323303030"
   let output =
@@ -437,21 +527,15 @@ test spend_evaluating_wrong_target() fail {
   let scriptOutputReference =
     OutputReference { transaction_id: scriptTxId, output_index: 0 }
   let scriptOutputReference1 =
-    OutputReference {
-      transaction_id: #"b8b523b596040bb749b23848ea976ee238d5693dca8daa3771e17f3874a9c170",
-      output_index: 0,
-    }
+    OutputReference { transaction_id: scriptTxId, output_index: 1 }
   let scriptOutputReference2 =
-    OutputReference {
-      transaction_id: #"b8b523b596040bb749b23848ea976ee238d5693dca8daa3771e17f3874a9c171",
-      output_index: 0,
-    }
+    OutputReference { transaction_id: scriptTxId, output_index: 2 }
   let scriptRedeemer: Redeemer =
-    SpendRedeemer { idx: 1, jdx: -1, signals: None, proof: None }
+    SpendRedeemer { self_idx: 0, idx: 1, jdx: -1, signals: None, proof: None }
   let scriptRedeemer1: Redeemer =
-    SpendRedeemer { idx: 0, jdx: 0, signals: None, proof: None }
+    SpendRedeemer { self_idx: 1, idx: 0, jdx: 0, signals: None, proof: None }
   let scriptRedeemer2: Redeemer =
-    SpendRedeemer { idx: 1, jdx: -1, signals: None, proof: None }
+    SpendRedeemer { self_idx: 2, idx: 1, jdx: -1, signals: None, proof: None }
   let redeemers =
     [
       Pair(Spend(scriptOutputReference), scriptRedeemer),
@@ -513,12 +597,13 @@ test spend_evaluating_wrong_target() fail {
       redeemers: redeemers,
       mint: mint,
     }
-  let redeemer = SpendRedeemer { idx: 1, jdx: -1, signals: None, proof: None }
+  let redeemer =
+    SpendRedeemer { self_idx: 2, idx: 1, jdx: -1, signals: None, proof: None }
   let params =
     AccountParameters {
       policy_id: policyId,
       asset_name: assetName,
       for_evaluation: True,
     }
-  janus.account.spend(params, None, redeemer, spendUtxo, tx)
+  janus.account.spend(params, None, redeemer, scriptOutputReference, tx)
 }

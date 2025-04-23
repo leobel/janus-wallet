@@ -1,6 +1,6 @@
 import { Assets, fromText, Network, TxOutput, UTxO } from '@lucid-evolution/lucid';
 import { getUserById } from '../../repositories/user.repository.js'
-import { readValidators, generateSpendScript, spendTx, ZkInput, buildUncheckedTx, buildZKProofRedeemer, buildDummySpendReedemers } from '../../utils/prepare-contracts.js';
+import { readValidators, generateSpendScript, spendTx, ZkInput, buildUncheckedTx, buildZKProofRedeemer, buildAllSpendRedeemers } from '../../utils/prepare-contracts.js';
 import { getLucid } from '../../utils/index.js';
 import { coinSelection } from '../../utils/coin-selection.js';
 
@@ -67,8 +67,8 @@ export async function generateRedeemer(username: string, pwd: string, txCbor: st
         pwd
         // pwd: "12345"
     }
-    const redeemer = await buildZKProofRedeemer(txCbor, zkInput, 0, 0)
-    return [redeemer, ...buildDummySpendReedemers(size - 1, 0)]
+    const redeemer = await buildZKProofRedeemer(txCbor, zkInput, 0, 0, 0)
+    return buildAllSpendRedeemers(redeemer, size)
 }
 
 export async function spendWalletFunds(username: string, redeemers: string[], txCbor: string) {

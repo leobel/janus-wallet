@@ -27,15 +27,18 @@ use types.{
 }
 
 pub fn evaluating_script(
-  inputs: List<Input>,
-  redeemers: Pairs<ScriptPurpose, Redeemer>,
-  self_ref: OutputReference,
+  self_idx: Int,
   idx: Int,
   jdx: Int,
+  self_ref: OutputReference,
+  inputs: List<Input>,
+  redeemers: Pairs<ScriptPurpose, Redeemer>,
+  
 ) -> (Bool, Bool) {
-  expect Some(script_input) = find_script_input(inputs, self_ref)
+  expect Some(script_input) = list.at(inputs, self_idx)
+  expect self_ref == script_input.output_reference
   expect Script(script_hash) = script_input.output.address.payment_credential
-  if evaluating_script_at(inputs, redeemers, script_hash, idx) {
+  if evaluating_script_at(idx, script_hash, inputs, redeemers) {
     (True, idx == jdx)
   } else {
     trace @"tx is not evaluating neither this script or at index": idx
@@ -44,10 +47,10 @@ pub fn evaluating_script(
 }
 
 pub fn evaluating_script_at(
+  index: Int,
+  own_script_hash: ScriptHash,
   inputs: List<Input>,
   redeemers: Pairs<ScriptPurpose, Redeemer>,
-  own_script_hash: ScriptHash,
-  index: Int,
 ) -> Bool {
   expect Some(input) = list.at(inputs, index)
   expect Script(script_hash) = input.output.address.payment_credential

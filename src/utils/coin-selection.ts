@@ -2,8 +2,8 @@ import { UTxO, TxOutput, Assets } from '@lucid-evolution/lucid'
 
 type TokensOnly = Omit<Assets, "lovelace">
 
-// TODO: get limit based on how many SC can be executed (with optimization in place to just evaluate ONCE)
-const COIN_SELECTION_INPUTS_LIMIT = 100
+// During some tests at least 50 inputs can be included, although it could be more (~85) if exUnits were not increasing on each bypass script execution
+const COIN_SELECTION_INPUTS_LIMIT = 50
 
 interface CoinSelectionResult {
   inputs: UTxO[]

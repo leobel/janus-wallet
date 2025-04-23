@@ -36,12 +36,12 @@ validator account(params: AccountParameters) {
     self_ref: OutputReference,
     self_tx: Transaction,
   ) {
-    let SpendRedeemer { idx, jdx, signals: r_signals, proof: r_proof } =
+    let SpendRedeemer { self_idx, idx, jdx, signals: r_signals, proof: r_proof } =
       redeemer
     let Transaction { inputs, reference_inputs, redeemers, .. } = self_tx
     // check script is evaluated whether it's here or by another script in the transaction. Return tuple (eval_script, eval_this)
     expect (True, eval_this) =
-      evaluating_script(inputs, redeemers, self_ref, idx, jdx)
+      evaluating_script(self_idx, idx, jdx, self_ref, inputs, redeemers)
     if eval_this == False {
       True
     } else {

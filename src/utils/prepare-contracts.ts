@@ -187,7 +187,7 @@ export function generatePublishValidator(
 
 export const r = 52435875175126190479447740508185965837690552500527637822603658699938581184513n
 
-export function getSpendRedeemer(userId: string, pwdHash: string, challenge: string, pA: string, pB: string, pC: string, idx: number, jdx: number) {
+export function getSpendRedeemer(userId: string, pwdHash: string, challenge: string, pA: string, pB: string, pC: string, selfIdx: number, idx: number, jdx: number) {
     const signals: Signals = {
         userId: userId,
         challenge: challenge,
@@ -201,6 +201,7 @@ export function getSpendRedeemer(userId: string, pwdHash: string, challenge: str
     }
 
     const redeemer: Redeemer = {
+        self_idx: BigInt(selfIdx),
         idx: BigInt(idx),
         jdx: BigInt(jdx),
         signals,
@@ -311,16 +312,11 @@ interface ScriptIncrements {
 function evalTransaction(
     config: TxBuilderConfig,
     tx: CML.Transaction,
-    walletInputs?: UTxO[],
     extraIncrements?: Map<CML.RedeemerTag, Map<number, number>>,
 ): ScriptEvaluation[] {
-    // console.log("TX Eval JSON (Before):", tx.to_json())
     const txEvaluation = setRedeemerstoZero(tx)!;
-    // console.log("TX Eval JSON:", txEvaluation.to_json())
     // console.log("TX Eval:", txEvaluation.to_cbor_hex())
-    // const txEvaluation = tx;
     const txUtxos = [
-        ...(walletInputs || []),
         ...config.collectedInputs,
         ...config.readInputs,
     ];
@@ -357,9 +353,7 @@ function evalTransaction(
             }
         })
     } catch (error) {
-        console.log(JSON.stringify(error)
-            .replace(/\\n\s*/g, " ")
-            .trim());
+        console.log("Evaluation error:", error);
         throw error
     }
 }
@@ -373,6 +367,8 @@ async function evalTransactionProvider(
     const txEvaluation = setRedeemerstoZero(tx)!;
     // const txEvaluation = tx;
     try {
+        console.log("TX Eval:", txEvaluation.to_cbor_hex())
+        console.log("Additional providers:", additionalUtxos)
         const uplcEval = await config.lucidConfig.provider.evaluateTx(
             txEvaluation.to_cbor_hex(),
             additionalUtxos,
@@ -404,9 +400,7 @@ async function evalTransactionProvider(
             }
         })
     } catch (error) {
-        console.log(JSON.stringify(error)
-            .replace(/\\n\s*/g, " ")
-            .trim());
+        console.log("Evaluation error:", error);
         throw error
     }
 }
@@ -563,9 +557,8 @@ async function buildTx(
     let txRedeemerBuilder = config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress));
     const increments = getEvalIncrements(scriptIncrements, config.txBuilder);
     let uplcEval: ScriptEvaluation[] = [];
-    const additionalUtxos = evalInputs.concat(evalReferenceInputs);
     if (options?.localUPLCEval !== false) {
-        uplcEval = evalTransaction(config, txRedeemerBuilder.draft_tx(), evalInputs, increments);
+        uplcEval = evalTransaction(config, txRedeemerBuilder.draft_tx(), increments);
     } else {
         uplcEval = await evalTransactionProvider(config, txRedeemerBuilder.draft_tx(), evalInputs, increments);
         // uplcEval[0].ex_units.mem = 8455482;
@@ -723,11 +716,13 @@ export async function buildUncheckedTx(
         .to_hex());
     const scriptIncrements: ScriptIncrements[] = [];
 
-    const evalInputs = inputs.map(input => {
+    const evalInputs = inputs.map((input, i) => {
         if (input.address === spendAddress) {
             return {
                 ...input,
-                txHash: input.txHash, // this is to force the mock evaluation to use additional UTxOs. This way evaluation will refer to the "fake" script
+                txHash: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // can't use real address when evaluating tx with external provider since it'll use real address instead or eval
+                outputIndex: i,
+                // txHash: input.txHash, // this is to force the mock evaluation to use additional UTxOs. This way evaluation will refer to the "fake" script
                 // txHash: "29e0b0742664ea8f8aacd4696323146c5e4685b92d98a2982fdf561e71918262", // this is to force the mock evaluation to use additional UTxOs. This way evaluation will refer to the "fake" script
                 // outputIndex: 2,
                 address: evalSpendAddress
@@ -737,7 +732,7 @@ export async function buildUncheckedTx(
     });
 
     const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
-    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0);
+    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
 
     const evalReferenceInputs = referenceInputs.map(input => {
         return {
@@ -760,7 +755,7 @@ export async function buildUncheckedTx(
         policyId,
         tokenName,
         network,
-        evalRedeemers: [evalSpendRedeemer, ...buildDummySpendReedemers(evalInputs.length - 1, 0)], // TODO: make redeemer signals and proof optionals so we can only pass it for the script to evaluate
+        evalRedeemers: buildAllSpendRedeemers(evalSpendRedeemer, evalInputs.length), // TODO: make redeemer signals and proof optionals so we can only pass it for the script to evaluate
         evalScripts: [evalSpendScript],
         scriptIncrements,
         options,
@@ -802,9 +797,8 @@ async function _buildUncheckedTx(
     let txRedeemerBuilder = config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress));
     const increments = getEvalIncrements(scriptIncrements, config.txBuilder);
     let uplcEval: ScriptEvaluation[] = [];
-    const additionalUtxos = evalInputs.concat(evalReferenceInputs);
     if (options?.localUPLCEval !== false) {
-        uplcEval = evalTransaction(config, txRedeemerBuilder.draft_tx(), evalInputs, increments);
+        uplcEval = evalTransaction(config, txRedeemerBuilder.draft_tx(), increments);
     } else {
         uplcEval = await evalTransactionProvider(config, txRedeemerBuilder.draft_tx(), evalInputs, increments);
         // uplcEval[0].ex_units.mem = 8455482;
@@ -835,22 +829,24 @@ async function _buildUncheckedTx(
     return tx;
 }
 
-export function buildZKProofRedeemer(txCbor: string, zkInput: ZkInput, idx: number, jdx: number): Promise<string> {
+export function buildZKProofRedeemer(txCbor: string, zkInput: ZkInput, self_idx: number, idx: number, jdx: number): Promise<string> {
     const txBody = CML.Transaction.from_cbor_hex(txCbor).body()
-    return buildRedeemer(txBody, zkInput, idx, jdx)
+    return buildRedeemer(txBody, zkInput, self_idx, idx, jdx)
 }
 
-export function buildDummySpendReedemers(size: number, idx: number): string[] {
+export function buildAllSpendRedeemers(redeemer: string, size: number): string[] {
+    return [redeemer, ...Array.from({length: size - 1}, (_, i) => buildDummySpendReedemer(i + 1, 0))]
+}
+
+export function buildDummySpendReedemer(self_idx: number, idx: number): string {
     const emptyRedeemer: Redeemer = {
+        self_idx: BigInt(self_idx),
         idx: BigInt(idx),
         jdx: -1n,
         signals: null,
         proof: null
     };
-
-    const dummyRedeemer = Data.to(emptyRedeemer, Redeemer);
-    return Array(size).fill(dummyRedeemer)
-
+    return Data.to(emptyRedeemer, Redeemer)
 }
 
 export async function spendTx(
@@ -872,6 +868,8 @@ export async function spendTx(
 
     const txHash = await provider.submitTx(cbor)
     console.log('Tx Id (Submit):', txHash);
+
+
     // const success = await lucid.awaitTx(txHash);
     // console.log('Success?', success);
     return txId;
@@ -906,7 +904,7 @@ export async function registerAndDelegateTx(
     console.log('Eval Publish Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalPublishScript.script)).hash().to_hex());
 
     const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
-    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0);
+    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
 
     const evalInputs = inputs.map(input => {
         if (input.address === spendAddress) {
@@ -954,7 +952,7 @@ export async function registerAndDelegateTx(
         return makeRegisterStakeTxBuilderConfig(lucid, referenceInputs, inputs, rRedeemer, sRedeemer, poolId, stakeScript, spendScript, rAddress, validTo)
     },
         async (tx: CML.TransactionBody, zkInput: ZkInput) => {
-            let spendRedeemer = await buildRedeemer(tx, zkInput, 0, 0);
+            let spendRedeemer = await buildRedeemer(tx, zkInput, 0, 0, 0);
             return [publishRedeemer, spendRedeemer];
         });
 
@@ -1007,7 +1005,7 @@ export async function withdrawTx(
     console.log('Eval Publish Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalPublishScript.script)).hash().to_hex());
 
     const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
-    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0);
+    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
 
     const evalInputs = inputs.map(input => {
         if (input.address === spendAddress) {
@@ -1057,7 +1055,7 @@ export async function withdrawTx(
             return makeWithdrawTxBuilderConfig(lucid, referenceInputs, inputs, rRedeemer, sRedeemer, poolId, stakeScript, spendScript, rAddress, amount, validTo)
         },
         async (tx: CML.TransactionBody, zkInput: ZkInput) => {
-            let spendRedeemer = await buildRedeemer(tx, zkInput, 0, 0);
+            let spendRedeemer = await buildRedeemer(tx, zkInput, 0, 0, 0);
             return [withdrawRedeemer, spendRedeemer];
         });
 
@@ -1323,9 +1321,9 @@ async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
 
 }
 
-async function buildRedeemer(txBody: CML.TransactionBody, zkInput: ZkInput, idx: number, jdx: number) {
+async function buildRedeemer(txBody: CML.TransactionBody, zkInput: ZkInput, self_idx: number, idx: number, jdx: number) {
     const [challengeId, pA, pB, pC] = await generateProof(txBody, zkInput);
-    const redeemer = getSpendRedeemer(zkInput.userId, zkInput.hash, challengeId, pA, pB, pC, idx, jdx);
+    const redeemer = getSpendRedeemer(zkInput.userId, zkInput.hash, challengeId, pA, pB, pC, self_idx, idx, jdx);
     return redeemer;
 }
 

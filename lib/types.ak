@@ -36,6 +36,7 @@ pub type Proof {
 }
 
 pub type SpendRedeemer {
+  self_idx: Int,
   idx: Int,
   jdx: Int,
   signals: Option<PubSignals>,
