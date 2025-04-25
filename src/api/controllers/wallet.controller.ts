@@ -62,11 +62,11 @@ export default (network: Network) => {
     }
   }
 
-  router.post('/spend/:userId/send', spendFunds);
-  router.post('/spend/:userId/build', buildSpendFunds);
+  router.post('/:userId/build', buildSpendFunds);
+  router.post('/:userId/sign', sign)
+  router.post('/:userId/send', spendFunds);
   router.post('/registerAndDelegateToPool', registerAndDelegateToPool);
   router.post('/withdraw', withdraw);
-  router.post('/sign/:userId', sign)
 
 
   return router;

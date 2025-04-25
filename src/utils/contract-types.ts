@@ -36,10 +36,20 @@ export type StakeCredential = Data.Static<typeof StakeCredentialSchema>;
 export const StakeCredential = StakeCredentialSchema as unknown as StakeCredential;
 
 const MintSchema = Data.Object({
+    version: Data.Integer(),
+    owner: Data.Bytes(),
     nonce: Data.Bytes()
 });
 export type Mint = Data.Static<typeof MintSchema>;
 export const Mint = MintSchema as unknown as Mint;
+
+const MintRedeemerSchema = Data.Enum([
+    Data.Literal("CreateCircuit"),
+    Data.Literal("CreateAccount"),
+    Data.Literal("BurnAccount"),
+])
+export type MintRedeemer = Data.Static<typeof MintRedeemerSchema>;
+export const MintRedeemer = MintRedeemerSchema as unknown as MintRedeemer;
 
 const AddressSchema = Data.Object({
     payment_credential: CredentialSchema,

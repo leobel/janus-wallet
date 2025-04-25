@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import walletRouter from './api/controllers/wallet.controller';
+import circuitRouter from './api/controllers/circuit.controller';
 import { Network } from '@lucid-evolution/lucid';
 
 const app = express();
@@ -16,7 +17,8 @@ app.get('/health', (req: Request, res: Response) => {
     res.json({ status: 'ok' });
 });
 
-app.use('/wallet', walletRouter(network));
+app.use('/wallets', walletRouter(network));
+app.use('/circuits', circuitRouter(network))
 
 // Start the server
 app.listen(port, () => {

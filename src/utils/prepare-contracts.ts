@@ -3,13 +3,17 @@ import { applyDoubleCborEncoding, applyParamsToScript, Data, MintingPolicy, Netw
      utxoToTransactionOutput, SLOT_CONFIG_NETWORK, LucidEvolution, Script, makeTxSignBuilder, 
      TxBuilderError, stringify, isEqualUTxO, selectUTxOs, assetsToValue, sortUTxOs, utxoToCore, 
      EvalRedeemer, toCMLRedeemerTag, PROTOCOL_PARAMETERS_DEFAULT, createCostModels, CertificateValidator, 
-     validatorToRewardAddress, PoolId, TxSignBuilder, PolicyId, Lovelace, CBORHex, RedeemerTag } from "@lucid-evolution/lucid";
+     validatorToRewardAddress, PoolId, TxSignBuilder, PolicyId, Lovelace, CBORHex, RedeemerTag, 
+     fromText,
+     TxOutput} from "@lucid-evolution/lucid";
 import * as UPLC from "@lucid-evolution/uplc";
 import blueprint from "../../plutus.json" assert { type: 'json' };
-import { Address, Certificate, Challenge, ChallengeOutput, Credential as ContractCredential, Datum, DelegateRepresentative, Input, Mint, Output, OutputReference, Proof, PublishRedeemer, Redeemer, ReferenceInputs, Signals, Spend, StakeCredential, Value, WithdrawRedeemer, ZkDatum } from "./contract-types";
+import { Address, Certificate, Challenge, ChallengeOutput, Credential as ContractCredential, Datum, DelegateRepresentative, Input, Mint, MintRedeemer, Output, OutputReference, Proof, PublishRedeemer, Redeemer, ReferenceInputs, Signals, Spend, StakeCredential, Value, WithdrawRedeemer, ZkDatum, ZkVerificationKey } from "./contract-types";
 import { pipe, Record, Array as _Array, BigInt as _BigInt, Option } from "effect";
 import { generate } from "../zkproof";
 import { getCollaterls, signCollateral } from "../api/services/collateral.service";
+import { coinSelection } from "./coin-selection";
+import { getSignerKey } from "../api/services/circuit.service";
 
 export type Validators = {
     spend: SpendingValidator;
@@ -81,8 +85,10 @@ export function readFooValidator() {
 
 }
 
-export function generateMintPolicy(mint_script: string, nonce?: string) {
+export function generateMintPolicy(network: Network, mint_script: string, owner: string, version: number, nonce?: string) {
     const params = Data.to({
+        version: BigInt(version),
+        owner,
         nonce: nonce || randomNonce()
     }, Mint);
     console.log('Mint params:', params);
@@ -98,10 +104,16 @@ export function generateMintPolicy(mint_script: string, nonce?: string) {
     };
 
     const policyId = validatorToScriptHash(mint);
+    const stakeCredential: Credential = {
+        type: "Script",
+        hash: policyId
+    };
+    const mintAddress = validatorToAddress(network, mint, stakeCredential);
 
     return {
         mint,
         policyId,
+        mintAddress
     };
 }
 
@@ -623,7 +635,7 @@ async function buildTx(
     return makeTxSignBuilder(config.lucidConfig, tx);
 }
 
-async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costModels: CML.CostModels): Promise<CML.Transaction> {
+async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costModels: CML.CostModels, extraSigners?: CML.PrivateKey[]): Promise<CML.Transaction> {
     const body = tx.body();
     const witnessSet = tx.witness_set();
 
@@ -642,7 +654,6 @@ async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costM
         );
         redeemerList.add(legacyRedeemer);
     }
-    console.log("heererer")
     const usedLanguages = CML.LanguageList.new();
     if (witnessSet.plutus_v1_scripts()) {
         usedLanguages.add(CML.Language.PlutusV1);
@@ -669,10 +680,23 @@ async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costM
     
     body.set_script_data_hash(scriptDataHash);
 
+    const txBodyHash = CML.hash_transaction(body)
+    const vKeyWitnesses = witnessSet.vkeywitnesses() || CML.VkeywitnessList.new()
+
     // add collateral signature
     const collateralWitness = signCollateral(body)
-    const vKeyWitnesses = witnessSet.vkeywitnesses() || CML.VkeywitnessList.new()
     vKeyWitnesses.add(collateralWitness)
+    const collateralPubKeyHash = collateralWitness.vkey().hash().to_hex()
+
+    // add extra signers
+    if (extraSigners) {
+        for (let privateKey of extraSigners) {
+            const pubKeyHash = privateKey.to_public().hash().to_hex()
+            if (collateralPubKeyHash != pubKeyHash) {
+                vKeyWitnesses.add(CML.make_vkey_witness(txBodyHash, privateKey))
+            }
+        }
+    }
 
     witnessSet.set_vkeywitnesses(vKeyWitnesses)
 
@@ -692,6 +716,83 @@ async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costM
     //     tx.auxiliary_data(),
     // );
 }
+
+export async function mintCircuitTx(
+    lucid: LucidEvolution,
+    network: Network,
+    circuit: any,
+    tokenName: string,
+    walletAddress: string,
+    version: number,
+    validTo: number,
+    nonce: string,
+    options?: CompleteOptions
+): Promise<string> {
+    const owner = getAddressDetails(walletAddress).paymentCredential!.hash
+    const { mint, policyId, mintAddress } = generateMintPolicy(network, validators.mint.script, owner, version, nonce);
+    console.log('PolicyId:', policyId);
+    console.log("Mint Address:", mintAddress)
+    console.log('Mint Script:', mint);
+
+    const hexTokenName = fromText(tokenName);
+    const assetName = `${policyId}${hexTokenName}`;
+    const assets = { [assetName]: 1n }
+
+    const datum = Data.to(circuit, ZkVerificationKey);
+    console.log('Datum', datum);
+
+    const lucidConfig = lucid.config()
+    const { lovelace } = getMinAda(assets, lucidConfig.protocolParameters.coinsPerUtxoByte, datum)!
+    console.log("lovelace:", lovelace)
+
+    const utxos = (await lucid.utxosAt(walletAddress))
+    
+    const outputs: TxOutput[] = [{ address: walletAddress, assets: { lovelace: lovelace + 1_000_000n }}] 
+    const { inputs } = coinSelection(utxos, outputs, walletAddress)
+    const _mintRedeemer: MintRedeemer = "CreateCircuit";
+    const mintRedeemer = Data.to(_mintRedeemer, MintRedeemer);
+    console.log('Redeemer:', mintRedeemer);
+
+    const config = await makeMintAssetsTxBuilderConfig(lucid, inputs, mintRedeemer, mint, mintAddress, assets, datum, lovelace, validTo, owner)
+    const collaterals = await getCollaterls(config);
+    
+    // Set collateral input if there are script executions
+    setCollateral(config, collaterals.inputs, collaterals.address);
+
+    // get a new txRedeemerBuilder based on updated redeemer with the challenge for evaluation
+    let txRedeemerBuilder = config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress));
+    let uplcEval: ScriptEvaluation[] = [];
+    if (options?.localUPLCEval !== false) {
+        uplcEval = evalTransaction(config, txRedeemerBuilder.draft_tx());
+    } else {
+        uplcEval = await evalTransactionProvider(config, txRedeemerBuilder.draft_tx());
+    }
+
+    // update txBuilder exUnits and 
+    // adjust tx inputs and outputs
+    applyUPLCEval(uplcEval, config.txBuilder, walletAddress);
+
+    const tx = config.txBuilder
+    .build(
+        CML.ChangeSelectionAlgo.Default,
+        CML.Address.from_bech32(walletAddress),
+    )
+    .build_unchecked();
+
+    const prvKey = getSignerKey()
+    const finalTx = await buildFinalTx(tx, [mintRedeemer], lucidConfig.costModels, [prvKey])
+
+    const cbor = finalTx.to_cbor_hex()
+    console.log('cbor', cbor);
+    const txId = CML.hash_transaction(finalTx.body()).to_hex()
+    console.log('Tx Id:', txId);
+    
+    const provider = lucid.config().provider
+    const txHash = await provider.submitTx(cbor)
+    console.log('Tx Id (Submit):', txHash);
+    return txId;
+}
+
 
 export async function buildUncheckedTx(
     lucid: LucidEvolution,
@@ -1070,6 +1171,13 @@ export async function withdrawTx(
     console.log('Success?', success);
 }
 
+export function getMinAda(assets: Assets, coinsPerUtxoByte: bigint, datum?: string) {
+    return pipe(
+        calculateExtraLovelace(assets, coinsPerUtxoByte, datum),
+        Option.getOrUndefined,
+    )
+}
+
 function makeRegisterStakeTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[], inputs: UTxO[], registerRedeemer: string, spendRedeemer: string, poolId: PoolId, stake: Script, spend: Script, rewardAddress: string, validTo: number) {
     return lucid
         .newTx()
@@ -1215,10 +1323,7 @@ function recursive(
         Record.union(externalAssets, _BigInt.sum),
     );
 
-    let extraLovelace: Assets | undefined = pipe(
-        calculateExtraLovelace(availableAssets, coinsPerUtxoByte),
-        Option.getOrUndefined,
-    );
+    let extraLovelace: Assets | undefined = getMinAda(availableAssets, coinsPerUtxoByte)
     let remainingInputs = inputs;
 
     while (extraLovelace) {
@@ -1242,10 +1347,7 @@ function recursive(
             _BigInt.sum,
         );
 
-        extraLovelace = pipe(
-            calculateExtraLovelace(availableAssets, coinsPerUtxoByte),
-            Option.getOrUndefined,
-        );
+        extraLovelace = getMinAda(availableAssets, coinsPerUtxoByte)
     }
     return selected;
 }
@@ -1261,9 +1363,10 @@ function sumAssetsFromInputs(inputs: UTxO[]) {
 function calculateExtraLovelace(
     leftoverAssets: Assets,
     coinsPerUtxoByte: bigint,
+    datum?: string,
 ): Option.Option<Assets> {
     return pipe(leftoverAssets, (assets) => {
-        const minLovelace = calculateMinLovelace(coinsPerUtxoByte, assets);
+        const minLovelace = calculateMinLovelace(coinsPerUtxoByte, assets, datum);
         const currentLovelace = assets["lovelace"] || 0n;
         return currentLovelace >= minLovelace
             ? Option.none()
@@ -1274,15 +1377,19 @@ function calculateExtraLovelace(
 function calculateMinLovelace(
     coinsPerUtxoByte: bigint,
     multiAssets?: Assets,
+    datum?: string,
     changeAddress?: string,
 ) {
     const dummyAddress =
         "addr_test1qrngfyc452vy4twdrepdjc50d4kvqutgt0hs9w6j2qhcdjfx0gpv7rsrjtxv97rplyz3ymyaqdwqa635zrcdena94ljs0xy950";
-    return CML.TransactionOutputBuilder.new()
+    let outputBuilder = CML.TransactionOutputBuilder.new()
         .with_address(
             CML.Address.from_bech32(changeAddress ? changeAddress : dummyAddress),
-        )
-        .next()
+        );
+    if (datum) {
+        outputBuilder = outputBuilder.with_data(CML.DatumOption.new_datum(CML.PlutusData.from_cbor_hex(datum)))
+    }
+    return outputBuilder.next()
         .with_asset_and_min_required_coin(
             multiAssets
                 ? assetsToValue(multiAssets).multi_asset()
@@ -1347,6 +1454,34 @@ function makeSpendTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[
         )
         .validTo(validTo)
         .config();
+}
+
+function makeMintAssetsTxBuilderConfig(lucid: LucidEvolution, inputs: UTxO[], mintRedeemer: string, mint: Script, mintAddress: string, assets: Assets, datum: string, lovelace: bigint, validTo: number, signerKey: string) {
+    return lucid
+        .newTx()
+        .collectFrom(inputs)
+        // use the mint validator
+        .attach.MintingPolicy(mint)
+        // mint the asset
+        .mintAssets(
+            assets,
+            // this redeemer is the first argument
+            mintRedeemer
+        )
+        .pay.ToContract(
+            mintAddress,
+            {
+                kind: "inline",
+                value: datum,
+            },
+            {
+                lovelace,
+                ...assets
+            }
+        )
+        .addSignerKey(signerKey)
+        .validTo(validTo)
+        .config()
 }
 
 export function serialiseBody(txBody: CML.TransactionBody): string {
@@ -1793,9 +1928,9 @@ function getDatum(dataHash?: string | null, data?: string | null): Datum {
 // console.log('Spend Script Address:', spendAddress);
 // console.log('Mint Script:', mint);
 
-export async function prepareContracts() {
+export async function prepareContracts(ownerAddress: string, version: number) {
     const validators = readValidators();
-    const { mint, policyId } = generateMintPolicy(validators.mint.script);
+    const { mint, policyId, mintAddress } = generateMintPolicy("Preview", validators.mint.script, ownerAddress, version);
     const { spend, spendAddress } = generateSpendScript(
         validators.spend.script,
         "Preview",
@@ -1816,6 +1951,7 @@ export async function prepareContracts() {
         spend,
         publish,
         policyId,
+        mintAddress,
         spendAddress,
         rewardAddress
     };
