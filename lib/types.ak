@@ -1,4 +1,4 @@
-use aiken/crypto.{Blake2b_224, Hash, ScriptHash}
+use aiken/crypto.{Blake2b_224, Hash, ScriptHash, VerificationKeyHash}
 use cardano/address.{Address}
 use cardano/assets.{AssetName, PolicyId}
 use cardano/certificate.{Certificate}
@@ -17,22 +17,26 @@ pub type ZkVerificationKey {
   vk_ic: List<ByteArray>,
 }
 
-pub type ZkDatum {
-  userId: ByteArray,
-  hash: ByteArray,
+pub type CircuitDatum {
   zkey: ZkVerificationKey,
 }
 
+pub type AccountDatum {
+  user_id: ByteArray,
+  hash: ByteArray,
+  nonce: ByteArray,
+}
+
 pub type PubSignals {
-  userId: ByteArray,
+  user_id: ByteArray,
   challenge: ByteArray,
   hash: ByteArray,
 }
 
 pub type Proof {
-  pA: ByteArray,
-  pB: ByteArray,
-  pC: ByteArray,
+  p_a: ByteArray,
+  p_b: ByteArray,
+  p_c: ByteArray,
 }
 
 pub type SpendRedeemer {
@@ -43,14 +47,17 @@ pub type SpendRedeemer {
   proof: Option<Proof>,
 }
 
-pub type Parameters {
-  // policy: ByteArray,
+pub type WalletParameters {
+  version: Int,
+  owner: VerificationKeyHash,
   nounce: ByteArray,
 }
 
 pub type AccountParameters {
   policy_id: PolicyId,
+  circuit_asset_name: AssetName,
   asset_name: AssetName,
+  nonce: ByteArray,
   for_evaluation: Bool,
 }
 
@@ -80,4 +87,10 @@ pub type PublishRedeemer {
 
 pub type WithdrawRedeemer {
   Withdraw
+}
+
+pub type MintRedeemer {
+  CreateCircuit
+  CreateAccount
+  BurnAccount
 }

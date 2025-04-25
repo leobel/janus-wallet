@@ -33,7 +33,6 @@ pub fn evaluating_script(
   self_ref: OutputReference,
   inputs: List<Input>,
   redeemers: Pairs<ScriptPurpose, Redeemer>,
-  
 ) -> (Bool, Bool) {
   expect Some(script_input) = list.at(inputs, self_idx)
   expect self_ref == script_input.output_reference
@@ -132,6 +131,14 @@ pub fn hash_challenge(challenge: Challenge) -> ChallengeId {
   blake2b_256(bytes)
 }
 
+pub fn to_scalar_overflow(data: ByteArray) -> (Option<Scalar>, Int) {
+  let num = bytearray_to_integer(True, data)
+  when scalar.new(num) is {
+    None -> (scalar.new(mod_integer(num, scalar.field_prime)), 1)
+    n -> (n, 0)
+  }
+}
+
 pub fn build_challenge_inputs(inputs: List<Input>) -> List<OutputReference> {
   list.foldr(
     inputs,
@@ -175,17 +182,53 @@ pub fn build_challenge_datum(datum: Datum) -> ByteArray {
   }
 }
 
-pub fn find_account_input(
+pub fn find_circuit_input(
   inputs: List<Input>,
-  policyId: PolicyId,
-  assetName: AssetName,
+  policy_id: PolicyId,
+  asset_name: AssetName,
 ) -> Option<Input> {
   list.find(
     inputs,
     fn(input) {
-      let Input { output, .. } = input
+      when input.output.address.payment_credential is {
+        Script(script_hash) -> {
+          trace @"policy_id": policy_id
+          trace @"script_hash": script_hash
+          (policy_id == script_hash)? && assets.quantity_of(
+            input.output.value,
+            policy_id,
+            asset_name,
+          ) == 1
+        }
+        _ -> False
+      }
+    },
+  )
+}
+
+pub fn find_account_input(
+  inputs: List<Input>,
+  policy_id: PolicyId,
+  asset_name: AssetName,
+) -> Option<Input> {
+  list.find(
+    inputs,
+    fn(input) {
+      assets.quantity_of(input.output.value, policy_id, asset_name) == 1
+    },
+  )
+}
+
+pub fn find_account_output(
+  outputs: List<Output>,
+  policy_id: PolicyId,
+  asset_name: AssetName,
+) -> Option<Output> {
+  list.find(
+    outputs,
+    fn(output) {
       let Output { value, .. } = output
-      assets.quantity_of(value, policyId, assetName) == 1
+      assets.quantity_of(value, policy_id, asset_name) == 1
     },
   )
 }
@@ -195,9 +238,9 @@ pub fn zk_verify(
   public: List<Scalar>,
   zkey: ZkVerificationKey,
 ) -> Bool {
-  let pA = g1.decompress(proof.pA)
-  let pB = g2.decompress(proof.pB)
-  let pC = g1.decompress(proof.pC)
+  let p_a = g1.decompress(proof.p_a)
+  let p_b = g2.decompress(proof.p_b)
+  let p_c = g1.decompress(proof.p_c)
 
   let vk_acc =
     when zkey.vk_ic is {
@@ -205,20 +248,20 @@ pub fn zk_verify(
       [ic0, ..tail] -> derive(tail, public, g1.decompress(ic0))
     }
   // pairing
-  let eAB = pairing(pA, pB)
+  let e_ab = pairing(p_a, p_b)
   // this value is already in zkey, it's alphabeta
-  let eAlphaBeta =
+  let e_alpha_beta =
     pairing(g1.decompress(zkey.vk_alpha1), g2.decompress(zkey.vk_beta2))
-  let eIGamma = pairing(vk_acc, g2.decompress(zkey.vk_gamma2))
-  let eCDelta = pairing(pC, g2.decompress(zkey.vk_delta2))
+  let e_igamma = pairing(vk_acc, g2.decompress(zkey.vk_gamma2))
+  let e_cdelta = pairing(p_c, g2.decompress(zkey.vk_delta2))
 
   // * Miller functions
-  let mlr1 = bls12_381_mul_miller_loop_result(eAlphaBeta, eIGamma)
-  let mlr2 = bls12_381_mul_miller_loop_result(mlr1, eCDelta)
+  let mlr1 = bls12_381_mul_miller_loop_result(e_alpha_beta, e_igamma)
+  let mlr2 = bls12_381_mul_miller_loop_result(mlr1, e_cdelta)
 
   // verify
   // A1 * B2 = α1 * β2 + (w0*L0(τ)/y + w1*L1(τ)/y + … + wl*Ll(τ)/y)1 * y2 + C1 * δ2 
-  bls12_381_final_verify(eAB, mlr2)
+  bls12_381_final_verify(e_ab, mlr2)
 }
 
 // lineal combination of public list of scalars: SUM (ic)^(pi)
