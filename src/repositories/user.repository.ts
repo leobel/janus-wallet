@@ -6,7 +6,11 @@ export const createUser = async (user: Omit<User, 'id' | 'created_at' | 'updated
         .insert({ 
             user_id: user.user_id,
             pwd_hash: user.pwd_hash,
-            zk_verification_ref: user.zk_verification_ref
+            spend_address: user.spend_address,
+            policy_id: user.policy_id,
+            nonce: user.nonce,
+            spend_script: user.spend_script,
+            mint_utxo_ref: user.mint_utxo_ref
         })
         .returning('*')
     return newUser

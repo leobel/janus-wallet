@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { spendWalletFunds, generateRedeemer, buildSpendTx } from '../services/wallet.service';
+import { spendWalletFunds, generateRedeemer, buildSpendTx, createAccountTx } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
 
 
@@ -7,6 +7,18 @@ import { Network } from '@lucid-evolution/lucid';
 const router = express.Router();
 
 export default (network: Network) => {
+  const createAccount = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { hash, nonce } = req.body
+      const result = createAccountTx(userId, network, hash, nonce)
+
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
   const buildSpendFunds = async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
@@ -62,6 +74,7 @@ export default (network: Network) => {
     }
   }
 
+  router.post('/:userId', createAccount)
   router.post('/:userId/build', buildSpendFunds);
   router.post('/:userId/sign', sign)
   router.post('/:userId/send', spendFunds);

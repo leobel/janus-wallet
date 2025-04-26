@@ -117,18 +117,20 @@ const ZkVerificationKeySchema = Data.Object({
 export type ZkVerificationKey = Data.Static<typeof ZkVerificationKeySchema>;
 export const ZkVerificationKey = ZkVerificationKeySchema as unknown as ZkVerificationKey;
 
-const ZKDatumSchema = Data.Object({
-    userId: Data.Bytes(),
+const AccountDatumSchema = Data.Object({
+    user_id: Data.Bytes(),
     hash: Data.Bytes(),
-    zkey: ZkVerificationKeySchema
+    nonce: Data.Bytes(),
 });
-export type ZkDatum = Data.Static<typeof ZKDatumSchema>;
-export const ZkDatum = ZKDatumSchema as unknown as ZkDatum;
+export type AccountDatum = Data.Static<typeof AccountDatumSchema>;
+export const AccountDatum = AccountDatumSchema as unknown as AccountDatum;
 
 const SpendSchema = Data.Object({
-    policyId: PolicyIdSchema,
-    assetName: AssetNameSchema,
-    forEvaluation: Data.Boolean()
+    policy_id: PolicyIdSchema,
+    circuit_asset_name: AssetNameSchema,
+    asset_name: AssetNameSchema,
+    nonce: Data.Bytes(),
+    for_evaluation: Data.Boolean()
 });
 
 export type Spend = Data.Static<typeof SpendSchema>;

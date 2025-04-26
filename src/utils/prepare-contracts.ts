@@ -8,7 +8,7 @@ import { applyDoubleCborEncoding, applyParamsToScript, Data, MintingPolicy, Netw
      TxOutput} from "@lucid-evolution/lucid";
 import * as UPLC from "@lucid-evolution/uplc";
 import blueprint from "../../plutus.json" assert { type: 'json' };
-import { Address, Certificate, Challenge, ChallengeOutput, Credential as ContractCredential, Datum, DelegateRepresentative, Input, Mint, MintRedeemer, Output, OutputReference, Proof, PublishRedeemer, Redeemer, ReferenceInputs, Signals, Spend, StakeCredential, Value, WithdrawRedeemer, ZkDatum, ZkVerificationKey } from "./contract-types";
+import { Address, Certificate, Challenge, ChallengeOutput, Credential as ContractCredential, Datum, DelegateRepresentative, Input, Mint, MintRedeemer, Output, OutputReference, Proof, PublishRedeemer, Redeemer, ReferenceInputs, Signals, Spend, StakeCredential, Value, WithdrawRedeemer } from "./contract-types";
 import { pipe, Record, Array as _Array, BigInt as _BigInt, Option } from "effect";
 import { generate } from "../zkproof";
 import { getCollaterls, signCollateral } from "../api/services/collateral.service";
@@ -123,13 +123,17 @@ export function generateSpendScript(
     // credential: Credential,
     network: Network,
     policyId: string,
+    circuitAssetName: string,
     assetName: string,
+    nonce: string,
     forEvaluation = false,
 ) {
     const params = Data.to({
-        policyId,
-        assetName,
-        forEvaluation: forEvaluation
+        policy_id: policyId,
+        circuit_asset_name: circuitAssetName,
+        asset_name: assetName,
+        nonce,
+        for_evaluation: forEvaluation
     }, Spend);
   
     console.log('Spend params:', params);
@@ -172,9 +176,11 @@ export function generatePublishValidator(
     forEvaluation = false,
 ) {
     const params = Data.to({
-        policyId,
-        assetName,
-        forEvaluation: forEvaluation
+        policy_id: policyId,
+        circuit_asset_name: assetName,
+        asset_name: assetName,
+        nonce: '',
+        for_evaluation: forEvaluation
     }, Spend);
     const publishParams = Data.from(params);
     console.log('Publish params:', params);
@@ -717,29 +723,26 @@ async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costM
     // );
 }
 
-export async function mintCircuitTx(
+export async function mintAssetsTx(
     lucid: LucidEvolution,
-    network: Network,
-    circuit: any,
+    datum: string,
+    mintRedeemer: MintRedeemer,
     tokenName: string,
     walletAddress: string,
-    version: number,
+    mint: Script, 
+    policyId: string, 
+    mintAddress: string,
     validTo: number,
-    nonce: string,
     options?: CompleteOptions
-): Promise<string> {
+): Promise<{txId: string, index: number, lovelace: bigint}> {
     const owner = getAddressDetails(walletAddress).paymentCredential!.hash
-    const { mint, policyId, mintAddress } = generateMintPolicy(network, validators.mint.script, owner, version, nonce);
+    // const { mint, policyId, mintAddress } = generateMintPolicy(network, validators.mint.script, owner, version, nonce);
     console.log('PolicyId:', policyId);
     console.log("Mint Address:", mintAddress)
     console.log('Mint Script:', mint);
 
-    const hexTokenName = fromText(tokenName);
-    const assetName = `${policyId}${hexTokenName}`;
+    const assetName = `${policyId}${tokenName}`;
     const assets = { [assetName]: 1n }
-
-    const datum = Data.to(circuit, ZkVerificationKey);
-    console.log('Datum', datum);
 
     const lucidConfig = lucid.config()
     const { lovelace } = getMinAda(assets, lucidConfig.protocolParameters.coinsPerUtxoByte, datum)!
@@ -749,11 +752,10 @@ export async function mintCircuitTx(
     
     const outputs: TxOutput[] = [{ address: walletAddress, assets: { lovelace: lovelace + 1_000_000n }}] 
     const { inputs } = coinSelection(utxos, outputs, walletAddress)
-    const _mintRedeemer: MintRedeemer = "CreateCircuit";
-    const mintRedeemer = Data.to(_mintRedeemer, MintRedeemer);
-    console.log('Redeemer:', mintRedeemer);
+    const redeemer = Data.to(mintRedeemer, MintRedeemer);
+    console.log('Redeemer:', redeemer);
 
-    const config = await makeMintAssetsTxBuilderConfig(lucid, inputs, mintRedeemer, mint, mintAddress, assets, datum, lovelace, validTo, owner)
+    const config = await makeMintAssetsTxBuilderConfig(lucid, inputs, redeemer, mint, mintAddress, assets, datum, lovelace, validTo, owner)
     const collaterals = await getCollaterls(config);
     
     // Set collateral input if there are script executions
@@ -780,7 +782,7 @@ export async function mintCircuitTx(
     .build_unchecked();
 
     const prvKey = getSignerKey()
-    const finalTx = await buildFinalTx(tx, [mintRedeemer], lucidConfig.costModels, [prvKey])
+    const finalTx = await buildFinalTx(tx, [redeemer], lucidConfig.costModels, [prvKey])
 
     const cbor = finalTx.to_cbor_hex()
     console.log('cbor', cbor);
@@ -790,7 +792,7 @@ export async function mintCircuitTx(
     const provider = lucid.config().provider
     const txHash = await provider.submitTx(cbor)
     console.log('Tx Id (Submit):', txHash);
-    return txId;
+    return {txId, index: 0, lovelace};
 }
 
 
@@ -806,11 +808,13 @@ export async function buildUncheckedTx(
     zkInput: ZkInput,
     policyId: string,
     tokenName: string,
+    circuitTokenName: string,
+    nonce: string,
     network: Network,
     options?: CompleteOptions) {
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, tokenName, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, tokenName, nonce, true);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script))
         .hash()
@@ -997,7 +1001,7 @@ export async function registerAndDelegateTx(
     const publishRedeemer = Data.to(publish, PublishRedeemer);
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, tokenName, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, tokenName, tokenName, '', true);
     const { publish: evalPublishScript, rewardAddress: evalRewardAddress } = generatePublishValidator(validators.publish.script, network, policyId, tokenName, true);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Reward Address:', evalRewardAddress);
@@ -1091,7 +1095,7 @@ export async function withdrawTx(
     const withdrawRedeemer = Data.to(withdraw, WithdrawRedeemer);
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, tokenName, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, tokenName, tokenName, '', true);
     const { publish: evalPublishScript, rewardAddress: evalRewardAddress } = generatePublishValidator(validators.publish.script, network, policyId, tokenName, true);
     const scriptIncrements: ScriptIncrements[] = [
         // { 
@@ -1936,6 +1940,8 @@ export async function prepareContracts(ownerAddress: string, version: number) {
         "Preview",
         policyId,
         "HOLA",
+        "HOLA",
+        '',
         false
     );
     const { publish, rewardAddress } = generatePublishValidator(
