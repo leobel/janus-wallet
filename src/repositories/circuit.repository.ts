@@ -5,12 +5,12 @@ export const createCircuit = async (circuit: Omit<Circuit, 'id' | 'created_at' |
     const [newCircuit] = await db('circuits')
         .insert({ 
             version: circuit.version,
-            owner: circuit.owner,
+            signer_key: circuit.signer_key,
             nonce: circuit.nonce,
             policy_id: circuit.policy_id,
             asset_name: circuit.asset_name,
             mint_address: circuit.mint_address,
-            mint_utxo: circuit.mint_utxo,
+            mint_utxo_ref: circuit.mint_utxo_ref,
             mint_script: circuit.mint_script,
             zk_verification_key: circuit.zk_verification_key
         })

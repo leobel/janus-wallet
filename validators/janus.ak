@@ -23,7 +23,6 @@ use utils.{
   stakeRegistrationDeposit, to_scalar_overflow, zk_verify,
 }
 
-// TODO: add VerificationKeyHash to params so only who can sign minting tx's can control minting (e.g Janus Wallet) 
 validator wallet(params: WalletParameters) {
   mint(redeemer: MintRedeemer, policy_id: PolicyId, tx: Transaction) {
     let Transaction { outputs, mint, extra_signatories, .. } = tx

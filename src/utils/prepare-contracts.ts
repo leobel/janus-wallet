@@ -14,6 +14,7 @@ import { generate } from "../zkproof";
 import { getCollaterls, signCollateral } from "../api/services/collateral.service";
 import { coinSelection } from "./coin-selection";
 import { getSignerKey } from "../api/services/circuit.service";
+import { MintUtxoRef } from "../models/mint-utxo-ref";
 
 export type Validators = {
     spend: SpendingValidator;
@@ -85,11 +86,11 @@ export function readFooValidator() {
 
 }
 
-export function generateMintPolicy(network: Network, mint_script: string, owner: string, version: number, nonce?: string) {
+export function generateMintPolicy(network: Network, mint_script: string, signerKey: string, version: number, nonce: string) {
     const params = Data.to({
         version: BigInt(version),
-        owner,
-        nonce: nonce || randomNonce()
+        owner: signerKey,
+        nonce
     }, Mint);
     console.log('Mint params:', params);
     const mintParams = Data.from(params);
@@ -733,9 +734,10 @@ export async function mintAssetsTx(
     policyId: string, 
     mintAddress: string,
     validTo: number,
+    signerKey: string,
     options?: CompleteOptions
-): Promise<{txId: string, index: number, lovelace: bigint}> {
-    const owner = getAddressDetails(walletAddress).paymentCredential!.hash
+): Promise<MintUtxoRef> {
+
     // const { mint, policyId, mintAddress } = generateMintPolicy(network, validators.mint.script, owner, version, nonce);
     console.log('PolicyId:', policyId);
     console.log("Mint Address:", mintAddress)
@@ -755,7 +757,7 @@ export async function mintAssetsTx(
     const redeemer = Data.to(mintRedeemer, MintRedeemer);
     console.log('Redeemer:', redeemer);
 
-    const config = await makeMintAssetsTxBuilderConfig(lucid, inputs, redeemer, mint, mintAddress, assets, datum, lovelace, validTo, owner)
+    const config = await makeMintAssetsTxBuilderConfig(lucid, inputs, redeemer, mint, mintAddress, assets, datum, lovelace, validTo, signerKey)
     const collaterals = await getCollaterls(config);
     
     // Set collateral input if there are script executions
@@ -792,7 +794,7 @@ export async function mintAssetsTx(
     const provider = lucid.config().provider
     const txHash = await provider.submitTx(cbor)
     console.log('Tx Id (Submit):', txHash);
-    return {txId, index: 0, lovelace};
+    return {tx_hash: txId, output_index: 0, lovelace: Number(lovelace), datum};
 }
 
 
@@ -1460,8 +1462,8 @@ function makeSpendTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[
         .config();
 }
 
-function makeMintAssetsTxBuilderConfig(lucid: LucidEvolution, inputs: UTxO[], mintRedeemer: string, mint: Script, mintAddress: string, assets: Assets, datum: string, lovelace: bigint, validTo: number, signerKey: string) {
-    return lucid
+function makeMintAssetsTxBuilderConfig(lucid: LucidEvolution, inputs: UTxO[], mintRedeemer: string, mint: Script, mintAddress: string, assets: Assets, datum: string, lovelace: bigint, validTo: number, signerKey?: string) {
+    let builder = lucid
         .newTx()
         .collectFrom(inputs)
         // use the mint validator
@@ -1483,9 +1485,11 @@ function makeMintAssetsTxBuilderConfig(lucid: LucidEvolution, inputs: UTxO[], mi
                 ...assets
             }
         )
-        .addSignerKey(signerKey)
         .validTo(validTo)
-        .config()
+    if (signerKey) {
+        builder = builder.addSignerKey(signerKey)
+    }
+    return builder.config()
 }
 
 export function serialiseBody(txBody: CML.TransactionBody): string {
@@ -1934,7 +1938,7 @@ function getDatum(dataHash?: string | null, data?: string | null): Datum {
 
 export async function prepareContracts(ownerAddress: string, version: number) {
     const validators = readValidators();
-    const { mint, policyId, mintAddress } = generateMintPolicy("Preview", validators.mint.script, ownerAddress, version);
+    const { mint, policyId, mintAddress } = generateMintPolicy("Preview", validators.mint.script, ownerAddress, version, '');
     const { spend, spendAddress } = generateSpendScript(
         validators.spend.script,
         "Preview",

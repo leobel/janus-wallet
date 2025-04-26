@@ -117,7 +117,7 @@ export async function createAccountTx(username: string, network: Network, hash: 
     const { spend, spendAddress } = generateSpendScript(validators.spend.script, network, policy_id, asset_name, tokenName, addrNonce)
 
     const validTo = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
-    const utxoRef = await mintAssetsTx(lucid, datum, mintRedeemer, tokenName, walletAddress, mint_script as Script, policy_id, spendAddress, validTo, { localUPLCEval: true })
+    const utxoRef = await mintAssetsTx(lucid, datum, mintRedeemer, tokenName, walletAddress, mint_script as Script, policy_id, spendAddress, validTo, '', { localUPLCEval: true })
     await createUser({
         user_id: tokenName,
         pwd_hash: hash,
@@ -125,12 +125,7 @@ export async function createAccountTx(username: string, network: Network, hash: 
         policy_id: policy_id,
         nonce: addrNonce,
         spend_script: spend,
-        mint_utxo_ref: {
-            tx_hash: utxoRef.txId,
-            output_index: utxoRef.index,
-            lovelace: Number(utxoRef.lovelace),
-            datum
-        }
+        mint_utxo_ref: utxoRef
     })
     return utxoRef
 }

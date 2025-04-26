@@ -11,7 +11,7 @@ export default (network: Network) => {
     try {
       const { userId } = req.params;
       const { hash, nonce } = req.body
-      const result = createAccountTx(userId, network, hash, nonce)
+      const result = await createAccountTx(userId, network, hash, nonce)
 
       res.status(200).json(result);
     } catch (error: any) {
