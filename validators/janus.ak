@@ -101,12 +101,13 @@ validator account(params: AccountParameters) {
         policy_id,
         circuit_asset_name,
         asset_name,
+        pwd_hash,
         nonce: addr_nonce,
       } = params
       expect Some(signals) = r_signals
       expect Some(proof) = r_proof
       let challenge_id = build_challenge(self_tx) |> hash_challenge
-      trace @"challengeId": challenge_id
+      trace @"tx challengeId": challenge_id
       trace @"signals challengeId": signals.challenge
       trace @"is for evaluation?": for_evaluation
       // Script for test is used to calculate ExUnits **ONLY** 
@@ -130,12 +131,15 @@ validator account(params: AccountParameters) {
       expect InlineDatum(data) = account_input.output.datum
       trace @"AccountDatum": data
       expect AccountDatum { user_id, hash, nonce } = data
+      trace @"datum userId": user_id
+      expect asset_name == user_id
+      trace @"params hash": pwd_hash
+      expect pwd_hash == hash
       expect addr_nonce == nonce
-      trace @"verified userId": user_id
-      trace @"userId": signals.user_id
+      trace @"signals userId": signals.user_id
       expect signals.user_id == user_id
-      trace @"verified hash": hash
-      trace @"hash": signals.hash
+      trace @"datum hash": hash
+      trace @"signals hash": signals.hash
       expect signals.hash == hash
       expect Some(scalar_user_id) = scalar.from_bytearray_big_endian(user_id)
       expect Some(scalar_hash) = scalar.from_bytearray_big_endian(hash)

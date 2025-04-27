@@ -157,6 +157,7 @@ test spend_evaluating_script() {
       policy_id,
       asset_name,
       circuit_asset_name,
+      pwd_hash: hash,
       nonce,
       for_evaluation: True,
     }
@@ -267,6 +268,7 @@ test spend_evaluating_bypass() {
       policy_id,
       asset_name,
       circuit_asset_name: #"",
+      pwd_hash: #"",
       nonce: #"",
       for_evaluation: True,
     }
@@ -379,6 +381,7 @@ test spend_evaluating_wrong_self_ref() fail {
       policy_id,
       asset_name,
       circuit_asset_name: #"",
+      pwd_hash: #"",
       nonce: #"",
       for_evaluation: True,
     }
@@ -503,6 +506,7 @@ test spend_evaluating_no_script() fail {
       policy_id,
       asset_name,
       circuit_asset_name: #"",
+      pwd_hash: #"",
       nonce: #"",
       for_evaluation: True,
     }
@@ -613,6 +617,7 @@ test spend_evaluating_wrong_target() fail {
       policy_id,
       asset_name,
       circuit_asset_name: #"",
+      pwd_hash: #"",
       nonce: #"",
       for_evaluation: True,
     }

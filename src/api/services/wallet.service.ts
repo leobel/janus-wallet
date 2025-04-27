@@ -84,7 +84,6 @@ export async function spendWalletFunds(userId: string, redeemers: string[], txCb
     return txId;
 };
 
-
 export async function createAccountTx(username: string, network: Network, hash: string, nonce?: string) {
     const circuit = await getCircuit();
     if (!circuit) {
@@ -107,11 +106,11 @@ export async function createAccountTx(username: string, network: Network, hash: 
     console.log('Datum', datum);
 
     const mintRedeemer: MintRedeemer = "CreateAccount";
-    const { spend, spendAddress } = generateSpendScript(validators.spend.script, network, policy_id, asset_name, tokenName, addrNonce)
+    const { spend, spendAddress } = generateSpendScript(validators.spend.script, network, policy_id, asset_name, tokenName, hash, addrNonce)
 
     const validTo = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
     const utxoRef = await mintAssetsTx(lucid, datum, mintRedeemer, tokenName, walletAddress, mint_script as Script, policy_id, spendAddress, validTo, '', { localUPLCEval: true })
-    await createUser({
+    const user = {
         token_name: tokenName,
         pwd_hash: hash,
         spend_address: spendAddress,
@@ -119,7 +118,8 @@ export async function createAccountTx(username: string, network: Network, hash: 
         nonce: addrNonce,
         spend_script: spend,
         mint_utxo_ref: utxoRef
-    })
-    return utxoRef
+    }
+    await createUser(user)
+    return user
 }
 

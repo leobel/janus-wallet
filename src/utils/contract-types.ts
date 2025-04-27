@@ -129,6 +129,7 @@ const SpendSchema = Data.Object({
     policy_id: PolicyIdSchema,
     circuit_asset_name: AssetNameSchema,
     asset_name: AssetNameSchema,
+    pwd_hash: Data.Bytes(),
     nonce: Data.Bytes(),
     for_evaluation: Data.Boolean()
 });

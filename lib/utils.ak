@@ -101,13 +101,14 @@ pub fn build_challenge(tx: Transaction) -> Challenge {
   let mint = build_challenge_value(tx_mint)
 
   // let certificates = build_challenge_certificates(tx_certificates)
-  Challenge {
-    reference_inputs,
-    inputs,
-    outputs,
-    mint,
-    certificates: tx_certificates,
-  }
+  let challenge =
+    Challenge {
+      reference_inputs,
+      inputs,
+      outputs,
+      mint,
+      certificates: tx_certificates,
+    }
   // let bytes =
   //   ""
   //     |> bytearray.concat(cbor.serialise(reference_inputs))
@@ -123,6 +124,8 @@ pub fn build_challenge(tx: Transaction) -> Challenge {
   //     |> bytearray.concat(cbor.serialise(proposal_procedures))
   //     |> bytearray.concat(cbor.serialise(current_treasury_amount))
   //     |> bytearray.concat(cbor.serialise(treasury_donation))
+  // trace @"serialise (challenge)": challenge |> cbor.serialise
+  challenge
 }
 
 pub fn hash_challenge(challenge: Challenge) -> ChallengeId {
