@@ -8,13 +8,13 @@ import { applyDoubleCborEncoding, applyParamsToScript, Data, MintingPolicy, Netw
      TxOutput} from "@lucid-evolution/lucid";
 import * as UPLC from "@lucid-evolution/uplc";
 import blueprint from "../../plutus.json" assert { type: 'json' };
-import { Address, Certificate, Challenge, ChallengeOutput, Credential as ContractCredential, Datum, DelegateRepresentative, Input, Mint, MintRedeemer, Output, OutputReference, Proof, PublishRedeemer, Redeemer, ReferenceInputs, Signals, Spend, StakeCredential, Value, WithdrawRedeemer } from "./contract-types";
+import { AccountDatum, Address, Certificate, Challenge, ChallengeOutput, Credential as ContractCredential, Datum, DelegateRepresentative, Input, Mint, MintRedeemer, Output, OutputReference, Proof, PublishRedeemer, Redeemer, ReferenceInputs, Signals, Spend, StakeCredential, Value, WithdrawRedeemer } from "./contract-types";
 import { pipe, Record, Array as _Array, BigInt as _BigInt, Option } from "effect";
 import { generate } from "../zkproof";
 import { getCollaterls, signCollateral } from "../api/services/collateral.service";
 import { coinSelection } from "./coin-selection";
 import { getSignerKey } from "../api/services/circuit.service";
-import { MintUtxoRef } from "../models/mint-utxo-ref";
+import { MintUtxoRef, MintUtxoRefAssets } from "../models/mint-utxo-ref";
 
 export type Validators = {
     spend: SpendingValidator;
@@ -794,7 +794,15 @@ export async function mintAssetsTx(
     const provider = lucid.config().provider
     const txHash = await provider.submitTx(cbor)
     console.log('Tx Id (Submit):', txHash);
-    return {tx_hash: txId, output_index: 0, lovelace: Number(lovelace), datum};
+    return {tx_hash: txId, output_index: 0, assets: fromAssetsToMintUtxoRefAssets({...assets,  lovelace}), datum};
+}
+
+export function fromAssetsToMintUtxoRefAssets(assets: Assets): MintUtxoRefAssets {
+    return Object.entries(assets).reduce((map, [key, value]) => ({...map, [key]: Number(value)}), {} as MintUtxoRefAssets)
+}
+
+export function fromMintUtxoRefAssetsToAssets(assets: MintUtxoRefAssets): Assets {
+    return Object.entries(assets).reduce((map, [key, value]) => ({...map, [key]: BigInt(value)}), {} as Assets)
 }
 
 
@@ -838,15 +846,23 @@ export async function buildUncheckedTx(
         return input;
     });
 
+    // use eval redeemer and reference datum to pass all onchain checks
     const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
     const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
 
-    const evalReferenceInputs = referenceInputs.map(input => {
-        return {
-            ...input,
-            datum: evalReferenceDatum
-        }
-    });
+    const [circuitRefInput, userRefInput] = referenceInputs
+
+    // const evalReferenceInputs = referenceInputs.map(input => {
+    //     return {
+    //         ...input,
+    //         datum: evalReferenceDatum
+    //     }
+    // });
+
+    const evalReferenceInputs = [circuitRefInput, {
+        ...userRefInput,
+        datum: Data.to({ user_id: userId, hash: pwdHash, nonce }, AccountDatum)
+    }]
 
     const params: SpendTxParams = {
         lucid,

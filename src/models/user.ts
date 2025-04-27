@@ -2,7 +2,7 @@ import { MintUtxoRef } from "./mint-utxo-ref";
 
 export interface User {
     id: string;
-    user_id: string;
+    token_name: string;
     pwd_hash: string;
     spend_address: string;
     policy_id: string;

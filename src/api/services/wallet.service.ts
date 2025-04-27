@@ -1,6 +1,6 @@
 import { Assets, CML, Data, fromText, Network, Script, TxOutput, UTxO } from '@lucid-evolution/lucid';
 import { createUser, getUserById } from '../../repositories/user.repository.js'
-import { readValidators, generateSpendScript, spendTx, ZkInput, buildUncheckedTx, buildZKProofRedeemer, buildAllSpendRedeemers, mintAssetsTx } from '../../utils/prepare-contracts.js';
+import { readValidators, generateSpendScript, spendTx, ZkInput, buildUncheckedTx, buildZKProofRedeemer, buildAllSpendRedeemers, mintAssetsTx, fromMintUtxoRefAssetsToAssets } from '../../utils/prepare-contracts.js';
 import { getLucid } from '../../utils/index.js';
 import { coinSelection } from '../../utils/coin-selection.js';
 import { getSignerKey, getSignerKeyHex } from './circuit.service.js';
@@ -10,15 +10,7 @@ import { randomUUID } from 'crypto';
 
 const validators = readValidators();
 
-function buildUserId(username: string): string {
-    const tokenName = fromText(username)
-    const userId = BigInt(`0x${tokenName}`).toString(16)
-    return userId
-}
-
-export async function buildSpendTx(username: string, amount: number, receiveAddress: string, network: Network, assets: Assets): Promise<{tx: string, size: number}> {
-    const tokenName = fromText(username)
-    const userId = buildUserId(username)
+export async function buildSpendTx(userId: string, amount: number, receiveAddress: string, network: Network, assets: Assets): Promise<{tx: string, size: number}> {
     const user = await getUserById(userId)
     if (!user) {
         throw new Error('User not found')
@@ -27,25 +19,26 @@ export async function buildSpendTx(username: string, amount: number, receiveAddr
     if (!circuit) {
         throw new Error('Circuit not found')
     }
-    const { mint_utxo_ref, spend_script, spend_address: spendAddress, policy_id: policyId, nonce } = user
-    const { tx_hash: txHash, output_index: outputIndex, lovelace , datum } = mint_utxo_ref
-    
-    // const { spend, spendAddress: walletAddress } = generateSpendScript(validators.spend.script, network, policyId, circuit.asset_name, tokenName, '')
+    const { token_name: tokenName, mint_utxo_ref, spend_script, spend_address: spendAddress, policy_id: policyId, nonce } = user
+    const { tx_hash: txHash, output_index: outputIndex, assets: userAssets , datum } = mint_utxo_ref
     console.log('Janus wallet Address:', spendAddress);
 
-    const assetUnit = `${policyId}${tokenName}`;
-    console.log("AssetUnit", assetUnit)
-    const utxoRef: UTxO = {
+    const userUtxoRef: UTxO = {
         address: spendAddress,
         txHash,
         outputIndex,
-        assets: { lovelace: BigInt(lovelace), [assetUnit]: BigInt(1) },
+        assets: fromMintUtxoRefAssetsToAssets(userAssets),
         datum
     }
-    const validTo = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
-
+    const circuitUtxoRef: UTxO = {
+        address: circuit.mint_address,
+        txHash: circuit.mint_utxo_ref.tx_hash,
+        outputIndex: circuit.mint_utxo_ref.output_index,
+        assets: fromMintUtxoRefAssetsToAssets(circuit.mint_utxo_ref.assets),
+        datum: circuit.mint_utxo_ref.datum
+    }
     const zkInput: ZkInput = {
-        userId: userId,
+        userId: tokenName,
         hash: user.pwd_hash,
         // pwd: "12345"
     }
@@ -59,18 +52,19 @@ export async function buildSpendTx(username: string, amount: number, receiveAddr
     const { inputs } = coinSelection(utxos, outputs, spendAddress)
     console.log("Coin Selection Inputs:", inputs)
     console.log("Coin Selection Inputs:", inputs.length)
-    const tx = await buildUncheckedTx(lucid, [utxoRef], inputs, spendAddress, spend_script as Script, reqLovelace, validTo, receiveAddress, zkInput, policyId, tokenName, circuit.asset_name, nonce, network, { localUPLCEval: true })
+
+    const validTo = Date.now() + (1 * 60 * 60 * 1000) // 1 hour
+    const tx = await buildUncheckedTx(lucid, [circuitUtxoRef, userUtxoRef], inputs, spendAddress, spend_script as Script, reqLovelace, validTo, receiveAddress, zkInput, policyId, tokenName, circuit.asset_name, nonce, network, { localUPLCEval: true })
     return {tx: tx.to_cbor_hex(), size: inputs.length}
 }
 
-export async function generateRedeemer(username: string, pwd: string, txCbor: string, size: number): Promise<string[]> {
-    const userId = buildUserId(username)
+export async function generateRedeemer(userId: string, pwd: string, txCbor: string, size: number): Promise<string[]> {
     const user = await getUserById(userId)
     if (!user) {
         throw new Error('User not found')
     }
     const zkInput: ZkInput = {
-        userId: userId,
+        userId: user.token_name,
         hash: user.pwd_hash,
         pwd
         // pwd: "12345"
@@ -79,8 +73,7 @@ export async function generateRedeemer(username: string, pwd: string, txCbor: st
     return buildAllSpendRedeemers(redeemer, size)
 }
 
-export async function spendWalletFunds(username: string, redeemers: string[], txCbor: string) {
-    const userId = buildUserId(username)
+export async function spendWalletFunds(userId: string, redeemers: string[], txCbor: string) {
     const user = await getUserById(userId)
     if (!user) {
         throw new Error('User not found')
@@ -119,7 +112,7 @@ export async function createAccountTx(username: string, network: Network, hash: 
     const validTo = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
     const utxoRef = await mintAssetsTx(lucid, datum, mintRedeemer, tokenName, walletAddress, mint_script as Script, policy_id, spendAddress, validTo, '', { localUPLCEval: true })
     await createUser({
-        user_id: tokenName,
+        token_name: tokenName,
         pwd_hash: hash,
         spend_address: spendAddress,
         policy_id: policy_id,
