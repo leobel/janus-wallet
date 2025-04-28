@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { spendWalletFunds, generateRedeemer, buildSpendTx, createAccountTx } from '../services/wallet.service';
+import { spendWalletFunds, generateRedeemer, buildSpendTx, createAccountTx, registerAndDelegate } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
 
 
@@ -37,13 +37,32 @@ export default (network: Network) => {
       const { redeemers, tx } = req.body;
       const txId = await spendWalletFunds(userId, redeemers, tx);
 
-      res.status(200).json({ txId });
+      res.status(200).json({ tx_id: txId });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
   };
 
   const registerAndDelegateToPool = async (req: Request, res: Response) => {
+    try {
+      const { userId, poolId } = req.params;
+      const result = await registerAndDelegate(network, userId, poolId)
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  };
+
+  const registerToPool = async (req: Request, res: Response) => {
+    try {
+      // TODO: Implement stake pool registration and delegation
+      res.status(501).json({ message: 'Not implemented yet' });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  };
+
+  const delegateToPool = async (req: Request, res: Response) => {
     try {
       // TODO: Implement stake pool registration and delegation
       res.status(501).json({ message: 'Not implemented yet' });
@@ -65,9 +84,9 @@ export default (network: Network) => {
   const sign = async (req: Request, res: Response) => {
     try {
       const { userId } = req.params
-      const { pwd, tx: txCbor, size } = req.body
+      const { pwd, tx: txCbor } = req.body
 
-      const redeemers = await generateRedeemer(userId, pwd, txCbor, size)
+      const redeemers = await generateRedeemer(userId, pwd, txCbor)
       res.status(200).json({ redeemers });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message })
@@ -78,8 +97,10 @@ export default (network: Network) => {
   router.post('/:userId/build', buildSpendFunds);
   router.post('/:userId/sign', sign)
   router.post('/:userId/send', spendFunds);
-  router.post('/registerAndDelegateToPool', registerAndDelegateToPool);
-  router.post('/withdraw', withdraw);
+  router.post('/:userId/pools/:poolId/registerAndDelegate', registerAndDelegateToPool);
+  router.post('/:userId/pools/:poolId/register', registerToPool);
+  router.post('/:userId/pools/:poolId/delegate', delegateToPool);
+  router.post('/:userId/withdraw', withdraw);
 
 
   return router;

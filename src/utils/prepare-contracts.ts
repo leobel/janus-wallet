@@ -653,11 +653,11 @@ async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costM
     console.log('Final Redeemers:', finalRedeemers.length)
     for (let i = 0; i < redeemers.as_arr_legacy_redeemer()!.len(); i++) {
         const redeemer = redeemers.as_arr_legacy_redeemer()!.get(i);
+        const tag = redeemer.tag()
         const legacyRedeemer = CML.LegacyRedeemer.new(
-            redeemer.tag(),
+            tag,
             redeemer.index(),
-            // redeemer.data(),
-            CML.PlutusData.from_cbor_hex(finalRedeemers[i]),
+            tag == CML.RedeemerTag.Spend ? CML.PlutusData.from_cbor_hex(finalRedeemers[i]) : redeemer.data(),
             redeemer.ex_units(),
         );
         redeemerList.add(legacyRedeemer);
@@ -748,7 +748,7 @@ export async function mintAssetsTx(
     const assets = { [assetName]: 1n }
 
     const lucidConfig = lucid.config()
-    const { lovelace } = getMinAda(assets, lucidConfig.protocolParameters.coinsPerUtxoByte, datum)!
+    const { lovelace } = getMinAda(assets, lucidConfig.protocolParameters.coinsPerUtxoByte, mintAddress, datum)!
     console.log("lovelace:", lovelace)
 
     const utxos = (await lucid.utxosAt(walletAddress))
@@ -879,7 +879,7 @@ export async function buildUncheckedTx(
         policyId,
         tokenName,
         network,
-        evalRedeemers: buildAllSpendRedeemers(evalSpendRedeemer, evalInputs.length), // TODO: make redeemer signals and proof optionals so we can only pass it for the script to evaluate
+        evalRedeemers: buildAllSpendRedeemers(evalSpendRedeemer, evalInputs.length),
         evalScripts: [evalSpendScript],
         scriptIncrements,
         options,
@@ -1004,48 +1004,51 @@ export async function registerAndDelegateTx(
     referenceInputs: UTxO[],
     inputs: UTxO[],
     rewardAddress: string,
-    stake: Script,
+    script: Script,
     spendAddress: string,
-    spend: Script,
     poolId: PoolId,
-    validTo: number,
     walletAddress: string,
     zkInput: ZkInput,
     policyId: string,
     tokenName: string,
+    circuitTokenName: string,
+    nonce: string,
     network: Network,
+    validTo: number,
     options?: CompleteOptions) {
+
+    // use eval redeemer and reference datum to pass all onchain checks
+    const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
+    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
+
+    const [circuitRefInput, userRefInput] = referenceInputs
+    const evalReferenceInputs = [circuitRefInput, {
+        ...userRefInput,
+        assets: {...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
+        datum: Data.to({ user_id: userId, hash: pwdHash, nonce }, AccountDatum)
+    }]
 
     const publish: PublishRedeemer = "RegisterAndDelegate";
     const publishRedeemer = Data.to(publish, PublishRedeemer);
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, tokenName, tokenName, '', '', true);
-    const { publish: evalPublishScript, rewardAddress: evalRewardAddress } = generatePublishValidator(validators.publish.script, network, policyId, tokenName, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, nonce, true);
+    const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
+    // const { publish: evalPublishScript, rewardAddress: evalRewardAddress } = generatePublishValidator(validators.publish.script, network, policyId, tokenName, true);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Reward Address:', evalRewardAddress);
-    console.log('Eval Spend Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex());
-    console.log('Eval Publish Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalPublishScript.script)).hash().to_hex());
+    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex());
 
-    const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
-    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
-
-    const evalInputs = inputs.map(input => {
+    const evalInputs = inputs.map((input, i) => {
         if (input.address === spendAddress) {
             return {
                 ...input,
-                txHash: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // this is to force the mock evaluation to use additional UTxOs. This way 
+                txHash: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // can't use real address when evaluating tx with external provider since it'll use real address instead or eval
+                outputIndex: i,
                 address: evalSpendAddress
             }
         }
         return input;
-    });
-
-    const evalReferenceInputs = referenceInputs.map(input => {
-        return {
-            ...input,
-            datum: evalReferenceDatum
-        }
     });
 
     const params: StakeAndDelegateTxParams = {
@@ -1053,7 +1056,7 @@ export async function registerAndDelegateTx(
         referenceInputs,
         inputs,
         redeemers: [publishRedeemer, ""],
-        scripts: [stake, spend],
+        scripts: [script, script],
         spendAddress,
         rewardAddress,
         poolId,
@@ -1063,32 +1066,33 @@ export async function registerAndDelegateTx(
         policyId,
         tokenName,
         network,
-        evalRedeemers: [publishRedeemer, evalSpendRedeemer],
-        evalScripts: [evalPublishScript, evalSpendScript],
+        evalRedeemers: [publishRedeemer, ...buildAllSpendRedeemers(evalSpendRedeemer, evalInputs.length)],
+        evalScripts: [evalSpendScript, evalSpendScript],
         options,
     };
 
-    const txSignBuilder = await buildTx(params, evalInputs, evalReferenceInputs, (params) => {
+    return _buildUncheckedTx(params, evalInputs, evalReferenceInputs, (params) => {
         const { lucid, referenceInputs, inputs, redeemers, poolId, scripts, rewardAddress, validTo, evalRedeemers, evalScripts } = params as StakeAndDelegateTxParams;
-        const [rRedeemer, sRedeemer] = evalRedeemers || redeemers;
+        const [rRedeemer, ...sRedeemer] = evalRedeemers || redeemers;
         const [stakeScript, spendScript] = evalScripts || scripts;
         const rAddress = evalScripts ? evalRewardAddress : rewardAddress
         return makeRegisterStakeTxBuilderConfig(lucid, referenceInputs, inputs, rRedeemer, sRedeemer, poolId, stakeScript, spendScript, rAddress, validTo)
-    },
-        async (tx: CML.TransactionBody, zkInput: ZkInput) => {
-            let spendRedeemer = await buildRedeemer(tx, zkInput, 0, 0, 0);
-            return [publishRedeemer, spendRedeemer];
-        });
+    })
 
-    const txSigned = await txSignBuilder.sign.withWallet().complete();
+    // async (tx: CML.TransactionBody, zkInput: ZkInput) => {
+    //     let spendRedeemer = await buildRedeemer(tx, zkInput, 0, 0, 0);
+    //     return [publishRedeemer, spendRedeemer];
+    // }
 
-    console.log('cbor', txSigned.toCBOR());
-    console.log('Tx Id:', txSigned.toHash());
+    // const txSigned = await txSignBuilder.sign.withWallet().complete();
 
-    const txHash = await txSigned.submit();
-    console.log('Tx Id (Submit):', txHash);
-    const success = await lucid.awaitTx(txHash);
-    console.log('Success?', success);
+    // console.log('cbor', txSigned.toCBOR());
+    // console.log('Tx Id:', txSigned.toHash());
+
+    // const txHash = await txSigned.submit();
+    // console.log('Tx Id (Submit):', txHash);
+    // const success = await lucid.awaitTx(txHash);
+    // console.log('Success?', success);
 
 }
 
@@ -1194,18 +1198,23 @@ export async function withdrawTx(
     console.log('Success?', success);
 }
 
-export function getMinAda(assets: Assets, coinsPerUtxoByte: bigint, datum?: string) {
+export function getMinAda(assets: Assets, coinsPerUtxoByte: bigint, changeAddress?: string, datum?: string) {
     return pipe(
-        calculateExtraLovelace(assets, coinsPerUtxoByte, datum),
+        calculateExtraLovelace(assets, coinsPerUtxoByte, changeAddress, datum),
         Option.getOrUndefined,
     )
 }
 
-function makeRegisterStakeTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[], inputs: UTxO[], registerRedeemer: string, spendRedeemer: string, poolId: PoolId, stake: Script, spend: Script, rewardAddress: string, validTo: number) {
-    return lucid
+function makeRegisterStakeTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[], inputs: UTxO[], registerRedeemer: string, spendRedeemers: string[], poolId: PoolId, stake: Script, spend: Script, rewardAddress: string, validTo: number) {
+    let txBuilder = lucid
         .newTx()
-        .readFrom(reference_inputs)
-        .collectFrom(inputs, spendRedeemer)
+        .readFrom(reference_inputs);
+
+    for (let i = 0; i < inputs.length; i++) {
+        txBuilder = txBuilder.collectFrom([inputs[i]], spendRedeemers[i])
+    }
+    
+    return txBuilder
         .attach.CertificateValidator(stake)
         .attach.SpendingValidator(spend)
         .registerAndDelegate.ToPool(rewardAddress, poolId, registerRedeemer)
@@ -1386,10 +1395,11 @@ function sumAssetsFromInputs(inputs: UTxO[]) {
 function calculateExtraLovelace(
     leftoverAssets: Assets,
     coinsPerUtxoByte: bigint,
+    changeAddress?: string,
     datum?: string,
 ): Option.Option<Assets> {
     return pipe(leftoverAssets, (assets) => {
-        const minLovelace = calculateMinLovelace(coinsPerUtxoByte, assets, datum);
+        const minLovelace = calculateMinLovelace(coinsPerUtxoByte, assets, changeAddress, datum);
         const currentLovelace = assets["lovelace"] || 0n;
         return currentLovelace >= minLovelace
             ? Option.none()
@@ -1400,8 +1410,8 @@ function calculateExtraLovelace(
 function calculateMinLovelace(
     coinsPerUtxoByte: bigint,
     multiAssets?: Assets,
-    datum?: string,
     changeAddress?: string,
+    datum?: string,
 ) {
     const dummyAddress =
         "addr_test1qrngfyc452vy4twdrepdjc50d4kvqutgt0hs9w6j2qhcdjfx0gpv7rsrjtxv97rplyz3ymyaqdwqa635zrcdena94ljs0xy950";
