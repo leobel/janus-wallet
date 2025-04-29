@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { spendWalletFunds, generateRedeemer, buildSpend, createAccountTx, registerAndDelegate, delegate } from '../services/wallet.service';
+import { spendWalletFunds, generateRedeemer, buildSpend, createAccountTx, registerAndDelegate, delegate, delegateDrep } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
 
 
@@ -72,6 +72,17 @@ export default (network: Network) => {
     }
   };
 
+  const delegateToDrep = async (req: Request, res: Response) => {
+    try {
+      const { userId, drepId } = req.params
+      const { drep_type } = req.body
+      const result = await delegateDrep(network, userId, { type: drep_type, hash: drepId })
+      res.status(200).json(result)
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  };
+
   const withdraw = async (req: Request, res: Response) => {
     try {
       // TODO: Implement withdrawal functionality
@@ -101,6 +112,7 @@ export default (network: Network) => {
   router.post('/:userId/pools/:poolId/registerAndDelegate', registerAndDelegateToPool)
   router.post('/:userId/pools/:poolId/delegate', delegateToPool)
   router.post('/:userId/pools/:poolId/register', registerToPool)
+  router.post('/:userId/dreps/:drepId/delegate', delegateToDrep)
   router.post('/:userId/withdraw', withdraw)
 
 

@@ -171,6 +171,7 @@ const PublishRedeemerSchema = Data.Enum([
     Data.Literal("Register"),
     Data.Literal("RegisterAndDelegate"),
     Data.Literal("Delegate"),
+    Data.Literal("DelegateDRep"),
 ]);
 export type PublishRedeemer = Data.Static<typeof PublishRedeemerSchema>;
 export const PublishRedeemer = PublishRedeemerSchema as unknown as PublishRedeemer;
@@ -188,7 +189,7 @@ const DelegateBlockProductionSchema = Data.Object({
     stake_pool: StakePoolIdSchema,
 });
 const DelegateRepresentativeSchema = Data.Enum([
-    Data.Object({ Registered: CredentialSchema }),
+    Data.Object({ Registered: Data.Tuple([CredentialSchema]) }),
     Data.Object({ AlwaysAbstain: Data.Literal("AlwaysAbstain") }),
     Data.Object({ AlwaysNoConfidence: Data.Literal("AlwaysNoConfidence") }),
 ]);
