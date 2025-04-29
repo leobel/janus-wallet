@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { spendWalletFunds, generateRedeemer, buildSpendTx, createAccountTx, registerAndDelegate } from '../services/wallet.service';
+import { spendWalletFunds, generateRedeemer, buildSpend, createAccountTx, registerAndDelegate, delegate } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
 
 
@@ -23,7 +23,7 @@ export default (network: Network) => {
     try {
       const { userId } = req.params;
       const { amount, receive_address: receiveAddress, assets } = req.body;
-      const result = await buildSpendTx(userId, amount, receiveAddress, network, assets);
+      const result = await buildSpend(userId, amount, receiveAddress, network, assets);
 
       res.status(200).json(result);
     } catch (error: any) {
@@ -45,9 +45,9 @@ export default (network: Network) => {
 
   const registerAndDelegateToPool = async (req: Request, res: Response) => {
     try {
-      const { userId, poolId } = req.params;
+      const { userId, poolId } = req.params
       const result = await registerAndDelegate(network, userId, poolId)
-      res.status(200).json(result);
+      res.status(200).json(result)
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -64,8 +64,9 @@ export default (network: Network) => {
 
   const delegateToPool = async (req: Request, res: Response) => {
     try {
-      // TODO: Implement stake pool registration and delegation
-      res.status(501).json({ message: 'Not implemented yet' });
+      const { userId, poolId } = req.params
+      const result = await delegate(network, userId, poolId)
+      res.status(200).json(result)
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -94,14 +95,14 @@ export default (network: Network) => {
   }
 
   router.post('/:user_name', createAccount)
-  router.post('/:userId/build', buildSpendFunds);
+  router.post('/:userId/build', buildSpendFunds)
   router.post('/:userId/sign', sign)
   router.post('/:userId/send', spendFunds);
-  router.post('/:userId/pools/:poolId/registerAndDelegate', registerAndDelegateToPool);
-  router.post('/:userId/pools/:poolId/register', registerToPool);
-  router.post('/:userId/pools/:poolId/delegate', delegateToPool);
-  router.post('/:userId/withdraw', withdraw);
+  router.post('/:userId/pools/:poolId/registerAndDelegate', registerAndDelegateToPool)
+  router.post('/:userId/pools/:poolId/delegate', delegateToPool)
+  router.post('/:userId/pools/:poolId/register', registerToPool)
+  router.post('/:userId/withdraw', withdraw)
 
 
-  return router;
+  return router
 };

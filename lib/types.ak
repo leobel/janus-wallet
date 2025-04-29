@@ -84,6 +84,7 @@ pub type PublishRedeemer {
   Register
   RegisterAndDelegate
   Delegate
+  DelegateDRep
 }
 
 pub type WithdrawRedeemer {

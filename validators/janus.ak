@@ -1,26 +1,28 @@
 use aiken/builtin.{bytearray_to_integer, mod_integer}
 use aiken/collection/dict
 use aiken/collection/list
+use aiken/collection/pairs
 use aiken/crypto/bls12_381/scalar
-use cardano/address.{Credential, Script, VerificationKey}
-use cardano/assets.{PolicyId} as assets
+use cardano/address.{Address, Credential, Inline, Script, VerificationKey}
+use cardano/assets.{PolicyId, lovelace_of} as assets
 use cardano/certificate.{
   Certificate, DelegateBlockProduction, DelegateCredential,
-  RegisterAndDelegateCredential, RegisterCredential,
+  DelegateRepresentative, DelegateVote, RegisterAndDelegateCredential,
+  RegisterCredential,
 }
 use cardano/transaction.{
   InlineDatum, Input, Output, OutputReference, Transaction,
 }
 use types.{
   AccountDatum, AccountParameters, BurnAccount, CreateAccount, CreateCircuit,
-  Delegate, MintRedeemer, PubSignals, PublishRedeemer, Register,
+  Delegate, DelegateDRep, MintRedeemer, PubSignals, PublishRedeemer, Register,
   RegisterAndDelegate, SpendRedeemer, WalletParameters, Withdraw,
   WithdrawRedeemer, ZkVerificationKey,
 }
 use utils.{
   build_challenge, evaluating_script, find_account_input, find_account_output,
-  find_circuit_input, hash_challenge, include_script_input,
-  stakeRegistrationDeposit, to_scalar_overflow, zk_verify,
+  find_circuit_input, get_total_input_script_balance, hash_challenge,
+  is_script_address, stakeRegistrationDeposit, to_scalar_overflow, zk_verify,
 }
 
 validator wallet(params: WalletParameters) {
@@ -178,6 +180,7 @@ validator account(params: AccountParameters) {
     certificate: Certificate,
     self_tx: Transaction,
   ) {
+    let Transaction { inputs, outputs, fee, .. } = self_tx
     when redeemer is {
       Register -> {
         expect RegisterCredential {
@@ -185,7 +188,12 @@ validator account(params: AccountParameters) {
           deposit: Never,
         } = certificate
         trace @"script hash": script_hash
-        include_script_input(self_tx.inputs, script_hash)
+        let input_lovelace =
+          inputs
+            |> get_total_input_script_balance(script_hash)
+        expect [output] = outputs
+        expect is_script_address(output.address, script_hash, True)
+        lovelace_of(output.value) == input_lovelace - fee
       }
       RegisterAndDelegate -> {
         expect RegisterAndDelegateCredential {
@@ -194,10 +202,14 @@ validator account(params: AccountParameters) {
           deposit,
         } = certificate
         trace @"script hash": script_hash
-        (deposit == stakeRegistrationDeposit)? && include_script_input(
-          self_tx.inputs,
-          script_hash,
-        )
+        (deposit == stakeRegistrationDeposit)? && {
+          let input_lovelace =
+            inputs
+              |> get_total_input_script_balance(script_hash)
+          expect [output] = outputs
+          expect is_script_address(output.address, script_hash, True)
+          lovelace_of(output.value) == input_lovelace - deposit - fee
+        }
       }
       Delegate -> {
         expect DelegateCredential {
@@ -205,19 +217,53 @@ validator account(params: AccountParameters) {
           delegate: DelegateBlockProduction { .. },
         } = certificate
         trace @"script hash": script_hash
-        include_script_input(self_tx.inputs, script_hash)
+        let input_lovelace =
+          inputs
+            |> get_total_input_script_balance(script_hash)
+        expect [output] = outputs
+        expect is_script_address(output.address, script_hash, True)
+        lovelace_of(output.value) == input_lovelace - fee
+      }
+      DelegateDRep -> {
+        expect DelegateCredential {
+          credential: Script(script_hash),
+          delegate: DelegateVote { .. },
+        } = certificate
+        trace @"script hash": script_hash
+        let input_lovelace =
+          inputs
+            |> get_total_input_script_balance(script_hash)
+        expect [output] = outputs
+        expect is_script_address(output.address, script_hash, True)
+        lovelace_of(output.value) == input_lovelace - fee
       }
     }
   }
 
-  withdraw(
-    redeemer: WithdrawRedeemer,
-    account: Credential,
-    self_tx: Transaction,
-  ) {
-    when redeemer is {
-      Withdraw -> True
-    }
+  // TODO: don't build this until have tested, current withdraw and delegate to another pool(previuosly delegated)
+  withdraw(_redeemer: Data, credential: Credential, self_tx: Transaction) {
+    let Transaction { inputs, outputs, fee, withdrawals, .. } = self_tx
+    expect Script(script_hash) = credential
+    // check all inputs are from script address and collect all lovelace
+    let input_lovelace =
+      inputs
+        |> get_total_input_script_balance(script_hash)
+    // check there is only one output for script address with value (lovelace) = input + rewards - fee
+    expect [output] = outputs
+    expect is_script_address(output.address, script_hash, True)
+    let output_lovelace = lovelace_of(output.value)
+    let rewards =
+      withdrawals
+        |> pairs.get_all(credential)
+        |> list.foldl(0, fn(lovelace, acc) { lovelace + acc })
+    trace @"inputs lovelace:": input_lovelace
+    trace @"output lovelace:": output_lovelace
+    trace @"rewards to withdraw:": rewards
+    trace @"fee:": fee
+    output_lovelace == input_lovelace + rewards - fee
+    // when redeemer is {
+    //   Withdraw -> True
+    // }
   }
 
   else(_) {

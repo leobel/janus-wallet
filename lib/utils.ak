@@ -15,7 +15,7 @@ use cardano/address.{
   Address, Inline, Referenced, Script, StakeCredential, VerificationKey,
   with_delegation_script,
 }
-use cardano/assets.{AssetName, Lovelace, PolicyId, Value} as assets
+use cardano/assets.{AssetName, Lovelace, PolicyId, Value, lovelace_of} as assets
 use cardano/certificate.{Certificate}
 use cardano/transaction.{
   Datum, DatumHash, InlineDatum, Input, NoDatum, Output, OutputReference,
@@ -309,6 +309,39 @@ pub fn include_script_input(
       payment_hash == script_hash && stake_hash == script_hash
     },
   )
+}
+
+// NOTE: this function expect all inputs are from script
+pub fn get_total_input_script_balance(
+  inputs: List<Input>,
+  script_hash: ScriptHash,
+) -> Lovelace {
+  inputs
+    |> list.foldl(
+        0,
+        fn(input, lovelace) {
+          expect is_script_address(input.output.address, script_hash, True)
+          lovelace + lovelace_of(input.output.value)
+        },
+      )
+}
+
+pub fn is_script_address(
+  address: Address,
+  script_hash: ScriptHash,
+  with_delegation: Bool,
+) -> Bool {
+  let Address { payment_credential, stake_credential } = address
+  expect Script(payment_hash) = payment_credential
+  expect payment_hash == script_hash
+  if with_delegation {
+    when stake_credential is {
+      Some(Inline(Script(stake_hash))) -> stake_hash == script_hash
+      _ -> False
+    }
+  } else {
+    True
+  }
 }
 
 pub const stakeRegistrationDeposit: Lovelace = 2_000_000
