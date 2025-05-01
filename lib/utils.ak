@@ -137,14 +137,8 @@ pub fn hash_challenge(challenge: Challenge) -> ChallengeId {
 pub fn to_scalar_overflow(data: ByteArray) -> (Option<Scalar>, Scalar) {
   let num = bytearray_to_integer(True, data)
   when scalar.new(num) is {
-    None -> {
-      expect Some(overflow) = scalar.new(1)
-      (scalar.new(mod_integer(num, scalar.field_prime)), overflow)
-    }
-    n -> {
-      expect Some(overflow) = scalar.new(0)
-      (n, overflow)
-    }
+    None -> (scalar.new(mod_integer(num, scalar.field_prime)), scalar.one)
+    n -> (n, scalar.zero)
   }
 }
 

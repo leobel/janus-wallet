@@ -147,7 +147,7 @@ validator account(params: AccountParameters) {
         to_scalar_overflow(challenge_id)
       // TODO: add challenge overflow to circuit
       trace @"userId (number)": scalar_user_id
-      trace @"pwdHash (number)": scalar_hash
+      trace @"circuitHash (number)": scalar_hash
       trace @"challenge (number)": scalar_challenge
       trace @"overflow (number)": scalar_overflow
       let public =

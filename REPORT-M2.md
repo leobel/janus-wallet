@@ -384,10 +384,10 @@ Cardano zk primitives only works with compressed data, that's why we need to com
 ### Compress G1 and G2 points
 The followwing command will effectively compress all points in `verification_key.json` and return `compressed_verification_key.json`
 ```jsx
-node --experimental-specifier-resolution=node --loader ts-node/esm src/zkproof/compress_zk_verification_key.ts janus-wallet/verification_key.json compressed_verification_key.json
+node --no-warnings --experimental-specifier-resolution=node --loader ts-node/esm compress_zk_verification_key.ts janus-wallet/verification_key.json compressed_verification_key.json
 ```
 
-> **NOTICE**: command above assume it will be ran from project root `dir`
+> **NOTICE**: command above assume it will be executed from `src/zkproof`
 
 ## Start HTTP API Server
 
