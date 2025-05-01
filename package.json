@@ -24,6 +24,8 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^22.8.0",
     "@types/snarkjs": "^0.7.8",
+    "circom_tester": "^0.0.20",
+    "circomlib": "^2.0.5",
     "jest": "^29.7.0",
     "nodemon": "^3.1.0",
     "ts-jest": "^29.3.2",

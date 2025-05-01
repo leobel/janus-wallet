@@ -1696,7 +1696,7 @@ function getDatum(dataHash?: string | null, data?: string | null): Datum {
 
 export async function prepareContracts() {
     const validators = readValidators();
-    const { mint, policyId } = generateMintPolicy(validators.mint.script);
+    const { mint, policyId } = generateMintPolicy(validators.mint.script, '123423');
     const { spend, spendAddress } = generateSpendScript(
         validators.spend.script,
         "Preview",
