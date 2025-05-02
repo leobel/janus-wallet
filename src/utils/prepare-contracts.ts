@@ -11,7 +11,7 @@ import * as UPLC from "@lucid-evolution/uplc";
 import blueprint from "../../plutus.json" assert { type: 'json' };
 import { AccountDatum, Address, Certificate, Challenge, ChallengeOutput, Credential as ContractCredential, Datum, DelegateRepresentative, Input, Mint, MintRedeemer, Output, OutputReference, Proof, PublishRedeemer, Redeemer, ReferenceInputs, Signals, Spend, StakeCredential, Value, WithdrawRedeemer } from "./contract-types";
 import { pipe, Record, Array as _Array, BigInt as _BigInt, Option } from "effect";
-import { generate } from "../zkproof";
+import { generate, hashWithCircomlib } from "../zkproof";
 import { getCollaterls, signCollateral } from "../api/services/collateral.service";
 import { coinSelection } from "./coin-selection";
 import { getSignerKey } from "../api/services/circuit.service";
@@ -1051,7 +1051,7 @@ export interface ZKProof {
 
 export interface ZkInput {
     userId: string,
-    hash: string,
+    hash?: string,
     pwd?: string,
 }
 
@@ -1612,7 +1612,7 @@ function calculateMinLovelace(
 }
 
 async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
-    const { userId, hash, pwd } = zkInput;
+    const { userId, pwd } = zkInput;
 
     if (!pwd) {
         throw new Error('Password is required');
@@ -1623,24 +1623,28 @@ async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
     console.log('serialise (challenge id):', challengeId.toUpperCase());
     const numChallenge = BigInt(`0x${challengeId}`);
 
-    const [cirChallenge, _overflow] = numChallenge > r ? [numChallenge % r, 1] : [numChallenge, 0];
+    const [cirChallenge, overflow] = numChallenge > r ? [(numChallenge % r).toString(), "1"] : [numChallenge.toString(), "0"];
     // challenge for circuit
-    console.log('Challenge (in circuit)', cirChallenge, _overflow);
+    console.log('Challenge (in circuit)', cirChallenge, overflow);
+    
     const numUserId = BigInt(`0x${userId}`).toString() // decimal number
-    const numHash = BigInt(`0x${hash}`).toString() // decimal number
+    // const numHash = BigInt(`0x${hash}`).toString() // decimal number
     // const challenge = cirChallenge.toString(); // decimal number
 
-    // TODO: use new challengeId to build zkProof so the evaluation pass (update pA, pB, pC)
-    console.log('Generarte proof for:', { userId: numUserId, challenge: cirChallenge, hash: numHash, pwd });
+    // calculate hash
+    const numHash = await hashWithCircomlib(pwd, numUserId, cirChallenge, overflow)
 
-    const { proof } = await generate({ userId: numUserId, challenge: cirChallenge, hash: numHash, pwd });
-    return [challengeId, ...proof];
+    // TODO: use new challengeId to build zkProof so the evaluation pass (update pA, pB, pC)
+    console.log('Circuit Full Signals:', { userId: numUserId, challenge: cirChallenge, challengeFlag: overflow, hash: numHash, pwd });
+
+    const { proof } = await generate({ userId: numUserId, challenge: cirChallenge, challengeFlag: overflow, hash: numHash, pwd });
+    return [challengeId, numHash, ...proof];
 
 }
 
 async function buildRedeemer(txBody: CML.TransactionBody, zkInput: ZkInput, self_idx: number, idx: number, jdx: number) {
-    const [challengeId, pA, pB, pC] = await generateProof(txBody, zkInput);
-    const redeemer = getSpendRedeemer(zkInput.userId, zkInput.hash, challengeId, pA, pB, pC, self_idx, idx, jdx);
+    const [challengeId, hash, pA, pB, pC] = await generateProof(txBody, zkInput);
+    const redeemer = getSpendRedeemer(zkInput.userId, hash, challengeId, pA, pB, pC, self_idx, idx, jdx);
     return redeemer;
 }
 

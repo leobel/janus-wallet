@@ -3,6 +3,11 @@ import path from 'path';
 import * as snarkjs from 'snarkjs';
 import { buildBls12381, Scalar } from "ffjavascript";
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const circomTester = require('circom_tester');
+const wasm_tester = circomTester.wasm;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -128,13 +133,13 @@ function compressG2(p: any[], bls12381: any) {
 
 }
 
-async function compress(points: any[]) {
+export async function compress(points: any[]) {
     // Load the BLS12-381 curve
     const bls12381 = await buildBls12381();
     return points.map(p => Array.isArray(p[0]) ? compressG2(p, bls12381) : compressG1(p, bls12381))
 }
 
-async function generateProof(input: snarkjs.CircuitSignals, baseDir = 'bls12381') {
+async function generateProof(input: snarkjs.CircuitSignals, baseDir = 'janus-wallet') {
     try {
         // Read inputs directly from files
         const wtnsFileName = path.join(__dirname, baseDir, 'witness.wtns');
@@ -201,6 +206,21 @@ export async function generate(input: snarkjs.CircuitSignals) {
             console.log("Proof (compressed):", [pA, pB, pC]);
             return { proof: [pA, pB, pC] }
         })
+}
+
+export async function hashWithCircomlib(pwd: string, userId: string, challenge: string, challengeFlag: string, dir = "janus-wallet") {
+    const circomInput = path.join(__dirname, dir, "poseidon2_hash.circom");
+    const circuit3 = await wasm_tester(circomInput, { inspect: true, prime: 'bls12381' });
+
+    const inputs = [
+        BigInt(pwd),
+        BigInt(userId),
+        BigInt(challenge),
+        BigInt(challengeFlag),
+    ]
+    const w = await circuit3.calculateWitness({ inputs });
+    await circuit3.loadSymbols();
+    return w[circuit3.symbols["main.out"].varIdx].toString();
 }
 
 

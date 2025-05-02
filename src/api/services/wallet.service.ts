@@ -45,8 +45,8 @@ export async function createAccountTx(username: string, network: Network, hash: 
         spend_script: spend,
         mint_utxo_ref: utxoRef
     }
-    await createUser(user)
-    return user
+    const newUser = await createUser(user)
+    return newUser
 }
 
 export async function buildSpend(userId: string, amount: number, receiveAddress: string, network: Network, assets: Assets): Promise<{tx: string}> {

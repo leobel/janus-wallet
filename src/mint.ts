@@ -1,7 +1,9 @@
 import { Blockfrost, Data, fromText, Lucid } from "@lucid-evolution/lucid";
-import { generateMintPolicy, readValidators } from "./prepare-contracts";
+import { readValidators } from "./prepare-contracts";
+import { generateMintPolicy } from "./utils/prepare-contracts"
 import * as fs from 'fs';
 import { ZkDatum, ZkVerificationKey } from "./contract-types";
+import { MintRedeemer } from "./utils/contract-types";
 
 const lucid = await Lucid(
     new Blockfrost(
@@ -16,13 +18,15 @@ const walletAddress = await lucid.wallet().address();
 
 const validators = readValidators();
 const nonce = "9565b074c5c930aff80cac59a2278b70";
-const { mint, policyId } = generateMintPolicy(validators.mint.script, nonce);
+const version = 0
+const { mint, policyId, mintAddress } = generateMintPolicy("Preview", validators.mint.script, walletAddress, version, nonce);
 
 console.log('PolicyId:', policyId);
+console.log("Mint Address:", mintAddress)
 console.log('Mint Script:', mint);
 
 const lovelace = 1_000_000;
-const tokenName = fromText('Fontus#000');
+const tokenName = fromText('Circuit#000');
 console.log('Token Name:', tokenName);
 
 const assetName = `${policyId}${tokenName}`;
@@ -57,12 +61,13 @@ const data: ZkDatum = {
 const datum = Data.to(data, ZkDatum);
 console.log('Datum', datum);
 
-
-const mintRedeemer = Data.void();
+const _mintRedeemer: MintRedeemer = "CreateCircuit";
+const mintRedeemer = Data.to(_mintRedeemer, MintRedeemer);
 console.log('Redeemer:', mintRedeemer);
+console.log("Wallet Address:", walletAddress)
 
-const validTo = 1730070639036 + (22 * 60 * 60 * 1000); // 22 hour
-const tx = await lucid
+const validTo = Date.now() + (22 * 60 * 60 * 1000); // 22 hour
+const _tx = lucid
     .newTx()
     // use the mint validator
     .attach.MintingPolicy(mint)
@@ -73,7 +78,7 @@ const tx = await lucid
         mintRedeemer
     )
     .pay.ToContract(
-        walletAddress,
+        mintAddress,
         {
             kind: "inline",
             value: datum,
@@ -83,15 +88,16 @@ const tx = await lucid
             [assetName]: BigInt(1)
         }
     )
-    .validTo(validTo)
-    .complete({ localUPLCEval: false});
+    .validTo(validTo);
+
+let tx = await _tx.complete({ localUPLCEval: true});
 const txSigned = await tx.sign.withWallet().complete();
 // console.log('cbor', await tx.toString());
 console.log('cbor', txSigned.toCBOR({ canonical: false }));
 console.log('cbor (canonical)', txSigned.toCBOR({ canonical: true }));
 console.log('Tx Id:', txSigned.toHash());
 
-const txHash = await txSigned.submit();
-console.log('Tx Id (Submit):', txHash);
-const success = await lucid.awaitTx(txHash);
-console.log('Success?', success);
+// const txHash = await txSigned.submit();
+// console.log('Tx Id (Submit):', txHash);
+// const success = await lucid.awaitTx(txHash);
+// console.log('Success?', success);

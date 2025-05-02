@@ -134,11 +134,11 @@ pub fn hash_challenge(challenge: Challenge) -> ChallengeId {
   blake2b_256(bytes)
 }
 
-pub fn to_scalar_overflow(data: ByteArray) -> (Option<Scalar>, Int) {
+pub fn to_scalar_overflow(data: ByteArray) -> (Option<Scalar>, Scalar) {
   let num = bytearray_to_integer(True, data)
   when scalar.new(num) is {
-    None -> (scalar.new(mod_integer(num, scalar.field_prime)), 1)
-    n -> (n, 0)
+    None -> (scalar.new(mod_integer(num, scalar.field_prime)), scalar.one)
+    n -> (n, scalar.zero)
   }
 }
 

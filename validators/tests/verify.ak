@@ -1,5 +1,4 @@
-use aiken/builtin.{bytearray_to_integer, mod_integer}
-use aiken/cbor
+use aiken/builtin.{bytearray_to_integer, integer_to_bytearray}
 use aiken/crypto/bls12_381/scalar
 use aiken/option
 use aiken/primitive/bytearray
@@ -10,7 +9,7 @@ use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
 }
 use types.{AccountDatum, Proof, ZkVerificationKey}
-use utils.{build_challenge, hash_challenge, zk_verify}
+use utils.{build_challenge, hash_challenge, to_scalar_overflow, zk_verify}
 
 test verify_challenge_certs() {
   let user_id = #"466f6e74757323303030"
@@ -20,22 +19,7 @@ test verify_challenge_certs() {
       32,
     )
   let nonce = #"1234567890"
-  let zkey =
-    ZkVerificationKey {
-      vk_alpha1: #"b18db01619508d589ba45cdcc9c9ab4dbddc33e08bc4dbddea565c10dc743fd66510d3f49c6343999caf540eaa0c4e03",
-      vk_beta2: #"845f7a4f6d0fbcaf0648d9c2657f19a33f4e2124c284d68688f209abf54d5a1d1afc47de55c24e662c47f7632a760a8016e8ba01eb4b0d4a2db67fe5abed5ae1a09e035dbe984a1426e440a4f0038276792f87cdb2bc35dc185a618d352d7f54",
-      vk_gamma2: #"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8",
-      vk_delta2: #"a2341a098a95305955386a3e0e4e2879e6206342b9c9a8da0559190e82f3ed1478158f2ca1ef4db7deab124b7c85b0f403d1a968b4812e6c9c9392d926b86da501e23f6c94cffcc62b02393d7807a6f381e40ca49a9b4a2b522518f72927ca15",
-      vk_ic: [
-        #"ac2fcd68b85b64e6c3bc11a9dadd1b24e7786738475cf2fe0acdd9b41f773af18ec12601e368d2e920f299f9e6bed480",
-        #"a33061a2549ea773d275539b2e92caa6f936404635db1da3199ec71f06faf2cba8effef6860bcb0376259a681ef043c3",
-        #"a3f6177ea5ef5797249df745be266271bd65a6a1c9c9fae2df3dd2c7e9e6b5751f288fba11950455a9a1f9a054bad854",
-        #"a5d227c013957479be181bf43c394a49e8bf14585fd04a4ca72102e3e5ab41661411eeb15986ad3d3a09eb25bb2b7b12",
-        #"93a152a9cd7d4b81a08989f67fcb958e96b14ef4d3cefd26ad992059df4d252a9f00b5f9f2b5b8a59cf4eca9d7884893",
-        #"b8cd6daceeaa3b53d707ae2b99dc87e0dbbf58a1e310cff5cd3bea151d90962372de834a519a879c05bc470a016202d6",
-        #"a6b5d4a12faf84ac46dba1793716cdb14009af64d0edcd5f1c0ca872fa53bc5732da912222fc3d4fc7ea2fc1b9fbff41",
-      ],
-    }
+  let zkey = get_zkey()
   let accountData = AccountDatum { user_id, hash, nonce }
   let scriptHash = #"45e7ce17366d83c4c25d37ec2f9039cb614a305fdb4bead40f424876"
   let address = get_script_address(scriptHash)
@@ -120,228 +104,202 @@ test verify_challenge_certs() {
   challenge == build_challenge
 }
 
-test verify_zk_proof_1() {
-  let zkey =
-    ZkVerificationKey {
-      vk_alpha1: #"b18db01619508d589ba45cdcc9c9ab4dbddc33e08bc4dbddea565c10dc743fd66510d3f49c6343999caf540eaa0c4e03",
-      vk_beta2: #"845f7a4f6d0fbcaf0648d9c2657f19a33f4e2124c284d68688f209abf54d5a1d1afc47de55c24e662c47f7632a760a8016e8ba01eb4b0d4a2db67fe5abed5ae1a09e035dbe984a1426e440a4f0038276792f87cdb2bc35dc185a618d352d7f54",
-      vk_gamma2: #"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8",
-      vk_delta2: #"a2341a098a95305955386a3e0e4e2879e6206342b9c9a8da0559190e82f3ed1478158f2ca1ef4db7deab124b7c85b0f403d1a968b4812e6c9c9392d926b86da501e23f6c94cffcc62b02393d7807a6f381e40ca49a9b4a2b522518f72927ca15",
-      vk_ic: [
-        #"ac2fcd68b85b64e6c3bc11a9dadd1b24e7786738475cf2fe0acdd9b41f773af18ec12601e368d2e920f299f9e6bed480",
-        #"a33061a2549ea773d275539b2e92caa6f936404635db1da3199ec71f06faf2cba8effef6860bcb0376259a681ef043c3",
-        #"a3f6177ea5ef5797249df745be266271bd65a6a1c9c9fae2df3dd2c7e9e6b5751f288fba11950455a9a1f9a054bad854",
-        #"a5d227c013957479be181bf43c394a49e8bf14585fd04a4ca72102e3e5ab41661411eeb15986ad3d3a09eb25bb2b7b12",
-        #"93a152a9cd7d4b81a08989f67fcb958e96b14ef4d3cefd26ad992059df4d252a9f00b5f9f2b5b8a59cf4eca9d7884893",
-        #"b8cd6daceeaa3b53d707ae2b99dc87e0dbbf58a1e310cff5cd3bea151d90962372de834a519a879c05bc470a016202d6",
-        #"a6b5d4a12faf84ac46dba1793716cdb14009af64d0edcd5f1c0ca872fa53bc5732da912222fc3d4fc7ea2fc1b9fbff41",
-      ],
-    }
+test verify_zk_proof() {
+  let zkey = get_zkey()
   let p_a =
-    #"b5954b04ea1d2956fac946a3dabbe826cc4651322c23423a245d65f528bd5adead5aee7cbcfc3d86ae96a9ecfc40d3e8"
+    #"b960a5fe0960509eecb023ea841a205f7c4503925403e0dfd91d2acfcfb14fbf43388932cca1e2edc4a60aa2ac52c538"
   let p_b =
-    #"a3f50879ce5f27741ef8b0dfaf4b100f1fbc9ed503c2edd901dfbd080c449e40c97c8e465d191514565ede494209181e00f121f68062b2e6048d566ccfab5bd01271ade34d9e07362c41635ea371aef4487302db945e8aa8664ed73214a68216"
+    #"9921309affa531a83edbeec14f5b1f9ee5dabebe6c4dbfab7a9efe75e0b098a65ce404a71cf105b038d8e0ae92e4241019470d52764f84818d736655d9075b5f7a92175d611b575447928c5bf3e71c0cca8de85cbd8ee60e1431217e2c701429"
   let p_c =
-    #"aa0b4443bb50d1c93ce088b2df5abb315fceb183c709008e071c196ae4e6d1a969ed62b747f4bf84e9d22eea9278dd9a"
+    #"a7a95e9ec8beaf56a90bd046f6dd930f795e834e2d7d8ffba9b13050a1c756ad61e6ffa4b5710cceb25f10e75f04b826"
   let proof = Proof { p_a, p_b, p_c }
   let user_id = option.or_else(scalar.new(332621201508635767746608), scalar.one)
-  let hash =
+  let circuit_hash =
     option.or_else(
       scalar.new(
-        10343661163184219313272354919635983875711247223011266158462328948931637363678,
+        1213068129888263879523280420374147302574367144364172966430678699081284544200,
       ),
       scalar.one,
     )
   let challenge =
     option.or_else(
       scalar.new(
-        51891613829265625378560554888192412376874405841139917857278942238725157370276,
+        15508608271287428592369580175065299368102118271501153969697864720906988930331,
       ),
       scalar.one,
     )
-  let public = [user_id, hash, challenge, user_id, challenge, hash]
+  let overflow = scalar.zero
+  let public = [user_id, challenge, overflow, circuit_hash]
   zk_verify(proof, public, zkey)
 }
 
-test verify_zk_proof_2() {
-  let zkey =
-    ZkVerificationKey {
-      vk_alpha1: #"b18db01619508d589ba45cdcc9c9ab4dbddc33e08bc4dbddea565c10dc743fd66510d3f49c6343999caf540eaa0c4e03",
-      vk_beta2: #"845f7a4f6d0fbcaf0648d9c2657f19a33f4e2124c284d68688f209abf54d5a1d1afc47de55c24e662c47f7632a760a8016e8ba01eb4b0d4a2db67fe5abed5ae1a09e035dbe984a1426e440a4f0038276792f87cdb2bc35dc185a618d352d7f54",
-      vk_gamma2: #"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8",
-      vk_delta2: #"a2341a098a95305955386a3e0e4e2879e6206342b9c9a8da0559190e82f3ed1478158f2ca1ef4db7deab124b7c85b0f403d1a968b4812e6c9c9392d926b86da501e23f6c94cffcc62b02393d7807a6f381e40ca49a9b4a2b522518f72927ca15",
-      vk_ic: [
-        #"ac2fcd68b85b64e6c3bc11a9dadd1b24e7786738475cf2fe0acdd9b41f773af18ec12601e368d2e920f299f9e6bed480",
-        #"a33061a2549ea773d275539b2e92caa6f936404635db1da3199ec71f06faf2cba8effef6860bcb0376259a681ef043c3",
-        #"a3f6177ea5ef5797249df745be266271bd65a6a1c9c9fae2df3dd2c7e9e6b5751f288fba11950455a9a1f9a054bad854",
-        #"a5d227c013957479be181bf43c394a49e8bf14585fd04a4ca72102e3e5ab41661411eeb15986ad3d3a09eb25bb2b7b12",
-        #"93a152a9cd7d4b81a08989f67fcb958e96b14ef4d3cefd26ad992059df4d252a9f00b5f9f2b5b8a59cf4eca9d7884893",
-        #"b8cd6daceeaa3b53d707ae2b99dc87e0dbbf58a1e310cff5cd3bea151d90962372de834a519a879c05bc470a016202d6",
-        #"a6b5d4a12faf84ac46dba1793716cdb14009af64d0edcd5f1c0ca872fa53bc5732da912222fc3d4fc7ea2fc1b9fbff41",
-      ],
-    }
+test verify_zk_proof_invalid_user() fail {
+  let zkey = get_zkey()
   let p_a =
-    #"af46f51c9067ff3f6ae57ba0f76d9de33e979d01c0f91a40fc600f467b8fd0a3804d1968c2836632d728450b5d2614d4"
+    #"b960a5fe0960509eecb023ea841a205f7c4503925403e0dfd91d2acfcfb14fbf43388932cca1e2edc4a60aa2ac52c538"
   let p_b =
-    #"816dc1b644722dcaf92aba79949fb514b19f0289dec36e9d49e9fec755244636e321ac6e6d37cc78381fc37eced6e5d7057e8187d6fd098df9647146154565800cbd3f64a809bb4e565416c967c60ad6e32f83a9def38b0ad5ba826ec45a1e0a"
+    #"9921309affa531a83edbeec14f5b1f9ee5dabebe6c4dbfab7a9efe75e0b098a65ce404a71cf105b038d8e0ae92e4241019470d52764f84818d736655d9075b5f7a92175d611b575447928c5bf3e71c0cca8de85cbd8ee60e1431217e2c701429"
   let p_c =
-    #"8881425d2cf63d3e019a4eb858b79d536804ce76ee499dc562cf0bac94db104963f7599c96ee98b2f47c58a780c62980"
+    #"a7a95e9ec8beaf56a90bd046f6dd930f795e834e2d7d8ffba9b13050a1c756ad61e6ffa4b5710cceb25f10e75f04b826"
+  let proof = Proof { p_a, p_b, p_c }
+  let user_id = option.or_else(scalar.new(12345567890), scalar.one)
+  let circuit_hash =
+    option.or_else(
+      scalar.new(
+        1213068129888263879523280420374147302574367144364172966430678699081284544200,
+      ),
+      scalar.one,
+    )
+  let challenge =
+    option.or_else(
+      scalar.new(
+        15508608271287428592369580175065299368102118271501153969697864720906988930331,
+      ),
+      scalar.one,
+    )
+  let overflow = scalar.zero
+  let public = [user_id, challenge, overflow, circuit_hash]
+  zk_verify(proof, public, zkey)
+}
+
+test verify_zk_proof_invalid_circuit_hash() fail {
+  let zkey = get_zkey()
+  let p_a =
+    #"b960a5fe0960509eecb023ea841a205f7c4503925403e0dfd91d2acfcfb14fbf43388932cca1e2edc4a60aa2ac52c538"
+  let p_b =
+    #"9921309affa531a83edbeec14f5b1f9ee5dabebe6c4dbfab7a9efe75e0b098a65ce404a71cf105b038d8e0ae92e4241019470d52764f84818d736655d9075b5f7a92175d611b575447928c5bf3e71c0cca8de85cbd8ee60e1431217e2c701429"
+  let p_c =
+    #"a7a95e9ec8beaf56a90bd046f6dd930f795e834e2d7d8ffba9b13050a1c756ad61e6ffa4b5710cceb25f10e75f04b826"
   let proof = Proof { p_a, p_b, p_c }
   let user_id = option.or_else(scalar.new(332621201508635767746608), scalar.one)
-  let hash =
+  let circuit_hash =
     option.or_else(
       scalar.new(
-        10343661163184219313272354919635983875711247223011266158462328948931637363678,
+        1213068129888263879523280420374147302574367144364172966430678699081284544201,
       ),
       scalar.one,
     )
   let challenge =
     option.or_else(
       scalar.new(
-        28076471370584806019427378065158897909801938413109722386793687859420994098272,
+        15508608271287428592369580175065299368102118271501153969697864720906988930331,
       ),
       scalar.one,
     )
-  let public = [user_id, hash, challenge, user_id, challenge, hash]
+  let overflow = scalar.zero
+  let public = [user_id, challenge, overflow, circuit_hash]
   zk_verify(proof, public, zkey)
 }
 
-test verify_zk_proof_3() {
-  let zkey =
-    ZkVerificationKey {
-      vk_alpha1: #"b18db01619508d589ba45cdcc9c9ab4dbddc33e08bc4dbddea565c10dc743fd66510d3f49c6343999caf540eaa0c4e03",
-      vk_beta2: #"845f7a4f6d0fbcaf0648d9c2657f19a33f4e2124c284d68688f209abf54d5a1d1afc47de55c24e662c47f7632a760a8016e8ba01eb4b0d4a2db67fe5abed5ae1a09e035dbe984a1426e440a4f0038276792f87cdb2bc35dc185a618d352d7f54",
-      vk_gamma2: #"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8",
-      vk_delta2: #"a2341a098a95305955386a3e0e4e2879e6206342b9c9a8da0559190e82f3ed1478158f2ca1ef4db7deab124b7c85b0f403d1a968b4812e6c9c9392d926b86da501e23f6c94cffcc62b02393d7807a6f381e40ca49a9b4a2b522518f72927ca15",
-      vk_ic: [
-        #"ac2fcd68b85b64e6c3bc11a9dadd1b24e7786738475cf2fe0acdd9b41f773af18ec12601e368d2e920f299f9e6bed480",
-        #"a33061a2549ea773d275539b2e92caa6f936404635db1da3199ec71f06faf2cba8effef6860bcb0376259a681ef043c3",
-        #"a3f6177ea5ef5797249df745be266271bd65a6a1c9c9fae2df3dd2c7e9e6b5751f288fba11950455a9a1f9a054bad854",
-        #"a5d227c013957479be181bf43c394a49e8bf14585fd04a4ca72102e3e5ab41661411eeb15986ad3d3a09eb25bb2b7b12",
-        #"93a152a9cd7d4b81a08989f67fcb958e96b14ef4d3cefd26ad992059df4d252a9f00b5f9f2b5b8a59cf4eca9d7884893",
-        #"b8cd6daceeaa3b53d707ae2b99dc87e0dbbf58a1e310cff5cd3bea151d90962372de834a519a879c05bc470a016202d6",
-        #"a6b5d4a12faf84ac46dba1793716cdb14009af64d0edcd5f1c0ca872fa53bc5732da912222fc3d4fc7ea2fc1b9fbff41",
-      ],
-    }
+test verify_zk_proof_invalid_challenge() fail {
+  let zkey = get_zkey()
   let p_a =
-    #"b93b1886cae4cc59622f0fdde89c76b34f32f37f523618118da4cc92133054a76f5f3a4651ee2455a09395d340e70ed5"
+    #"b960a5fe0960509eecb023ea841a205f7c4503925403e0dfd91d2acfcfb14fbf43388932cca1e2edc4a60aa2ac52c538"
   let p_b =
-    #"88fb7828c74ad5acd71e378fe7cec93920ba38ac51c638c600f828e8cf0a726ee78f8a00b95a25089eed0fffec2193110891bfb24c9f587a270d521eca65407fa3f5d76c8e73df17c0155b9ee808ad1fe95bda518fe6e8576516a2e6c330f80b"
+    #"9921309affa531a83edbeec14f5b1f9ee5dabebe6c4dbfab7a9efe75e0b098a65ce404a71cf105b038d8e0ae92e4241019470d52764f84818d736655d9075b5f7a92175d611b575447928c5bf3e71c0cca8de85cbd8ee60e1431217e2c701429"
   let p_c =
-    #"aec773e18eb01d1772b09dee3f56ccffabc2b6af595f6b8ab7516569f381ec357669997d70eaa37c2869c53093cc5b40"
+    #"a7a95e9ec8beaf56a90bd046f6dd930f795e834e2d7d8ffba9b13050a1c756ad61e6ffa4b5710cceb25f10e75f04b826"
   let proof = Proof { p_a, p_b, p_c }
-  let user_id =
+  let user_id = option.or_else(scalar.new(332621201508635767746608), scalar.one)
+  let circuit_hash =
     option.or_else(
       scalar.new(
-        52435875175126190479447740508185965837690552500527637822603658699938581184512,
-      ),
-      scalar.one,
-    )
-  let hash =
-    option.or_else(
-      scalar.new(
-        10343661163184219313272354919635983875711247223011266158462328948931637363678,
+        1213068129888263879523280420374147302574367144364172966430678699081284544200,
       ),
       scalar.one,
     )
   let challenge =
     option.or_else(
       scalar.new(
-        28076471370584806019427378065158897909801938413109722386793687859420994098272,
+        15508608271287428592369580175065299368102118271501153969697864720906988930333,
       ),
       scalar.one,
     )
-  let public = [user_id, hash, challenge, user_id, challenge, hash]
+  let overflow = scalar.zero
+  let public = [user_id, challenge, overflow, circuit_hash]
   zk_verify(proof, public, zkey)
 }
 
-test verify_zk_proof_4() {
-  let zkey =
-    ZkVerificationKey {
-      vk_alpha1: #"b18db01619508d589ba45cdcc9c9ab4dbddc33e08bc4dbddea565c10dc743fd66510d3f49c6343999caf540eaa0c4e03",
-      vk_beta2: #"845f7a4f6d0fbcaf0648d9c2657f19a33f4e2124c284d68688f209abf54d5a1d1afc47de55c24e662c47f7632a760a8016e8ba01eb4b0d4a2db67fe5abed5ae1a09e035dbe984a1426e440a4f0038276792f87cdb2bc35dc185a618d352d7f54",
-      vk_gamma2: #"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8",
-      vk_delta2: #"a2341a098a95305955386a3e0e4e2879e6206342b9c9a8da0559190e82f3ed1478158f2ca1ef4db7deab124b7c85b0f403d1a968b4812e6c9c9392d926b86da501e23f6c94cffcc62b02393d7807a6f381e40ca49a9b4a2b522518f72927ca15",
-      vk_ic: [
-        #"ac2fcd68b85b64e6c3bc11a9dadd1b24e7786738475cf2fe0acdd9b41f773af18ec12601e368d2e920f299f9e6bed480",
-        #"a33061a2549ea773d275539b2e92caa6f936404635db1da3199ec71f06faf2cba8effef6860bcb0376259a681ef043c3",
-        #"a3f6177ea5ef5797249df745be266271bd65a6a1c9c9fae2df3dd2c7e9e6b5751f288fba11950455a9a1f9a054bad854",
-        #"a5d227c013957479be181bf43c394a49e8bf14585fd04a4ca72102e3e5ab41661411eeb15986ad3d3a09eb25bb2b7b12",
-        #"93a152a9cd7d4b81a08989f67fcb958e96b14ef4d3cefd26ad992059df4d252a9f00b5f9f2b5b8a59cf4eca9d7884893",
-        #"b8cd6daceeaa3b53d707ae2b99dc87e0dbbf58a1e310cff5cd3bea151d90962372de834a519a879c05bc470a016202d6",
-        #"a6b5d4a12faf84ac46dba1793716cdb14009af64d0edcd5f1c0ca872fa53bc5732da912222fc3d4fc7ea2fc1b9fbff41",
-      ],
-    }
+test verify_zk_proof_invalid_overflow() fail {
+  let zkey = get_zkey()
   let p_a =
-    #"b93b1886cae4cc59622f0fdde89c76b34f32f37f523618118da4cc92133054a76f5f3a4651ee2455a09395d340e70ed5"
+    #"b960a5fe0960509eecb023ea841a205f7c4503925403e0dfd91d2acfcfb14fbf43388932cca1e2edc4a60aa2ac52c538"
   let p_b =
-    #"88fb7828c74ad5acd71e378fe7cec93920ba38ac51c638c600f828e8cf0a726ee78f8a00b95a25089eed0fffec2193110891bfb24c9f587a270d521eca65407fa3f5d76c8e73df17c0155b9ee808ad1fe95bda518fe6e8576516a2e6c330f80b"
+    #"9921309affa531a83edbeec14f5b1f9ee5dabebe6c4dbfab7a9efe75e0b098a65ce404a71cf105b038d8e0ae92e4241019470d52764f84818d736655d9075b5f7a92175d611b575447928c5bf3e71c0cca8de85cbd8ee60e1431217e2c701429"
   let p_c =
-    #"aec773e18eb01d1772b09dee3f56ccffabc2b6af595f6b8ab7516569f381ec357669997d70eaa37c2869c53093cc5b40"
+    #"a7a95e9ec8beaf56a90bd046f6dd930f795e834e2d7d8ffba9b13050a1c756ad61e6ffa4b5710cceb25f10e75f04b826"
   let proof = Proof { p_a, p_b, p_c }
-  let user_id =
+  let user_id = option.or_else(scalar.new(332621201508635767746608), scalar.one)
+  let circuit_hash =
     option.or_else(
       scalar.new(
-        52435875175126190479447740508185965837690552500527637822603658699938581184512,
-      ),
-      scalar.one,
-    )
-  let hash =
-    option.or_else(
-      scalar.new(
-        52435875175126190479447740508185965837690552500527637822603658699938581184512,
+        1213068129888263879523280420374147302574367144364172966430678699081284544200,
       ),
       scalar.one,
     )
   let challenge =
     option.or_else(
       scalar.new(
-        52435875175126190479447740508185965837690552500527637822603658699938581184512,
+        15508608271287428592369580175065299368102118271501153969697864720906988930331,
       ),
       scalar.one,
     )
-  let public = [user_id, hash, challenge, user_id, challenge, hash]
-  !zk_verify(proof, public, zkey)
+  let overflow = scalar.one
+  let public = [user_id, challenge, overflow, circuit_hash]
+  zk_verify(proof, public, zkey)
 }
 
-test verify_zk_proof_5() {
-  let max =
-    104871750350252380958895481016371931675381105001055275645207317399877162369025
-  let max_challenge =
-    bytearray_to_integer(
-      True,
-      #"e7db4ea6533afa906673b0101343b00aa77b4805fffcb7fdfffffffe00000001",
+test verify_zk_proof_invalid_proof() fail {
+  let zkey = get_zkey()
+  let p_a =
+    #"887ffde615b9fc5b7974ca73328663b938fdf295107a4999535f6085aec0f7a2c7b25efa996d7e73c26e3a24e9994b96"
+  let p_b =
+    #"a3329e6511058a7deab9c937cc3936b316d9e9da403b5e70f1a976d06c0cc0a76adf8e677a158e1fec4dce33eb0b9c230ed84aaf088be80c607dc91ba55682d918d205ebb9e425821c0450e5b62937938f53f84b276f61ae976786ed113e6c7c"
+  let p_c =
+    #"83c484deabff3c5024c140f44f018baf96abd29207d9077e3a5ceb209b918ba292dfb390992fd4e206678dbfc2121fd3"
+  let proof = Proof { p_a, p_b, p_c }
+  let user_id = option.or_else(scalar.new(332621201508635767746608), scalar.one)
+  let circuit_hash =
+    option.or_else(
+      scalar.new(
+        1213068129888263879523280420374147302574367144364172966430678699081284544200,
+      ),
+      scalar.one,
     )
-  expect (Some(challenge), overflow) =
-    when scalar.new(max_challenge) is {
-      None -> (scalar.new(mod_integer(max_challenge, scalar.field_prime)), 1)
-      n -> (n, 0)
-    }
+  let challenge =
+    option.or_else(
+      scalar.new(
+        15508608271287428592369580175065299368102118271501153969697864720906988930331,
+      ),
+      scalar.one,
+    )
+  let overflow = scalar.zero
+  let public = [user_id, challenge, overflow, circuit_hash]
+  zk_verify(proof, public, zkey)
+}
 
-  scalar.to_int(challenge) + 1 == scalar.field_prime && max_challenge == max
+test verify_zk_proof_overflow_one() {
+  // scalar.field_prime = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+  let max = #"e7db4ea6533afa906673b0101343b00aa77b4805fffcb7fdfffffffe00000001"
+  expect (Some(challenge), overflow) = to_scalar_overflow(max)
+  scalar.to_int(challenge) + 1 == scalar.field_prime && overflow == scalar.one
+}
+
+test verify_zk_proof_overflow_zero() {
+  // max = scalar.field_prime (52435875175126190479447740508185965837690552500527637822603658699938581184513) - 1
+  let max = integer_to_bytearray(True, 32, scalar.field_prime - 1)
+  expect (Some(challenge), overflow) = to_scalar_overflow(max)
+  scalar.to_int(challenge) + 1 == scalar.field_prime && overflow == scalar.zero
 }
 
 test verify_zk_proof_performance() {
-  let zkey =
-    ZkVerificationKey {
-      vk_alpha1: #"b18db01619508d589ba45cdcc9c9ab4dbddc33e08bc4dbddea565c10dc743fd66510d3f49c6343999caf540eaa0c4e03",
-      vk_beta2: #"845f7a4f6d0fbcaf0648d9c2657f19a33f4e2124c284d68688f209abf54d5a1d1afc47de55c24e662c47f7632a760a8016e8ba01eb4b0d4a2db67fe5abed5ae1a09e035dbe984a1426e440a4f0038276792f87cdb2bc35dc185a618d352d7f54",
-      vk_gamma2: #"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8",
-      vk_delta2: #"8e5796ace888fd643418178b2db8f80c170c5e9c354e116e85f504eb8408cd40e90952222121e9e08a30ad95f46dba32086b9d84370c59c06bc8c209e8f8b43b22f7899a5a79559cb0a2126b2d26460ac3b4a2f8d2586ce49ffd9dbe5a081c13",
-      vk_ic: [
-        #"a46d067684adc323d799d6f3fbe954355a0aef435306756e1d6a155a128b29fa6272e6d7b764ceb72c08b62a99eece9f",
-        #"a995e5030b8bb094cd5979ac22e5a102cffb93a27e68bbba9c53ab8db6bc7d142ba29733331fcd1efd598136b159e1c8",
-        #"a66a4baf54fb9fd9f5b6fcb39372327b7663a2ddf1d0cf01c0e33c41b14d2a0d90fc6a253713fc2e1d4f71cdc656bcb7",
-        #"922d8796f14639d88eeab4b6563350e7f3bb8ab2b2543f6b1203930e8df6b3607c545e191a9235962011b22ae7a873df",
-        #"907323e981b8ca804b93f3fedfbcf920afa884365698bb26e2bd6cf1e5c470f38414545074530404d4e9c844aa7e7590",
-      ],
-    }
+  let zkey = get_zkey()
   let p_a =
-    #"b1b281e0d3ecd76171442635713dfa878e118385d2e9cd355067ea205459225bef48c91a1b8a71ca003319e2622ce71d"
+    #"887ffde615b9fc5b7974ca73328663b938fdf295107a4999535f6085aec0f7a2c7b25efa996d7e73c26e3a24e9994b96"
   let p_b =
-    #"a6946374ebf1c51e7cbf6f51daf37e1e68d9d22a2798cba9dbc4160674856346021e6b22bcff6c07356f48b1783f088d15a224d577482ee6a8982b4abbf00bdf0b4fb5e627c958e7bc419aed02852e5d5c07b2966aaab7a4012dd625e92b29f3"
+    #"a3329e6511058a7deab9c937cc3936b316d9e9da403b5e70f1a976d06c0cc0a76adf8e677a158e1fec4dce33eb0b9c230ed84aaf088be80c607dc91ba55682d918d205ebb9e425821c0450e5b62937938f53f84b276f61ae976786ed113e6c7c"
   let p_c =
-    #"864f0956fc1f489b1e9fc0ee00a29afea7e19c8ae5e80facfe321bb55c57a2026d504fbddac6cb0b7d7a9e2716701c27"
+    #"83c484deabff3c5024c140f44f018baf96abd29207d9077e3a5ceb209b918ba292dfb390992fd4e206678dbfc2121fd3"
   let proof = Proof { p_a, p_b, p_c }
   let user_id =
     option.or_else(
@@ -361,12 +319,12 @@ test verify_zk_proof_performance() {
   let hash =
     option.or_else(
       scalar.new(
-        52435875175126190479447740508185965837690552500527637822603658699938581184512,
+        7872546840633957424423922093117117055086684658853702699218477667386254515905,
       ),
       scalar.one,
     )
   let public = [user_id, challenge, challengeFlag, hash]
-  !zk_verify(proof, public, zkey)
+  zk_verify(proof, public, zkey)
 }
 
 fn get_script_address(script_hash: ByteArray) -> Address {
@@ -374,4 +332,20 @@ fn get_script_address(script_hash: ByteArray) -> Address {
     Address { payment_credential: Script(script_hash), stake_credential: None },
     script_hash,
   )
+}
+
+fn get_zkey() -> ZkVerificationKey {
+  ZkVerificationKey {
+    vk_alpha1: #"8f944ea2be1d423e0c36e660f1ada1a7134635fa3465a5fcaef0acf1f0896999a75cadedf66d311cd0a6313c18ffafce",
+    vk_beta2: #"81dfe06986c3f80e8297c1ebb297671e768da02d5bf34ad87b404aba89cc1655f024e28942c7a1169139e6ce5ecacfde081e9ba17708034ca12593f19c020c2544e49aaff91a718f0199d1c35ae00b0f5f8101028d4ab9e804bf35a7f3eea524",
+    vk_gamma2: #"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8",
+    vk_delta2: #"84bf191b52b37245585ff46a89b0b7489050c06f305c76ff3f091400f055782e07c549300ab623ac239f253276aa3a860d6f734f51e36c68aaceaf9278cd8f69d7737ec862effa5442ad75fb328e471811b43bae6ac6ca27f52fdc358df81a56",
+    vk_ic: [
+      #"b96ea33f7e293ee46e2a5298bfc29547175296e94001cd3a6b4da298bf1103ea2ff66053a9d1e7eb7183709dbadefd8e",
+      #"90daa46fc04d5e71ff4c4abd1f71e042cb60f3a0a4884d1c13aec3401cf6e4723f3e4b11b7e5a8548777447a4f66d55d",
+      #"b38187f1fc1fe0f5769846a05a96b99c06de97a99aa25c00066b9c4fbe948ff93866b11b0424ab497277da64aed53ad9",
+      #"b7caa8872d7c82bad8e14797f6aaae278911fc2b5ecd69e71fa8762ad9d525197630b43ab5ba06eb1739548e0e83800b",
+      #"85c7f52cf0ca708c389d07a01c30565679588362431b2787ab6c22b47b58e4f31a318fc2cdb9844b84c9de7a1fd09fc8",
+    ],
+  }
 }
