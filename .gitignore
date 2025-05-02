@@ -15,3 +15,6 @@ node_modules
 
 # env
 .env*
+
+# zk proof
+src/zkproof/*/circuit_cpp
