@@ -4,10 +4,11 @@ import * as snarkjs from 'snarkjs';
 import { buildBls12381, Scalar } from "ffjavascript";
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
-
 const require = createRequire(import.meta.url);
 const circomTester = require('circom_tester');
 const wasm_tester = circomTester.wasm;
+
+// import { wasm_tester } from './circom_hashing/index';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

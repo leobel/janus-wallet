@@ -104,7 +104,6 @@ export async function generateRedeemer(userId: string, pwd: string, txCbor: stri
     }
     const zkInput: ZkInput = {
         userId: user.token_name,
-        hash: user.pwd_hash,
         pwd
         // pwd: "12345"
     }

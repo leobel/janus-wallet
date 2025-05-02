@@ -109,13 +109,13 @@ export default (network: Network) => {
 
   router.post('/:user_name', createAccount)
   router.post('/:userId/build', buildSpendFunds)
-  router.post('/:userId/sign', sign)
-  router.post('/:userId/send', spendFunds);
   router.post('/:userId/pools/:poolId/registerAndDelegate', registerAndDelegateToPool)
   router.post('/:userId/pools/:poolId/delegate', delegateToPool)
   router.post('/:userId/pools/:poolId/register', registerToPool)
   router.post('/:userId/dreps/:drepId/delegate', delegateToDrep)
   router.post('/:userId/withdraw', withdraw)
+  router.post('/:userId/sign', sign)
+  router.post('/:userId/send', spendFunds);
 
 
   return router

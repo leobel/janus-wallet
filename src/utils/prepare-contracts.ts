@@ -1638,7 +1638,7 @@ async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
     console.log('Circuit Full Signals:', { userId: numUserId, challenge: cirChallenge, challengeFlag: overflow, hash: numHash, pwd });
 
     const { proof } = await generate({ userId: numUserId, challenge: cirChallenge, challengeFlag: overflow, hash: numHash, pwd });
-    return [challengeId, numHash, ...proof];
+    return [challengeId, BigInt(numHash.toString()).toString(16), ...proof];
 
 }
 
