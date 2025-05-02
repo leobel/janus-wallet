@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { spendWalletFunds, generateRedeemer, buildSpend, createAccountTx, registerAndDelegate, delegate, delegateDrep } from '../services/wallet.service';
+import { spendWalletFunds, generateRedeemer, buildSpend, createAccountTx, registerAndDelegate, delegate, delegateDrep, withdrawRewards } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
 
 
@@ -85,8 +85,10 @@ export default (network: Network) => {
 
   const withdraw = async (req: Request, res: Response) => {
     try {
-      // TODO: Implement withdrawal functionality
-      res.status(501).json({ message: 'Not implemented yet' });
+      const { userId } = req.params
+      const { amount } = req.body
+      const result = await withdrawRewards(network, userId, amount)
+      res.status(200).json(result)
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
