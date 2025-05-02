@@ -1,25 +1,10 @@
+# Obtaining a ZK-SNARK circuit (GROTH16)
+
 ## Prepare the project
-let's just start installing all project's dependencies with:
+let's just start installing all dependencies with:
 ```jsx
 npm install
 ```
-
-## Obtaining a ZK-SNARK circuit (GROTH16)
-- Online using zkrepl.dev:
-Go to https://zkrepl.dev and replace current code with your circon code in the editor. You can then add some inputs to verify it with command `shift+enter`:
-```json
-/* INPUT = {
-    "userId": "52435875175126190479447740508185965837690552500527637822603658699938581184512",
-    "challenge": "52435875175126190479447740508185965837690552500527637822603658699938581184512",
-    "challengeFlag": "1",
-    "hash": "7507823236105502751361814670776963121972651270405097442444326619292614813323",
-    "pwd": "52435875175126190479447740508185965837690552500527637822603658699938581184512"
-} */
-```
-To generate circuit ZK Verification keys click on "Groth16" button, then download file `main.groth16.vkey.json`
-> ⚠️ **WARNING:** These keys are strictly for testing purposes, and are generated without a proper trusted setup!
-
-
 
 ## Locally using `snarkjs` and `circom` commands:
 First install `snarkjs` globally following installation guide [here](https://github.com/iden3/snarkjs?tab=readme-ov-file#install-node). To install circom, follow the instructions at [installing circom](https://docs.circom.io/getting-started/installation).
