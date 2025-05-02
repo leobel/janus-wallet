@@ -2,18 +2,11 @@
 
 Simplified Cardano Onboarding with ZK Proofs
 
-```cli
-node --experimental-specifier-resolution=node --loader ts-node/esm src/prepare-contracts.ts
+[M1 Report](https://github.com/leobel/janus-wallet/blob/main/REPORT-M1.md)
+[M2 Report](https://github.com/leobel/janus-wallet/blob/main/REPORT-M2.md)
 
-node --experimental-specifier-resolution=node --loader ts-node/esm src/spend.ts
-node --experimental-specifier-resolution=node --loader ts-node/esm src/mint.ts
-node --experimental-specifier-resolution=node --loader ts-node/esm src/register-stake.ts
-```
-    
 
 ## Test
 ```cli
-aiken check -m tests.verify_zk_proof_per
-aiken check -t silent -m tests/spend.evaluating 
-aiken check . -t silent
+aiken check .
 ```
