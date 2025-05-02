@@ -19,8 +19,12 @@ Go to https://zkrepl.dev and replace current code with your circon code in the e
 To generate circuit ZK Verification keys click on "Groth16" button, then download file `main.groth16.vkey.json`
 > ⚠️ **WARNING:** These keys are strictly for testing purposes, and are generated without a proper trusted setup!
 
-- Locally using `snarkjs` cli:
-First install `snarkjs` globally following installation guide [here](https://github.com/iden3/snarkjs?tab=readme-ov-file#install-node). Once `snarkjs` is installed we can proceed to generate the ZK Verification keys as follow:
+
+
+## Locally using `snarkjs` and `circom` commands:
+First install `snarkjs` globally following installation guide [here](https://github.com/iden3/snarkjs?tab=readme-ov-file#install-node). To install circom, follow the instructions at [installing circom](https://docs.circom.io/getting-started/installation).
+
+Once `snarkjs` is installed we can proceed to generate the ZK Verification keys as follow:
 
 ### Phase 1 Trusted Setup
 **1. Start a new powers of tau ceremony**
@@ -453,6 +457,8 @@ Once the `.env` is ready you can start the HTTP server with:
 ```
 npm start
 ``` 
+
+> **WARNING** Logic to sign transactions (producing the ZKProof) relies on `circom` to be installed, so make sure it's accesible from the console running the server. One simple check is running `circom --version` to check if it's available. Normally the binary will be isntalled at: `$HOME/.cargo/bin` if you can't access to it from the console you can consider moving it to a global path like: `/usr/local/bin`
 
 
 ### Mint circuit
