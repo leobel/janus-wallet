@@ -121,26 +121,40 @@ include "../../../node_modules/circomlib/circuits/poseidon.circom";
 
 template Authenticate() {
     signal input userId; // Public user id (this could be a username or session id from Auth providers like Google)
+    signal input credentialHash; // Public credential hash, e.g Poseidon(pwd, userId)
     signal input challenge; // Public challenge the SC will require to match (this value will change on each successful tx so you can't use same proof twice)
     signal input challengeFlag; // Public flag indicating whether challenge overflow or not
-    signal input hash; // Public user password hash
+    signal input circuitHash; // Public circuit hash, e.g Poseidon(pwd, hash, userId, challenge, challengeFlag)
     signal input pwd;  // Private user password
 
     // Step 1: Hash the provided password
-    component poseidon = Poseidon(4);
-    poseidon.inputs[0] <== pwd;
-    poseidon.inputs[1] <== userId;
-    poseidon.inputs[2] <== challenge;
-    poseidon.inputs[3] <== challengeFlag;
+    component p = Poseidon(2);
+    p.inputs[0] <== pwd;
+    p.inputs[1] <== userId;
 
     // deugging (Optional)
-    log("hash", poseidon.out);
+    log("credential hash:", p.out);
 
-    // Step 2: Ensure the provided password matches the known hash
-    hash === poseidon.out;
+    // Step 2: Ensure the provided password & userId matches the known credential hash
+    credentialHash === p.out;
+
+
+    // Step 3: Hash all signals 
+    component poseidon = Poseidon(5);
+    poseidon.inputs[0] <== pwd;
+    poseidon.inputs[1] <== userId;
+    poseidon.inputs[2] <== credentialHash;
+    poseidon.inputs[3] <== challenge;
+    poseidon.inputs[4] <== challengeFlag;
+
+    // deugging (Optional)
+    log("circuit hash:", poseidon.out);
+
+    // Step 4: Ensure the provided signals plus password matches the circuit hash
+    circuitHash === poseidon.out;
 }
 
-component main {public [userId, challenge, challengeFlag, hash]} = Authenticate();
+component main {public [userId, credentialHash, challenge, challengeFlag, circuitHash]} = Authenticate();
 EOT
 ```
 
@@ -171,11 +185,11 @@ snarkjs r1cs info circuit.r1cs
 Output will looks like this:
 ```jsx
 [INFO]  snarkJS: Curve: bls12-381
-[INFO]  snarkJS: # of Wires: 741
-[INFO]  snarkJS: # of Constraints: 736
+[INFO]  snarkJS: # of Wires: 1357
+[INFO]  snarkJS: # of Constraints: 1352
 [INFO]  snarkJS: # of Private Inputs: 1
-[INFO]  snarkJS: # of Public Inputs: 4
-[INFO]  snarkJS: # of Labels: 1173
+[INFO]  snarkJS: # of Public Inputs: 5
+[INFO]  snarkJS: # of Labels: 2126
 [INFO]  snarkJS: # of Outputs: 0
 ```
 The information fits out understanding of the circuit where we pass in four public data: `userId, challenge, challengeFlag, hash`
@@ -200,9 +214,10 @@ First, we create a file with the inputs for our circuit:
 cat <<EOT > input.json
 {
     "userId": "52435875175126190479447740508185965837690552500527637822603658699938581184512",
-    "challenge": "52435875175126190479447740508185965837690552500527637822603658699938581184512",
+    "credentialHash": "17469782945530594987388377835453341901430155623074104503315972326141136515159",
+    "challenge": "17469782945530594987388377835453341901430155623074104503315972326141136515159",
     "challengeFlag": "1",
-    "hash": "7872546840633957424423922093117117055086684658853702699218477667386254515905",
+    "circuitHash": "24883872159189864133794802823127472657146334491119345834661566606314629978415",
     "pwd": "52435875175126190479447740508185965837690552500527637822603658699938581184512"
 }
 EOT
@@ -230,12 +245,12 @@ Output should be something like this:
 [INFO]  snarkJS: ----------------------------
 [INFO]  snarkJS:   WITNESS CHECK
 [INFO]  snarkJS:   Curve:          bls12381
-[INFO]  snarkJS:   Vars (wires):   741
+[INFO]  snarkJS:   Vars (wires):   1357
 [INFO]  snarkJS:   Outputs:        0
-[INFO]  snarkJS:   Public Inputs:  4
+[INFO]  snarkJS:   Public Inputs:  5
 [INFO]  snarkJS:   Private Inputs: 1
-[INFO]  snarkJS:   Labels:         1173
-[INFO]  snarkJS:   Constraints:    736
+[INFO]  snarkJS:   Labels:         2126
+[INFO]  snarkJS:   Constraints:    1352
 [INFO]  snarkJS:   Custom Gates:   false
 [INFO]  snarkJS: ----------------------------
 [INFO]  snarkJS: > Checking witness correctness
@@ -373,7 +388,7 @@ Cardano zk primitives only works with compressed data, that's why we need to com
 ### Compress G1 and G2 points
 The followwing command will effectively compress all points in `verification_key.json` and return `compressed_verification_key.json`
 ```jsx
-node --no-warnings --experimental-specifier-resolution=node --loader ts-node/esm compress_zk_verification_key.ts janus-wallet/verification_key.json compressed_verification_key.json
+node --no-warnings --experimental-specifier-resolution=node --loader ts-node/esm compress_zk_verification_key.ts janus-wallet/verification_key.json janus-wallet/compressed_verification_key.json
 ```
 
 > **NOTICE**: command above assume it will be executed from `src/zkproof`

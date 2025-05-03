@@ -10,7 +10,7 @@ import * as UPLC from "@lucid-evolution/uplc";
 import blueprint from "../../plutus.json" assert { type: 'json' };
 import { AccountDatum, Address, Certificate, Challenge, ChallengeOutput, Credential as ContractCredential, Datum, DelegateRepresentative, Input, Mint, MintRedeemer, Output, OutputReference, Proof, PublishRedeemer, Redeemer, ReferenceInputs, Signals, Spend, StakeCredential, Value, WithdrawRedeemer } from "./contract-types";
 import { pipe, Record, Array as _Array, BigInt as _BigInt, Option } from "effect";
-import { generate, hashWithCircomlib } from "../zkproof";
+import { generate, circuitHashWithCircom } from "../zkproof";
 import { getCollaterls, signCollateral } from "../api/services/collateral.service";
 import { coinSelection } from "./coin-selection";
 import { getSignerKey } from "../api/services/circuit.service";
@@ -144,7 +144,7 @@ export async function buildSpendTx(
     }]
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, nonce, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdHash, nonce, true);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script))
         .hash()
@@ -256,9 +256,8 @@ export async function registerAndDelegateTx(
     const publishRedeemer = Data.to(publish, PublishRedeemer);
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, nonce, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdHash, nonce, true);
     const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
-    // const { publish: evalPublishScript, rewardAddress: evalRewardAddress } = generatePublishValidator(validators.publish.script, network, policyId, tokenName, true);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Reward Address:', evalRewardAddress);
     console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex());
@@ -338,7 +337,7 @@ export async function delegateTx(
     const publishRedeemer = Data.to(publish, PublishRedeemer);
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, nonce, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdHash, nonce, true);
     const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Reward Address:', evalRewardAddress);
@@ -419,7 +418,7 @@ export async function delegateDrepTx(
     const publishRedeemer = Data.to(publish, PublishRedeemer);
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, nonce, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdHash, nonce, true);
     const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Reward Address:', evalRewardAddress);
@@ -500,7 +499,7 @@ export async function withdrawTx(
     const withdrawRedeemer = Data.to(withdraw, WithdrawRedeemer);
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, nonce, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdHash, nonce, true);
     const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Reward Address:', evalRewardAddress);
@@ -705,6 +704,7 @@ export function generateSpendScript(
     circuitAssetName: string,
     assetName: string,
     pwdHash: string,
+    pwdKdfHash: string,
     nonce: string,
     forEvaluation = false,
 ) {
@@ -713,6 +713,7 @@ export function generateSpendScript(
         circuit_asset_name: circuitAssetName,
         asset_name: assetName,
         pwd_hash: pwdHash,
+        pwd_kdf_hash: pwdKdfHash,
         nonce,
         for_evaluation: forEvaluation
     }, Spend);
@@ -747,42 +748,6 @@ export function generateSpendScript(
         spend,
         spendAddress
     };
-}
-
-export function generatePublishValidator(
-    publish_script: string,
-    network: Network,
-    policyId: string,
-    assetName: string,
-    forEvaluation = false,
-) {
-    const params = Data.to({
-        policy_id: policyId,
-        circuit_asset_name: assetName,
-        asset_name: assetName,
-        pwd_hash: '',
-        nonce: '',
-        for_evaluation: forEvaluation
-    }, Spend);
-    const publishParams = Data.from(params);
-    console.log('Publish params:', params);
-    console.log('Publish params:', Data.to(publishParams));
-
-
-    const publish: CertificateValidator = {
-        type: "PlutusV3",
-        script: applyParamsToScript(applyDoubleCborEncoding(publish_script),
-            [
-                publishParams
-            ],
-        )
-    };
-
-    const rewardAddress = validatorToRewardAddress(network, publish);
-    return {
-        publish,
-        rewardAddress
-    }
 }
 
 export const r = 52435875175126190479447740508185965837690552500527637822603658699938581184513n
@@ -1629,16 +1594,30 @@ async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
     
     const numUserId = BigInt(`0x${userId}`).toString() // decimal number
     const numPwd = BigInt(`0x${pwd}`).toString() // decimal number
-    // const numHash = BigInt(`0x${hash}`).toString() // decimal number
+    const numCredentialHash = BigInt(`0x${hash}`).toString() // decimal number
     // const challenge = cirChallenge.toString(); // decimal number
 
     // calculate hash
-    const numHash = await hashWithCircomlib(numPwd, numUserId, cirChallenge, overflow)
+    const numHash = await circuitHashWithCircom("poseidon_hash_circuit.circom", [numPwd, numUserId, numCredentialHash, cirChallenge, overflow])
 
     // TODO: use new challengeId to build zkProof so the evaluation pass (update pA, pB, pC)
-    console.log('Circuit Full Signals:', { userId: numUserId, challenge: cirChallenge, challengeFlag: overflow, hash: numHash, pwd: numPwd });
+    console.log('Circuit Full Signals:', { 
+        userId: numUserId,
+        credentialHash: numCredentialHash, 
+        challenge: cirChallenge, 
+        challengeFlag: overflow, 
+        circuitHash: numHash, 
+        pwd: numPwd 
+    });
 
-    const { proof } = await generate({ userId: numUserId, challenge: cirChallenge, challengeFlag: overflow, hash: numHash, pwd: numPwd });
+    const { proof } = await generate({ 
+        userId: numUserId,
+        credentialHash: numCredentialHash, 
+        challenge: cirChallenge, 
+        challengeFlag: overflow, 
+        circuitHash: numHash, 
+        pwd: numPwd 
+    });
     return [challengeId, numberToHex(numHash), ...proof];
 
 }
@@ -2107,43 +2086,4 @@ export function buildDrep(drep: DRepresentative): DRep {
             throw new Error(`invalid drep type: ${drep.type}`)
         }
     }
-}
-
-// const validators = readValidators();
-// const nonce = "9565b074c5c930aff80cac59a2278b70";
-// const { mint, policyId, spendAddress } = generateSpendScript(validators.mint.script, validators.spend.script, "Preview", nonce);
-// console.log('PolicyId:', policyId);
-// console.log('Spend Script Address:', spendAddress);
-// console.log('Mint Script:', mint);
-
-export async function prepareContracts(ownerAddress: string, version: number) {
-    const validators = readValidators();
-    const { mint, policyId, mintAddress } = generateMintPolicy("Preview", validators.mint.script, ownerAddress, version, '');
-    const { spend, spendAddress } = generateSpendScript(
-        validators.spend.script,
-        "Preview",
-        policyId,
-        "HOLA",
-        "HOLA",
-        '',
-        '',
-        false
-    );
-    const { publish, rewardAddress } = generatePublishValidator(
-        validators.publish.script,
-        "Preview",
-        policyId,
-        "HOLA",
-        false
-    );
-
-    return {
-        mint,
-        spend,
-        publish,
-        policyId,
-        mintAddress,
-        spendAddress,
-        rewardAddress
-    };
 }

@@ -16,7 +16,7 @@ test spend_evaluating_real_script() {
   let user_id = #"466f6e74757323303030"
   let hash =
     bytearray.from_int_big_endian(
-      10343661163184219313272354919635983875711247223011266158462328948931637363678,
+      38358706005010237984897052131059375087277120723539046063548902418320083744329,
       32,
     )
   let zkey = get_zkey()
@@ -137,16 +137,16 @@ test spend_evaluating_real_script() {
   let challenge = build_challenge(tx) |> hash_challenge
   let circuit_hash =
     bytearray.from_int_big_endian(
-      1213068129888263879523280420374147302574367144364172966430678699081284544200,
+      51144372254986188763633616671201291769628063042926002312308424635337077359052,
       32,
     )
   let signals = PubSignals { user_id, challenge, hash: circuit_hash }
   let p_a =
-    #"b960a5fe0960509eecb023ea841a205f7c4503925403e0dfd91d2acfcfb14fbf43388932cca1e2edc4a60aa2ac52c538"
+    #"9054e3e899146c70a33e935e00cbed99060c06afcfd53b7c6fc864f7b07b3386e2e27dc798d38f2132dc651c5351b5aa"
   let p_b =
-    #"9921309affa531a83edbeec14f5b1f9ee5dabebe6c4dbfab7a9efe75e0b098a65ce404a71cf105b038d8e0ae92e4241019470d52764f84818d736655d9075b5f7a92175d611b575447928c5bf3e71c0cca8de85cbd8ee60e1431217e2c701429"
+    #"8d50967cb959e3b2f66df90703a9e5c41e7a4ab0fc60beea301715357a924696400b76262574e3e3be24e95e75ef84f41804b086cde3319248841c64671cd0bb106aab87e0ea4c2922e1f80377cd10dd6fcfcef1942cf822747d064f35368f5b"
   let p_c =
-    #"a7a95e9ec8beaf56a90bd046f6dd930f795e834e2d7d8ffba9b13050a1c756ad61e6ffa4b5710cceb25f10e75f04b826"
+    #"b1adbf6f6c6378a60e9a9c883a15a4b31113a8cb9d13afcb5db45ea0426fe7ce1d5484d0234a3cb71119e061700e047f"
   let proof = Proof { p_a, p_b, p_c }
   // trace @"serialise (challenge)": build_challenge(tx) |> cbor.serialise
   let redeemer =
@@ -163,6 +163,7 @@ test spend_evaluating_real_script() {
       asset_name,
       circuit_asset_name,
       pwd_hash: hash,
+      pwd_kdf_hash: hash,
       nonce,
       for_evaluation: False,
     }
@@ -315,6 +316,7 @@ test spend_evaluating_script() {
       asset_name,
       circuit_asset_name,
       pwd_hash: hash,
+      pwd_kdf_hash: hash,
       nonce,
       for_evaluation: True,
     }
@@ -426,6 +428,7 @@ test spend_evaluating_bypass() {
       asset_name,
       circuit_asset_name: #"",
       pwd_hash: #"",
+      pwd_kdf_hash: #"",
       nonce: #"",
       for_evaluation: True,
     }
@@ -539,6 +542,7 @@ test spend_evaluating_wrong_self_ref() fail {
       asset_name,
       circuit_asset_name: #"",
       pwd_hash: #"",
+      pwd_kdf_hash: #"",
       nonce: #"",
       for_evaluation: True,
     }
@@ -664,6 +668,7 @@ test spend_evaluating_no_script() fail {
       asset_name,
       circuit_asset_name: #"",
       pwd_hash: #"",
+      pwd_kdf_hash: #"",
       nonce: #"",
       for_evaluation: True,
     }
@@ -775,6 +780,7 @@ test spend_evaluating_wrong_target() fail {
       asset_name,
       circuit_asset_name: #"",
       pwd_hash: #"",
+      pwd_kdf_hash: #"",
       nonce: #"",
       for_evaluation: True,
     }
@@ -793,13 +799,14 @@ fn get_zkey() -> ZkVerificationKey {
     vk_alpha1: #"8f944ea2be1d423e0c36e660f1ada1a7134635fa3465a5fcaef0acf1f0896999a75cadedf66d311cd0a6313c18ffafce",
     vk_beta2: #"81dfe06986c3f80e8297c1ebb297671e768da02d5bf34ad87b404aba89cc1655f024e28942c7a1169139e6ce5ecacfde081e9ba17708034ca12593f19c020c2544e49aaff91a718f0199d1c35ae00b0f5f8101028d4ab9e804bf35a7f3eea524",
     vk_gamma2: #"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8",
-    vk_delta2: #"84bf191b52b37245585ff46a89b0b7489050c06f305c76ff3f091400f055782e07c549300ab623ac239f253276aa3a860d6f734f51e36c68aaceaf9278cd8f69d7737ec862effa5442ad75fb328e471811b43bae6ac6ca27f52fdc358df81a56",
+    vk_delta2: #"910d1b3de24b56acded36e43285b5abf910def69fa6f945b0a423dde08579d67f902cb2953a4e7b5f6bc2b9d173ec48c16fdffab8bad9fb1700e35bc74ea24c6d72f1d717cae480612e71990734ace847aed7f6ff9de9d6efc85698b3095669c",
     vk_ic: [
-      #"b96ea33f7e293ee46e2a5298bfc29547175296e94001cd3a6b4da298bf1103ea2ff66053a9d1e7eb7183709dbadefd8e",
-      #"90daa46fc04d5e71ff4c4abd1f71e042cb60f3a0a4884d1c13aec3401cf6e4723f3e4b11b7e5a8548777447a4f66d55d",
-      #"b38187f1fc1fe0f5769846a05a96b99c06de97a99aa25c00066b9c4fbe948ff93866b11b0424ab497277da64aed53ad9",
-      #"b7caa8872d7c82bad8e14797f6aaae278911fc2b5ecd69e71fa8762ad9d525197630b43ab5ba06eb1739548e0e83800b",
-      #"85c7f52cf0ca708c389d07a01c30565679588362431b2787ab6c22b47b58e4f31a318fc2cdb9844b84c9de7a1fd09fc8",
+      #"8d043ff56d286437f7783c5c9f7d9db2fc4678172f99454965f5085e17a9bd1f1613d14fffd8bcc826420946c35c925b",
+      #"86fa74a9049758feb0336041daf0feb5f1d892ed563baac600ccf37e2ae7319b68070293a39b992e547bd264ca55bb48",
+      #"90c9f2c17f3ca057bb78858da0a800bf5dd7ce60c38efa8db74a1abbc3eac9325448dff74e05ead6f04897982076a798",
+      #"8ecfbfd2e8f23c4116d078da1806abcab8c4abe3af53c850e7b77a4a5fe27cae9db82e3de02bcd665c26946b0a38d035",
+      #"a6df181d334c56b40aa234d5d460ddac333c18bb10574346ed11416e42b7af1d29ac77deaa02e0baf203624e384a27bd",
+      #"83e9fd82457045e4ec2ee99837707c234ecbf106344148819b4c19ef1559a639b1a78faa39e2af44f73352f555855177",
     ],
   }
 }

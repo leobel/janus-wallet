@@ -105,6 +105,7 @@ validator account(params: AccountParameters) {
         asset_name,
         pwd_hash,
         nonce: addr_nonce,
+        ..
       } = params
       expect Some(signals) = r_signals
       expect Some(proof) = r_proof
@@ -142,16 +143,21 @@ validator account(params: AccountParameters) {
       trace @"signals userId": signals.user_id
       expect signals.user_id == user_id
       expect Some(scalar_user_id) = scalar.from_bytearray_big_endian(user_id)
+      expect Some(scalar_cred_hash) = scalar.from_bytearray_big_endian(pwd_hash)
       expect Some(scalar_hash) = scalar.from_bytearray_big_endian(signals.hash)
       expect (Some(scalar_challenge), scalar_overflow) =
         to_scalar_overflow(challenge_id)
       // TODO: add challenge overflow to circuit
       trace @"userId (number)": scalar_user_id
-      trace @"circuitHash (number)": scalar_hash
+      trace @"credentialHash (number)": scalar_cred_hash
       trace @"challenge (number)": scalar_challenge
       trace @"overflow (number)": scalar_overflow
+      trace @"circuitHash (number)": scalar_hash
       let public =
-        [scalar_user_id, scalar_challenge, scalar_overflow, scalar_hash]
+        [
+          scalar_user_id, scalar_cred_hash, scalar_challenge, scalar_overflow,
+          scalar_hash,
+        ]
       if for_evaluation {
         // NOTE: we're passing maximum values as public which are the only one affecting exUnits dynamically (pA, pB, pC cost is constant)
         // Since we're using Poseidon.hash we can't determine which password generate hash equal to scalar.field_prime - 1, therefore 

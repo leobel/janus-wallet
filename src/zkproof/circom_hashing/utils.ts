@@ -17,7 +17,7 @@ export function toArray32(rem: bigint, size: number) {
     return res;
 }
 
-export function fromArray32(arr: Uint32Array<ArrayBuffer>) { //returns a BigInt
+export function fromArray32(arr: Uint32Array) { //returns a BigInt
     var res = BigInt(0);
     const radix = BigInt(0x100000000);
     for (let i = 0; i < arr.length; i++) {

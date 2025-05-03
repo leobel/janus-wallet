@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url);
 const circomTester = require('circom_tester');
 const wasm_tester = circomTester.wasm;
 
-// import { wasm_tester } from './circom_hashing/index';
+import { wasm_tester as wasm_evaluator } from './circom_hashing/index';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -209,29 +209,34 @@ export async function generate(input: snarkjs.CircuitSignals) {
         })
 }
 
-export async function hashWithCircomlib(pwd: string, userId: string, challenge: string, challengeFlag: string, dir = "janus-wallet") {
-    const circomInput = path.join(__dirname, dir, "poseidon2_hash.circom");
-    const circuit3 = await wasm_tester(circomInput, { inspect: true, prime: 'bls12381' });
-
-    const inputs = [
-        BigInt(pwd),
-        BigInt(userId),
-        BigInt(challenge),
-        BigInt(challengeFlag),
-    ]
-    const w = await circuit3.calculateWitness({ inputs });
-    await circuit3.loadSymbols();
-    return w[circuit3.symbols["main.out"].varIdx].toString();
+export async function circuitHashWithCircom(fileName: string, inputs: string[], dir = "janus-wallet") {
+    const circomInput = path.join(__dirname, dir, fileName)
+    const circuit3 = await wasm_tester(circomInput, { inspect: true, prime: 'bls12381' })
+    // const inputs = [
+    //     BigInt(pwd),
+    //     BigInt(userId),
+    //     BigInt(credentialHash),
+    //     BigInt(challenge),
+    //     BigInt(challengeFlag),
+    // ]
+    return circuitCalculateWitness(circuit3, inputs.map(input => BigInt(input)))
 }
 
+export async function circuitHashTest(fileName: string, inputs: string[], dir = "janus-wallet") {
+    const circomInput = path.join(__dirname, dir, fileName)
+    const circuit3 = await wasm_evaluator(circomInput, { inspect: true, prime: 'bls12381' })
+    // const inputs = [
+    //     BigInt(pwd),
+    //     BigInt(userId),
+    //     BigInt(credentialHash),
+    //     BigInt(challenge),
+    //     BigInt(challengeFlag),
+    // ]
+    return circuitCalculateWitness(circuit3, inputs.map(input => BigInt(input)))
+}
 
-const input = {
-    "userId": 52435875175126190479447740508185965837690552500527637822603658699938581184512n,
-    "challenge": 52435875175126190479447740508185965837690552500527637822603658699938581184512n,
-    "hash": 10343661163184219313272354919635983875711247223011266158462328948931637363678n,
-    "pwd": 1234n
-    // "userId": 567n,
-    // "challenge": 32061325926100244839728411285060075964907793563017957268288049843895531058762n,
-    // "hash": 10343661163184219313272354919635983875711247223011266158462328948931637363678n,
-    // "pwd": 1234n
+async function circuitCalculateWitness(circuit: any, inputs: bigint[]) {
+    const w = await circuit.calculateWitness({ inputs })
+    await circuit.loadSymbols();
+    return w[circuit.symbols["main.out"].varIdx].toString()
 }

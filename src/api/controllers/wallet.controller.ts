@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { spendWalletFunds, generateRedeemer, buildSpend, createAccountTx, registerAndDelegate, delegate, delegateDrep, withdrawRewards } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
+import { circuitHashTest } from '../../zkproof';
 
 
 // Wallet routes
@@ -10,8 +11,8 @@ export default (network: Network) => {
   const createAccount = async (req: Request, res: Response) => {
     try {
       const { user_name } = req.params;
-      const { hash, nonce } = req.body
-      const result = await createAccountTx(user_name, network, hash, nonce)
+      const { hash, dfk_hash: kdfHash, nonce } = req.body
+      const result = await createAccountTx(user_name, network, hash, kdfHash, nonce)
 
       res.status(200).json(result);
     } catch (error: any) {
@@ -115,8 +116,7 @@ export default (network: Network) => {
   router.post('/:userId/dreps/:drepId/delegate', delegateToDrep)
   router.post('/:userId/withdraw', withdraw)
   router.post('/:userId/sign', sign)
-  router.post('/:userId/send', spendFunds);
-
+  router.post('/:userId/send', spendFunds)
 
   return router
 };

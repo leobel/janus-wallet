@@ -10,7 +10,7 @@ import { randomUUID } from 'crypto';
 
 const validators = readValidators();
 
-export async function createAccountTx(username: string, network: Network, hash: string, nonce?: string) {
+export async function createAccountTx(username: string, network: Network, hash: string, kdfHash: string, nonce?: string) {
     const circuit = await getCircuit();
     if (!circuit) {
         throw new Error('Circuit not found')
@@ -25,14 +25,14 @@ export async function createAccountTx(username: string, network: Network, hash: 
     const tokenName = fromText(username);
     const _datum: AccountDatum = {
         user_id: tokenName,
-        hash,
+        hash: kdfHash, // bcrypt.hash(...)
         nonce: addrNonce
     }
     const datum = Data.to(_datum, AccountDatum);
     console.log('Datum', datum);
 
     const mintRedeemer: MintRedeemer = "CreateAccount";
-    const { spend, spendAddress } = generateSpendScript(validators.spend.script, network, policy_id, asset_name, tokenName, hash, addrNonce)
+    const { spend, spendAddress } = generateSpendScript(validators.spend.script, network, policy_id, asset_name, tokenName, hash, kdfHash, addrNonce)
 
     const validTo = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
     const utxoRef = await mintAssetsTx(lucid, datum, mintRedeemer, tokenName, walletAddress, mint_script as Script, policy_id, spendAddress, validTo, '', { localUPLCEval: true })

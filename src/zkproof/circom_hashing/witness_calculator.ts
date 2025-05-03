@@ -1,7 +1,6 @@
 import * as utils from "./utils"
 
 export async function builder(code: any, options?: any): Promise<WitnessCalculator> {
-    console.log('HERERERE'.repeat(5))
     options = options || {};
 
     let wasmModule;
@@ -15,6 +14,7 @@ export async function builder(code: any, options?: any): Promise<WitnessCalculat
 
     let wc;
     let errStr = "";
+    let msgStr = "";
 
     const instance = await WebAssembly.instantiate(wasmModule, {
         runtime: {
@@ -37,9 +37,32 @@ export async function builder(code: any, options?: any): Promise<WitnessCalculat
                 }
                 throw new Error(err + errStr);
             },
+            printErrorMessage: function () {
+                errStr += getMessage() + "\n";
+                // console.error(getMessage());
+            },
+            writeBufferMessage: function () {
+                const msg = getMessage();
+                // Any calls to `log()` will always end with a `\n`, so that's when we print and reset
+                if (msg === "\n") {
+                    console.log(msgStr);
+                    msgStr = "";
+                } else {
+                    // If we've buffered other content, put a space in between the items
+                    if (msgStr !== "") {
+                        msgStr += " "
+                    }
+                    // Then append the message to the message we are creating
+                    msgStr += msg;
+                }
+            },
+            showSharedRWMemory: function () {
+                printSharedRWMemory();
+            }
         }
     });
 
+    const exports = instance.exports as unknown as WitnessExports
     const sanityCheck =
         options
 //        options &&
@@ -51,12 +74,38 @@ export async function builder(code: any, options?: any): Promise<WitnessCalculat
 //            options.logFinishComponent
 //        );
 
-
     wc = new WitnessCalculator(instance, sanityCheck);
     return wc;
+
+    function getMessage() {
+        let message = "";
+        let c = exports.getMessageChar();
+        while (c != 0) {
+            message += String.fromCharCode(c);
+            c = exports.getMessageChar();
+        }
+        return message;
+    }
+
+    function printSharedRWMemory() {
+        const shared_rw_memory_size = exports.getFieldNumLen32();
+        const arr = new Uint32Array(shared_rw_memory_size);
+        for (let j = 0; j < shared_rw_memory_size; j++) {
+            arr[shared_rw_memory_size - 1 - j] = exports.readSharedRWMemory(j);
+        }
+
+        // If we've buffered other content, put a space in between the items
+        if (msgStr !== "") {
+            msgStr += " "
+        }
+        // Then append the value to the message we are creating
+        msgStr += (utils.fromArray32(arr).toString());
+    }
+
 };
 
 interface WitnessExports {
+    getMessageChar(): number
     getVersion(): string
     getFieldNumLen32(): number
     getRawPrime(): bigint

@@ -58,6 +58,7 @@ pub type AccountParameters {
   circuit_asset_name: AssetName,
   asset_name: AssetName,
   pwd_hash: ByteArray,
+  pwd_kdf_hash: ByteArray,
   nonce: ByteArray,
   for_evaluation: Bool,
 }
