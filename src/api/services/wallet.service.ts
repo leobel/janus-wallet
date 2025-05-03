@@ -104,7 +104,7 @@ export async function generateRedeemer(userId: string, pwd: string, txCbor: stri
     }
     const zkInput: ZkInput = {
         userId: user.token_name,
-        pwd
+        pwd: fromText(pwd)
         // pwd: "12345"
     }
     const redeemer = await buildZKProofRedeemer(txCbor, zkInput, 0, 0, 0)

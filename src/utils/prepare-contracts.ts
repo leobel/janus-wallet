@@ -4,7 +4,6 @@ import { applyDoubleCborEncoding, applyParamsToScript, Data, MintingPolicy, Netw
      TxBuilderError, stringify, isEqualUTxO, selectUTxOs, assetsToValue, sortUTxOs, utxoToCore, 
      EvalRedeemer, toCMLRedeemerTag, PROTOCOL_PARAMETERS_DEFAULT, createCostModels, CertificateValidator, 
      validatorToRewardAddress, PoolId, TxSignBuilder, PolicyId, Lovelace, CBORHex, RedeemerTag, 
-     fromText,
      TxOutput,
      DRep} from "@lucid-evolution/lucid";
 import * as UPLC from "@lucid-evolution/uplc";
@@ -16,6 +15,7 @@ import { getCollaterls, signCollateral } from "../api/services/collateral.servic
 import { coinSelection } from "./coin-selection";
 import { getSignerKey } from "../api/services/circuit.service";
 import { MintUtxoRef, MintUtxoRefAssets } from "../models/mint-utxo-ref";
+import { numberToHex } from ".";
 
 export type Validators = {
     spend: SpendingValidator;
@@ -1612,7 +1612,7 @@ function calculateMinLovelace(
 }
 
 async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
-    const { userId, pwd } = zkInput;
+    const { userId, hash, pwd } = zkInput;
 
     if (!pwd) {
         throw new Error('Password is required');
@@ -1628,17 +1628,18 @@ async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
     console.log('Challenge (in circuit)', cirChallenge, overflow);
     
     const numUserId = BigInt(`0x${userId}`).toString() // decimal number
+    const numPwd = BigInt(`0x${pwd}`).toString() // decimal number
     // const numHash = BigInt(`0x${hash}`).toString() // decimal number
     // const challenge = cirChallenge.toString(); // decimal number
 
     // calculate hash
-    const numHash = await hashWithCircomlib(pwd, numUserId, cirChallenge, overflow)
+    const numHash = await hashWithCircomlib(numPwd, numUserId, cirChallenge, overflow)
 
     // TODO: use new challengeId to build zkProof so the evaluation pass (update pA, pB, pC)
-    console.log('Circuit Full Signals:', { userId: numUserId, challenge: cirChallenge, challengeFlag: overflow, hash: numHash, pwd });
+    console.log('Circuit Full Signals:', { userId: numUserId, challenge: cirChallenge, challengeFlag: overflow, hash: numHash, pwd: numPwd });
 
-    const { proof } = await generate({ userId: numUserId, challenge: cirChallenge, challengeFlag: overflow, hash: numHash, pwd });
-    return [challengeId, BigInt(numHash.toString()).toString(16), ...proof];
+    const { proof } = await generate({ userId: numUserId, challenge: cirChallenge, challengeFlag: overflow, hash: numHash, pwd: numPwd });
+    return [challengeId, numberToHex(numHash), ...proof];
 
 }
 

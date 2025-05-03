@@ -11,3 +11,8 @@ export const getLucid = (async () => {
     );
     return lucid;
 })();
+
+export const numberToHex = (num: string | bigint): string => {
+    const str = BigInt(num).toString(16)
+    return str.padStart(str.length + (str.length % 2), '0')
+}
