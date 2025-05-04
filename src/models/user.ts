@@ -4,6 +4,7 @@ export interface User {
     id: string;
     token_name: string;
     pwd_hash: string;
+    pwd_kdf_hash: string;
     spend_address: string;
     policy_id: string;
     nonce: string;

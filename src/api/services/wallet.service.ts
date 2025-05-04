@@ -39,6 +39,7 @@ export async function createAccountTx(username: string, network: Network, hash: 
     const user = {
         token_name: tokenName,
         pwd_hash: hash,
+        pwd_kdf_hash: kdfHash,
         spend_address: spendAddress,
         policy_id: policy_id,
         nonce: addrNonce,
@@ -76,11 +77,6 @@ export async function buildSpend(userId: string, amount: number, receiveAddress:
         assets: fromMintUtxoRefAssetsToAssets(circuit.mint_utxo_ref.assets),
         datum: circuit.mint_utxo_ref.datum
     }
-    const zkInput: ZkInput = {
-        userId: tokenName,
-        hash: user.pwd_hash,
-        // pwd: "12345"
-    }
 
     const lucid = await getLucid;
 
@@ -93,7 +89,7 @@ export async function buildSpend(userId: string, amount: number, receiveAddress:
     console.log("Coin Selection Inputs:", inputs.length)
 
     const validTo = Date.now() + (1 * 60 * 60 * 1000) // 1 hour
-    const tx = await buildSpendTx(lucid, [circuitUtxoRef, userUtxoRef], inputs, spendAddress, spend_script as Script, reqLovelace, validTo, receiveAddress, zkInput, policyId, tokenName, circuit.asset_name, nonce, network, { localUPLCEval: true })
+    const tx = await buildSpendTx(lucid, [circuitUtxoRef, userUtxoRef], inputs, spendAddress, spend_script as Script, reqLovelace, validTo, receiveAddress, policyId, tokenName, circuit.asset_name, nonce, network, { localUPLCEval: true })
     return {tx: tx.to_cbor_hex()}
 }
 
@@ -104,6 +100,7 @@ export async function generateRedeemer(userId: string, pwd: string, txCbor: stri
     }
     const zkInput: ZkInput = {
         userId: user.token_name,
+        hash: user.pwd_hash,
         pwd: fromText(pwd)
         // pwd: "12345"
     }

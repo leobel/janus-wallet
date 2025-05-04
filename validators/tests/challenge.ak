@@ -133,6 +133,126 @@ test build_challenge_ok() {
   challenge_id == built_challenge_id
 }
 
+test build_challenge_ok_1() {
+  let user_id = #"466f6e74757323303231"
+  let hash =
+    #"243262243130246c7937437063726c42786e777977416b5a34494e444f4e6c782f634e4c327065627964523735452e376639522e6b32476c7931734f"
+  let zkey = get_zkey()
+  let nonce =
+    #"63306531613062352d663339642d343432652d383462622d373463306335396265623439"
+  let account_datum = AccountDatum { user_id, hash, nonce }
+  let policy_id = #"cadc50649cd1daf6e0dea610dd9392a8be1c8e6ac570dc3773101f97"
+  let circuit_asset_name = #"4369726375697423303032"
+  let address =
+    get_script_address(
+      #"3daf6abb8d762de665c903ca085d9b32a05cc1dd20745e0b07577577",
+      Some(#"3daf6abb8d762de665c903ca085d9b32a05cc1dd20745e0b07577577"),
+    )
+  let circuit_input =
+    Input {
+      output_reference: OutputReference {
+        transaction_id: #"c7ac7e242699ee9ed6b9d7f7cfea9fd4c1ae4c457ec8bdd63a60186b8e188369",
+        output_index: 0,
+      },
+      output: Output {
+        address,
+        value: assets.from_asset_list(
+          [
+            Pair("", [Pair("", 4064330)]),
+            Pair(policy_id, [Pair(circuit_asset_name, 1)]),
+          ],
+        ),
+        datum: InlineDatum(zkey),
+        reference_script: None,
+      },
+    }
+  let user_input =
+    Input {
+      output_reference: OutputReference {
+        transaction_id: #"1748e9f8009c37e4d9c586e01c93582de42eec6ffdf17a77ab79f08e73438910",
+        output_index: 0,
+      },
+      output: Output {
+        address,
+        value: assets.from_asset_list(
+          [Pair("", [Pair("", 1698140)]), Pair(policy_id, [Pair(user_id, 1)])],
+        ),
+        datum: InlineDatum(account_datum),
+        reference_script: None,
+      },
+    }
+
+  //   let mint = assets.from_asset_list([Pair(policy_id, [Pair(asset_name, 1)])])
+  let challenge_id =
+    #"6b394455a5341da0689945be06eb19f0e373eb8b5ec1e3ed0738dc17b52c38cd"
+  let signals =
+    PubSignals {
+      user_id,
+      challenge: challenge_id,
+      hash: #"4d21460aaf60650fee7473867a1be9a08c8671066755d6312d923a8efb66c7",
+    }
+  let proof =
+    Proof {
+      p_a: #"b826ad08638b2868286371b2caec97651a3b0e42a7244a7c33d4b6390c9d789251cc5cb93c190650f025cd1cf10cc2dd",
+      p_b: #"b31893c229a3f16633d98fa3b4bb3d4b528c50fcfe95654c8ac99da8da73592eacbd7108a41840dad0e31aec6132dee40e8c2df2a8485451f8a78e4b9f7fb31c7c3c179a2f04b8b5f4a4559aed91f815ac87304570e300fe0c40abcd31b5e358",
+      p_c: #"9531356b035ed46cc426f723cbd6faa57af8b14ff758e802fc1286b8aee1f51bc08a7355b0f94973fd793ad2fd0a8afd",
+    }
+  let scriptRedeemer: Redeemer =
+    SpendRedeemer {
+      self_idx: 0,
+      idx: 0,
+      jdx: 0,
+      signals: Some(signals),
+      proof: Some(proof),
+    }
+  let scriptOutputReference =
+    OutputReference {
+      transaction_id: #"d791f39a0d9f231d294519fddd92f784e767d7a2610bd0a1226609e16203dce2",
+      output_index: 0,
+    }
+  let redeemers = [Pair(Spend(scriptOutputReference), scriptRedeemer)]
+  let tx =
+    Transaction {
+      ..transaction.placeholder,
+      reference_inputs: [circuit_input, user_input],
+      inputs: [
+        Input {
+          output_reference: scriptOutputReference,
+          output: Output {
+            address,
+            value: assets.from_lovelace(10000000),
+            datum: NoDatum,
+            reference_script: None,
+          },
+        },
+      ],
+      outputs: [
+        Output {
+          address: get_verification_key_address(
+            #"e52ded0f93f2cb669317a6ae9b1316a7182e5ef40fd0c6d934cf62f2",
+            Some(#"7e6d90260a406824d6d4b5ae7a2f48bed1e47881c7e4468d06ffbfa0"),
+          ),
+          value: assets.from_lovelace(2000000),
+          datum: NoDatum,
+          reference_script: None,
+        },
+        Output {
+          address,
+          value: assets.from_lovelace(7403431),
+          datum: NoDatum,
+          reference_script: None,
+        },
+      ],
+      redeemers: redeemers,
+    }
+  let challenge = build_challenge(tx)
+  //   trace @"serialise (challenge)": challenge |> cbor.serialise
+  let built_challenge_id = challenge |> hash_challenge
+  trace @"challenge_id:": challenge_id
+  trace @"built_challenge_id:": built_challenge_id
+  challenge_id == built_challenge_id
+}
+
 fn get_script_address(
   script_hash: ByteArray,
   stake_hash: Option<ByteArray>,
@@ -162,18 +282,17 @@ fn get_verification_key_address(
 
 fn get_zkey() -> ZkVerificationKey {
   ZkVerificationKey {
-    vk_alpha1: #"b18db01619508d589ba45cdcc9c9ab4dbddc33e08bc4dbddea565c10dc743fd66510d3f49c6343999caf540eaa0c4e03",
-    vk_beta2: #"845f7a4f6d0fbcaf0648d9c2657f19a33f4e2124c284d68688f209abf54d5a1d1afc47de55c24e662c47f7632a760a8016e8ba01eb4b0d4a2db67fe5abed5ae1a09e035dbe984a1426e440a4f0038276792f87cdb2bc35dc185a618d352d7f54",
+    vk_alpha1: #"8f944ea2be1d423e0c36e660f1ada1a7134635fa3465a5fcaef0acf1f0896999a75cadedf66d311cd0a6313c18ffafce",
+    vk_beta2: #"81dfe06986c3f80e8297c1ebb297671e768da02d5bf34ad87b404aba89cc1655f024e28942c7a1169139e6ce5ecacfde081e9ba17708034ca12593f19c020c2544e49aaff91a718f0199d1c35ae00b0f5f8101028d4ab9e804bf35a7f3eea524",
     vk_gamma2: #"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8",
-    vk_delta2: #"a2341a098a95305955386a3e0e4e2879e6206342b9c9a8da0559190e82f3ed1478158f2ca1ef4db7deab124b7c85b0f403d1a968b4812e6c9c9392d926b86da501e23f6c94cffcc62b02393d7807a6f381e40ca49a9b4a2b522518f72927ca15",
+    vk_delta2: #"910d1b3de24b56acded36e43285b5abf910def69fa6f945b0a423dde08579d67f902cb2953a4e7b5f6bc2b9d173ec48c16fdffab8bad9fb1700e35bc74ea24c6d72f1d717cae480612e71990734ace847aed7f6ff9de9d6efc85698b3095669c",
     vk_ic: [
-      #"ac2fcd68b85b64e6c3bc11a9dadd1b24e7786738475cf2fe0acdd9b41f773af18ec12601e368d2e920f299f9e6bed480",
-      #"a33061a2549ea773d275539b2e92caa6f936404635db1da3199ec71f06faf2cba8effef6860bcb0376259a681ef043c3",
-      #"a3f6177ea5ef5797249df745be266271bd65a6a1c9c9fae2df3dd2c7e9e6b5751f288fba11950455a9a1f9a054bad854",
-      #"a5d227c013957479be181bf43c394a49e8bf14585fd04a4ca72102e3e5ab41661411eeb15986ad3d3a09eb25bb2b7b12",
-      #"93a152a9cd7d4b81a08989f67fcb958e96b14ef4d3cefd26ad992059df4d252a9f00b5f9f2b5b8a59cf4eca9d7884893",
-      #"b8cd6daceeaa3b53d707ae2b99dc87e0dbbf58a1e310cff5cd3bea151d90962372de834a519a879c05bc470a016202d6",
-      #"a6b5d4a12faf84ac46dba1793716cdb14009af64d0edcd5f1c0ca872fa53bc5732da912222fc3d4fc7ea2fc1b9fbff41",
+      #"8d043ff56d286437f7783c5c9f7d9db2fc4678172f99454965f5085e17a9bd1f1613d14fffd8bcc826420946c35c925b",
+      #"86fa74a9049758feb0336041daf0feb5f1d892ed563baac600ccf37e2ae7319b68070293a39b992e547bd264ca55bb48",
+      #"90c9f2c17f3ca057bb78858da0a800bf5dd7ce60c38efa8db74a1abbc3eac9325448dff74e05ead6f04897982076a798",
+      #"8ecfbfd2e8f23c4116d078da1806abcab8c4abe3af53c850e7b77a4a5fe27cae9db82e3de02bcd665c26946b0a38d035",
+      #"a6df181d334c56b40aa234d5d460ddac333c18bb10574346ed11416e42b7af1d29ac77deaa02e0baf203624e384a27bd",
+      #"83e9fd82457045e4ec2ee99837707c234ecbf106344148819b4c19ef1559a639b1a78faa39e2af44f73352f555855177",
     ],
   }
 }

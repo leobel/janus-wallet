@@ -1,5 +1,5 @@
-import { fromText } from '@lucid-evolution/lucid';
 import { circuitHashTest, circuitHashWithCircom } from '.';
+import { fromText, numberToHex } from '../utils/converter';
 
 const args = process.argv.slice(2);
 
@@ -27,6 +27,8 @@ const numUserId = BigInt(`0x${userId}`).toString() // decimal number
 
 const credHash = await circuitHashWithCircom("poseidon_hash_credential.circom", [numPwd, numUserId])
 const credHash1 = await circuitHashTest("poseidon_hash_credential.circom", [numPwd, numUserId])
-console.log("credential hash:", credHash)
-console.log("credential hash:", credHash1)
+console.log("credential hash (number):", credHash)
+console.log("credential hash (number):",  credHash1)
+console.log("credential hash:", numberToHex(credHash1))
+console.log("credential hash:", numberToHex(credHash1))
 process.exit(0)

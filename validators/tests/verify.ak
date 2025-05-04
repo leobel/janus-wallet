@@ -140,6 +140,42 @@ test verify_zk_proof() {
   zk_verify(proof, public, zkey)
 }
 
+test verify_zk_proof_1() {
+  let zkey = get_zkey()
+  let p_a =
+    #"8d444fab1c847112b20421d67d49f9814bb339e2c72633af280780dc7d0402ca255748d036877744123460e2b680082a"
+  let p_b =
+    #"a5f4871c5654f1094796479c92659f6c97c8e00613abe8163f1c143e473accc8d8ca748a4e5ba5ef53ed1e4fd6222f52100a0c0103dd2d5c76123563c4a80ada8ad4070c9668a0d0df2442cd837949848bf388f545bf31994505671c962a49eb"
+  let p_c =
+    #"b663de6c83239388505c25c47bb9e882de389a203ed65084a7e070c7370216d43773c4f4f8fa1ce1ce8544bb368004b6"
+  let proof = Proof { p_a, p_b, p_c }
+  let user_id = option.or_else(scalar.new(332621201508635767747121), scalar.one)
+  let hash =
+    option.or_else(
+      scalar.new(
+        26153876879400612280134036031852041740678837593561870331470402059052248864877,
+      ),
+      scalar.one,
+    )
+  let circuit_hash =
+    option.or_else(
+      scalar.new(
+        136276869938915024026222020207617093338490483274455411416665336862387955399,
+      ),
+      scalar.one,
+    )
+  let challenge =
+    option.or_else(
+      scalar.new(
+        48498656708846887221535287026578788581134725406450318940724854086903809194189,
+      ),
+      scalar.one,
+    )
+  let overflow = scalar.zero
+  let public = [user_id, hash, challenge, overflow, circuit_hash]
+  zk_verify(proof, public, zkey)
+}
+
 test verify_zk_proof_invalid_user() fail {
   let zkey = get_zkey()
   let p_a =

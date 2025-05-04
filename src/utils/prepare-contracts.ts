@@ -15,7 +15,7 @@ import { getCollaterls, signCollateral } from "../api/services/collateral.servic
 import { coinSelection } from "./coin-selection";
 import { getSignerKey } from "../api/services/circuit.service";
 import { MintUtxoRef, MintUtxoRefAssets } from "../models/mint-utxo-ref";
-import { numberToHex } from ".";
+import { numberToHex } from "./converter";
 
 export type Validators = {
     spend: SpendingValidator;
@@ -117,7 +117,7 @@ export async function buildSpendTx(
     lovelace: bigint,
     validTo: number,
     receiptAddress: string,
-    zkInput: ZkInput,
+    // zkInput: ZkInput,
     policyId: string,
     tokenName: string,
     circuitTokenName: string,
@@ -177,7 +177,7 @@ export async function buildSpendTx(
         validTo,
         walletAddress: spendAddress,
         evalWalletAddress: evalSpendAddress,
-        zkInput,
+        // zkInput,
         policyId,
         tokenName,
         network,
@@ -1065,7 +1065,7 @@ type SpendTxParams = {
     validTo: number,
     walletAddress: string,
     evalWalletAddress: string,
-    zkInput: ZkInput,
+    zkInput?: ZkInput,
     policyId: string,
     tokenName: string,
     network: Network,

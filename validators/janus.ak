@@ -104,8 +104,8 @@ validator account(params: AccountParameters) {
         circuit_asset_name,
         asset_name,
         pwd_hash,
+        pwd_kdf_hash,
         nonce: addr_nonce,
-        ..
       } = params
       expect Some(signals) = r_signals
       expect Some(proof) = r_proof
@@ -133,15 +133,17 @@ validator account(params: AccountParameters) {
           |> find_account_input(policy_id, asset_name)
       expect InlineDatum(data) = account_input.output.datum
       trace @"AccountDatum": data
-      expect AccountDatum { user_id, hash, nonce } = data
+      expect AccountDatum { user_id, hash: kdf_hash, nonce } = data
       trace @"datum userId": user_id
-      expect asset_name == user_id
-      trace @"params hash": pwd_hash
-      trace @"datum hash": hash
-      expect pwd_hash == hash
-      expect addr_nonce == nonce
+      trace @"params userId": asset_name
       trace @"signals userId": signals.user_id
+      expect asset_name == user_id
       expect signals.user_id == user_id
+      trace @"params kdf hash": pwd_kdf_hash
+      trace @"datum kdf_hash": kdf_hash
+      expect pwd_kdf_hash == kdf_hash
+      expect addr_nonce == nonce
+      trace @"params credential hash": pwd_hash
       expect Some(scalar_user_id) = scalar.from_bytearray_big_endian(user_id)
       expect Some(scalar_cred_hash) = scalar.from_bytearray_big_endian(pwd_hash)
       expect Some(scalar_hash) = scalar.from_bytearray_big_endian(signals.hash)
