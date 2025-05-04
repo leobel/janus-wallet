@@ -636,3 +636,7 @@ Similar to the other endpoints presented above it will return a tx that need to 
 ```cli
 aiken check .
 ```
+![Screenshot 2025-05-03 at 11 33 52 PM](https://github.com/user-attachments/assets/f29f2f87-a9f9-4f7e-81df-a9237120078c)
+
+
+
