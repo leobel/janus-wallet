@@ -633,10 +633,99 @@ Similar to the other endpoints presented above it will return a tx that need to 
 ```
 
 ## Test
-```cli
+```jsx
 aiken check .
+Compiling tangocrypto/janus-wallet 0.0.0 (.)
+    Compiling aiken-lang/stdlib v2.1.0 (./build/packages/aiken-lang-stdlib)
+      Testing ...
+
+    ┍━ tests/challenge ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │ PASS [mem: 208949, cpu:  117098579] build_challenge_ok
+    │ PASS [mem: 207283, cpu:  114000813] build_challenge_ok_1
+    ┕━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2 tests | 2 passed | 0 failed
+
+    ┍━ tests/mint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │ PASS [mem: 146551, cpu:   44767225] mint_account_ok
+    │ PASS [mem: 127471, cpu:   38992815] mint_account_invalid_datum
+    │ · with traces
+    │ | failed to deserialise PlutusData using UnConstrData
+    │         Value Con(
+    │                   Data(
+    │                       BoundedBytes(
+    │                           BoundedBytes(
+    │                               [],
+    │                           ),
+    │                       ),
+    │                   ),
+    │               )
+    │ PASS [mem: 146551, cpu:   44762199] mint_account_different_user_id
+    │ PASS [mem: 127278, cpu:   39670696] mint_account_send_to_same_script
+    │ · with traces
+    │ | the validator crashed / exited prematurely
+    │ PASS [mem: 132147, cpu:   40019076] mint_account_send_to_pub_prv_key
+    │ PASS [mem: 174258, cpu:   50991106] mint_circuit_ok
+    │ PASS [mem:  84886, cpu:   24995578] mint_circuit_invalid_no_signed
+    │ · with traces
+    │ | the validator crashed / exited prematurely
+    │ PASS [mem: 127920, cpu:   39964052] mint_circuit_invalid_datum
+    │ · with traces
+    │ | failed to deserialise PlutusData using UnConstrData
+    │         Value Con(
+    │                   Data(
+    │                       BoundedBytes(
+    │                           BoundedBytes(
+    │                               [],
+    │                           ),
+    │                       ),
+    │                   ),
+    │               )
+    │ PASS [mem: 127566, cpu:   38981813] mint_circuit_send_to_different_script
+    │ · with traces
+    │ | the validator crashed / exited prematurely
+    │ PASS [mem: 136836, cpu:   40110242] mint_circuit_send_to_pub_prv_script
+    ┕━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10 tests | 10 passed | 0 failed
+
+    ┍━ tests/spend ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │ PASS [mem: 687195, cpu: 2871498366] spend_evaluating_real_script
+    │ PASS [mem: 688597, cpu: 2871874464] spend_evaluating_script
+    │ PASS [mem: 253523, cpu:   75494440] spend_evaluating_bypass
+    │ PASS [mem: 190310, cpu:   54432950] spend_evaluating_wrong_self_ref
+    │ · with traces
+    │ | the validator crashed / exited prematurely
+    │ PASS [mem: 190692, cpu:   54921654] spend_evaluating_no_script
+    │ · with traces
+    │ | the validator crashed / exited prematurely
+    │ PASS [mem: 190314, cpu:   54793472] spend_evaluating_wrong_target
+    │ · with traces
+    │ | the validator crashed / exited prematurely
+    ┕━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6 tests | 6 passed | 0 failed
+
+    ┍━ tests/verify ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │ PASS [mem: 176202, cpu:   91543356] verify_challenge_certs
+    │ PASS [mem:  89791, cpu: 2541340679] verify_zk_proof
+    │ PASS [mem:  89791, cpu: 2541340679] verify_zk_proof_1
+    │ PASS [mem:  63964, cpu: 1355803465] verify_zk_proof_invalid_user
+    │ · with traces
+    │ | the validator crashed / exited prematurely
+    │ PASS [mem:  63964, cpu: 1355812874] verify_zk_proof_invalid_circuit_hash
+    │ · with traces
+    │ | the validator crashed / exited prematurely
+    │ PASS [mem:  63964, cpu: 1355812874] verify_zk_proof_invalid_challenge
+    │ · with traces
+    │ | the validator crashed / exited prematurely
+    │ PASS [mem:  63964, cpu: 1355812874] verify_zk_proof_invalid_overflow
+    │ · with traces
+    │ | the validator crashed / exited prematurely
+    │ PASS [mem:  63964, cpu: 1355812874] verify_zk_proof_invalid_proof
+    │ · with traces
+    │ | the validator crashed / exited prematurely
+    │ PASS [mem:  19672, cpu:    6533232] verify_zk_proof_overflow_one
+    │ PASS [mem:  17165, cpu:    7145501] verify_zk_proof_overflow_zero
+    │ PASS [mem:  89791, cpu: 2541359497] verify_zk_proof_performance
+    ┕━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11 tests | 11 passed | 0 failed
+...
+Summary 29 checks, 0 errors, 19 warnings
 ```
-![Screenshot 2025-05-03 at 11 33 52 PM](https://github.com/user-attachments/assets/f29f2f87-a9f9-4f7e-81df-a9237120078c)
 
 
 
