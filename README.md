@@ -634,7 +634,7 @@ Similar to the other endpoints presented above it will return a tx that need to 
 
 ## Test
 ```jsx
-aiken check .
+aiken check -t silent .
 Compiling tangocrypto/janus-wallet 0.0.0 (.)
     Compiling aiken-lang/stdlib v2.1.0 (./build/packages/aiken-lang-stdlib)
       Testing ...
