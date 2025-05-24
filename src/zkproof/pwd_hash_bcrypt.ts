@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt"
-import { fromText } from '@lucid-evolution/lucid'
+import { fromText, toHex, toText } from '@lucid-evolution/lucid'
 
 const args = process.argv.slice(2)
 console.log('Args:', args)
@@ -29,3 +29,4 @@ const hash = await bcrypt.hash(password, salt)
 console.log('salt:', salt)
 console.log('bcrypt hash:', hash)
 console.log('bcrypt hash (hex):', fromText(hash))
+console.log('bcrypt hash:', toText(fromText(hash)))

@@ -1,7 +1,8 @@
-import express, { Request, Response } from 'express';
+import express, { Request, RequestHandler, Response } from 'express';
 import { spendWalletFunds, generateRedeemer, buildSpend, createAccountTx, registerAndDelegate, delegate, delegateDrep, withdrawRewards } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
 import { circuitHashTest } from '../../zkproof';
+import { authenticateToken } from '../services/auth.service';
 
 
 // Wallet routes
@@ -109,14 +110,14 @@ export default (network: Network) => {
   }
 
   router.post('/:user_name', createAccount)
-  router.post('/:userId/build', buildSpendFunds)
+  router.post('/:userId/build', authenticateToken as RequestHandler, buildSpendFunds)
   router.post('/:userId/pools/:poolId/registerAndDelegate', registerAndDelegateToPool)
   router.post('/:userId/pools/:poolId/delegate', delegateToPool)
   router.post('/:userId/pools/:poolId/register', registerToPool)
   router.post('/:userId/dreps/:drepId/delegate', delegateToDrep)
   router.post('/:userId/withdraw', withdraw)
   router.post('/:userId/sign', sign)
-  router.post('/:userId/send', spendFunds)
+  router.post('/:userId/send', authenticateToken as RequestHandler,  spendFunds)
 
   return router
 };

@@ -22,3 +22,9 @@ export const getUserById = async (userId: string): Promise<User | null> => {
         .where({ id: userId })
         .first()
 }
+
+export const getUserByTokenName = async (tokenName: string): Promise<User | null> => {
+    return await db('users')
+        .where({ token_name: tokenName })
+        .first()
+}
