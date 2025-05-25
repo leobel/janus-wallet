@@ -2,12 +2,14 @@ import { ThemeProvider, createTheme } from '@mui/material';
 import { ReactRouterAppProvider } from '@toolpad/core/react-router';
 import { type Navigation } from '@toolpad/core/AppProvider';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import DescriptionIcon from '@mui/icons-material/Description';
-import LayersIcon from '@mui/icons-material/Layers';
 import { Outlet } from 'react-router';
 import { AuthProvider } from './context/AuthProvider';
+import StackedBarChartIcon from '@mui/icons-material/StackedBarChart';
+import SendIcon from '@mui/icons-material/Send';
+import SouthWestIcon from '@mui/icons-material/SouthWest';
+import ImportExportIcon from '@mui/icons-material/ImportExport';
 
 const NAVIGATION: Navigation = [
   {
@@ -22,17 +24,17 @@ const NAVIGATION: Navigation = [
   {
     segment: 'staking',
     title: 'Staking',
-    icon: <LayersIcon />,
+    icon: <StackedBarChartIcon />,
   },
   {
     segment: 'receive',
     title: 'Receive',
-    icon: <ShoppingCartIcon />,
+    icon: <SouthWestIcon />,
   },
   {
     segment: 'send',
     title: 'Send',
-    icon: <ShoppingCartIcon />,
+    icon: <SendIcon />,
   },
   {
     kind: 'divider',
@@ -61,19 +63,11 @@ const NAVIGATION: Navigation = [
   {
     segment: 'activity',
     title: 'Activity',
-    icon: <LayersIcon />,
+    icon: <ImportExportIcon />,
   },
 ];
 
 const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1E88E5',
-    },
-    secondary: {
-      main: '#26A69A',
-    },
-  },
   cssVariables: {
     colorSchemeSelector: 'data-toolpad-color-scheme',
   },
