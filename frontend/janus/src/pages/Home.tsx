@@ -7,15 +7,16 @@ export default function HomePage() {
     const { auth, setAuth } = useAuth()
     useEffect(() => {
         const fetch = async () => {
-            try {
-                const balance = await getWalletBalance(auth.user.id)
-                console.log('Wallet Account Balance:', balance)
-                setAuth({ user: auth.user, balance })
-            } catch (err) {
-                console.error(err)
+            if (auth.user) {
+                try {
+                    const balance = await getWalletBalance(auth.user.id)
+                    console.log('Wallet Account Balance:', balance)
+                    setAuth({ user: auth.user, balance })
+                } catch (err) {
+                    console.error(err)
+                }
             }
         }
-
         fetch()
     }, [])
 

@@ -1,6 +1,7 @@
 import axios from "../api/axios";
+import type { UserSession } from "../models/user";
 
-export async function login(username: string, password: string): Promise<string> {
+export async function login(username: string, password: string): Promise<UserSession> {
     const response = await axios.post('login', {
         username,
         password
