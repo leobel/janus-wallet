@@ -7,7 +7,6 @@ import Tooltip from '@mui/material/Tooltip';
 import Stack from '@mui/material/Stack';
 import IconButton, { type IconButtonProps } from '@mui/material/IconButton';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import SettingsIcon from '@mui/icons-material/Settings';
 import { useLocaleText } from '@toolpad/core';
 import { AccountLocaleContext } from './AccountLocalContext';
 import AuthContext from '../context/AuthProvider';
