@@ -3,17 +3,35 @@ import express, { Request, Response, RequestHandler } from 'express';
 import walletRouter from './api/controllers/wallet.controller';
 import circuitRouter from './api/controllers/circuit.controller';
 import { Network } from '@lucid-evolution/lucid';
-import { login, refresh, register } from './api/controllers/auth.controller';
+import { isAuthenticated, login, logout, refresh, register } from './api/controllers/auth.controller';
 import cookieParser from 'cookie-parser';
+import cors from 'cors'
+import { authenticateToken } from './api/services/auth.service';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 const network = process.env.CARDANO_NETWORK as Network;
 
+app.set('trust proxy', 1);
+
+// Allowed origins
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",").filter(url => url) || [];
+
 // Middleware
+app.use(cors({
+    origin: allowedOrigins,
+    credentials: true,
+}))
 app.use(express.json());
 app.use(cookieParser());
+
+// Add this before your routes
+app.use((req, res, next) => {
+    console.log('Request origin:', req.headers.origin);
+    console.log('Request cookies:', req.cookies);
+    next();
+});
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
@@ -21,10 +39,12 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 app.post('/login', login as RequestHandler)
+app.get('/logout', logout as RequestHandler)
 app.post('/register', register(network) as RequestHandler)
 app.get('/refreshToken', refresh as RequestHandler)
+app.get('/auth/me', isAuthenticated as RequestHandler)
 
-app.use('/wallets', walletRouter(network));
+app.use('/wallets', authenticateToken as RequestHandler, walletRouter(network));
 app.use('/circuits', circuitRouter(network))
 
 // Start the server

@@ -7,6 +7,7 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import DescriptionIcon from '@mui/icons-material/Description';
 import LayersIcon from '@mui/icons-material/Layers';
 import { Outlet } from 'react-router';
+import { AuthProvider } from './context/AuthProvider';
 
 const NAVIGATION: Navigation = [
   {
@@ -15,13 +16,13 @@ const NAVIGATION: Navigation = [
   },
   {
     segment: '',
-    title: 'Portfolio',
+    title: 'Home',
     icon: <DashboardIcon />,
   },
   {
     segment: 'staking',
     title: 'Staking',
-    icon: <ShoppingCartIcon />,
+    icon: <LayersIcon />,
   },
   {
     segment: 'receive',
@@ -58,8 +59,8 @@ const NAVIGATION: Navigation = [
     ],
   },
   {
-    segment: 'integrations',
-    title: 'Integrations',
+    segment: 'activity',
+    title: 'Activity',
     icon: <LayersIcon />,
   },
 ];
@@ -91,18 +92,20 @@ const theme = createTheme({
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <ReactRouterAppProvider 
-        navigation={NAVIGATION} 
-        theme={theme}
-        branding={{
-          // TODO: add logo
-          // logo: <img src="https://mui.com/static/logo.png" alt="MUI logo" />,
-          title: 'Janus',
-          homeUrl: '',
-        }}
-      >
-        <Outlet />
-      </ReactRouterAppProvider>
+      <AuthProvider>
+        <ReactRouterAppProvider 
+          navigation={NAVIGATION} 
+          theme={theme}
+          branding={{
+            // TODO: add logo
+            // logo: <img src="https://mui.com/static/logo.png" alt="MUI logo" />,
+            title: 'Janus',
+            homeUrl: '',
+          }}
+        >
+          <Outlet />
+        </ReactRouterAppProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

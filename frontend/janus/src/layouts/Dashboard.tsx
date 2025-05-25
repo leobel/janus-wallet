@@ -4,6 +4,7 @@ import { DashboardLayout } from '@toolpad/core/DashboardLayout';
 interface DemoProps {}
 
 export default function Dashboard(props: DemoProps) {
+
   return (
     <DashboardLayout>
       <Outlet />

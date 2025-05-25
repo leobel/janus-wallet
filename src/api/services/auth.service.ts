@@ -22,7 +22,7 @@ interface JWTPayload {
 }
 
 // In production, persist refresh tokens in DB or Redis
-let refreshTokensStore = [];
+let refreshTokensStore: string[] = [];
 
 export const ACCESS_TOKEN_KEY = '_uatk';
 export const REFRESH_TOKEN_KEY = '_urtk';
@@ -54,7 +54,7 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
 
 export function refreshToken(req: Request, expiresIn?: number | StringValue): Promise<string | null> {
     const token = req.cookies ? req.cookies[REFRESH_TOKEN_KEY] : null;
-    if (!token) return Promise.resolve(null)
+    if (!token || !refreshTokensStore.includes(token)) return Promise.resolve(null)
         
     return new Promise((resolve) => {
         jwt.verify(token, REFRESH_TOKEN_SECRET, (err: VerifyErrors | null, decoded: any) => {
@@ -62,6 +62,23 @@ export function refreshToken(req: Request, expiresIn?: number | StringValue): Pr
             resolve(generateAccessToken(decoded.user, expiresIn))
         });
     })
+}
+
+export function isLoggedIn(req: Request): Promise<boolean> {
+    const token = req.cookies ? req.cookies[ACCESS_TOKEN_KEY] : null;
+    if (!token) return Promise.resolve(false)
+    return new Promise((resolve) => {
+        jwt.verify(token, ACCESS_TOKEN_SECRET, (err: VerifyErrors | null, _decoded: any) => {
+            if (err) resolve(false)
+            resolve(true)
+        });
+    })
+}
+
+export function removeToken(req: Request) {
+    const token = req.cookies ? req.cookies[REFRESH_TOKEN_KEY] : null;
+    if (!token) return
+    refreshTokensStore = refreshTokensStore.filter(t => t != token)
 }
 
 export async function getUserByCredentials(username: string, password: string): Promise<User | null> {

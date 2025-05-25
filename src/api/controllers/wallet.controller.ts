@@ -1,5 +1,5 @@
 import express, { Request, RequestHandler, Response } from 'express';
-import { spendWalletFunds, generateRedeemer, buildSpend, createAccountTx, registerAndDelegate, delegate, delegateDrep, withdrawRewards } from '../services/wallet.service';
+import { spendWalletFunds, generateRedeemer, buildSpend, createAccountTx, registerAndDelegate, delegate, delegateDrep, withdrawRewards, getWalletAccount } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
 import { circuitHashTest } from '../../zkproof';
 import { authenticateToken } from '../services/auth.service';
@@ -96,6 +96,17 @@ export default (network: Network) => {
     }
   }; 
 
+  const getAccountBalance = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+     
+      const account = await getWalletAccount(userId)
+      res.status(200).json({ account });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message })
+    }
+  }
+
   // TODO: this should be done on the client side (e.g browser)
   const sign = async (req: Request, res: Response) => {
     try {
@@ -109,15 +120,16 @@ export default (network: Network) => {
     }
   }
 
-  router.post('/:user_name', createAccount)
-  router.post('/:userId/build', authenticateToken as RequestHandler, buildSpendFunds)
+  // router.post('/:user_name', createAccount)
+  router.get('/:userId/balance', getAccountBalance)
+  router.post('/:userId/build', buildSpendFunds)
   router.post('/:userId/pools/:poolId/registerAndDelegate', registerAndDelegateToPool)
   router.post('/:userId/pools/:poolId/delegate', delegateToPool)
   router.post('/:userId/pools/:poolId/register', registerToPool)
   router.post('/:userId/dreps/:drepId/delegate', delegateToDrep)
   router.post('/:userId/withdraw', withdraw)
   router.post('/:userId/sign', sign)
-  router.post('/:userId/send', authenticateToken as RequestHandler,  spendFunds)
+  router.post('/:userId/send', spendFunds)
 
   return router
 };

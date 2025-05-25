@@ -17,6 +17,7 @@
     "@tailwindcss/vite": "^4.1.7",
     "@toolpad/core": "^0.15.0",
     "autoprefixer": "^10.4.21",
+    "axios": "^1.9.0",
     "formik": "^2.4.6",
     "postcss": "^8.5.3",
     "react": "^19.1.0",

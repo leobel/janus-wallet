@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { ACCESS_TOKEN_KEY, generateAccessToken, generateRefreshToken, getUserByCredentials, REFRESH_TOKEN_KEY, refreshToken } from '../services/auth.service';
-import { Network } from '@lucid-evolution/lucid';
+import { ACCESS_TOKEN_KEY, generateAccessToken, generateRefreshToken, getUserByCredentials, isLoggedIn, REFRESH_TOKEN_KEY, refreshToken, removeToken } from '../services/auth.service';
+import { Network, toText } from '@lucid-evolution/lucid';
 import { createAccountTx } from '../services/wallet.service';
 
 
@@ -40,19 +40,24 @@ export async function login(req: Request, res: Response) {
 
     // Set cookies
     res.cookie(ACCESS_TOKEN_KEY, accessToken, {
-        httpOnly: false, // frontend have access to it
-        secure: true,
-        sameSite: 'strict',
+        httpOnly: true, // frontend have access to it.
+        secure: false, // TODO: set it true on production
+        domain: "localhost",
+        sameSite: 'lax',
         maxAge: accessExpiresIn * 1000, // 15 minutes
     });
     res.cookie(REFRESH_TOKEN_KEY, refreshToken, {
         httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
+        secure: false, // TODO: set it true on production
+        sameSite: 'lax',
         maxAge: refreshExpiresIn * 1000, // 7 days
     });
 
-    res.status(200).json({ message: 'Logged in' });
+    res.status(200).json({ user: {
+        id: user.id,
+        username: toText(user.token_name),
+        address: user.spend_address
+    }, message: 'Logged in' });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -64,11 +69,28 @@ export async function refresh(req: Request, res: Response) {
     // Set cookies
     res.cookie(ACCESS_TOKEN_KEY, accessToken, {
         httpOnly: false, // frontend have access to it
-        secure: true,
-        sameSite: 'strict',
+        secure: false, // TODO: set it true on production
+        sameSite: 'lax',
         maxAge: accessExpiresIn * 1000, // 15 minutes
     });
     
     
     res.sendStatus(200)
+}
+
+export async function isAuthenticated(req: Request, res: Response) {
+    const logged = await isLoggedIn(req)
+    if (!logged) {
+        return res.sendStatus(401)
+    }
+
+    res.sendStatus(200)
+}
+
+
+export async function logout(req: Request, res: Response) {
+    removeToken(req)
+    res.clearCookie(ACCESS_TOKEN_KEY)
+    res.clearCookie(REFRESH_TOKEN_KEY)
+    res.json({ message: 'Logged out' })
 }

@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Card, TextField, Button, Typography, Box, Tab, Tabs } from '@mui/material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
+import useAuth from '../hooks/useAuth';
+import { useNavigate } from 'react-router';
+import { login } from '../services/auth.service';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -37,7 +40,10 @@ const validationSchema = yup.object({
 });
 
 export default function AuthPage() {
+  const { setAuth } = useAuth();
+  const [errMsg, setErrMsg] = useState("")
   const [tabValue, setTabValue] = useState(0);
+ const navigate = useNavigate()
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -49,9 +55,29 @@ export default function AuthPage() {
       password: '',
     },
     validationSchema: validationSchema,
-    onSubmit: (values) => {
-      // TODO: Handle form submission
-      console.log(values);
+    onSubmit: async ({username, password}) => {
+      try {
+        const user = await login(username, password)
+        if (user) {
+          console.log('User:', user)
+          setAuth({ user });
+          navigate('/');
+        } else {
+          setErrMsg('Login failed, please try again');
+        }
+      } catch (err: any) {
+        console.log('Login Error:', err)
+        if (!err?.response) {
+          setErrMsg('No Server Response');
+        } else if (err.response?.status === 400) {
+          setErrMsg('Missing Username or Password');
+        } else if (err.response?.status === 401) {
+          setErrMsg('Unauthorized');
+        } else {
+          setErrMsg('Login Failed');
+        }
+        // errRef.current.focus();
+      }
     },
   });
 

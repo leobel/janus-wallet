@@ -2,15 +2,19 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { StyledEngineProvider } from '@mui/material/styles';
 import GlobalStyles from '@mui/material/GlobalStyles';
-import { createBrowserRouter, RouterProvider } from 'react-router';
+import { createBrowserRouter, RouterProvider, redirect } from 'react-router';
 import Dashboard from './layouts/Dashboard';
 import HomePage from './pages/Home';
 import StakingPage from './pages/Staking';
 import ReceivePage from './pages/Receive';
 import SendPage from './pages/Send';
+import ActivityPage from './pages/Activity';
+import AuthPage from './pages/AuthPage';
+import isAuthenticated from './guards/auth'
 
 import App from './App.tsx'
 import './index.css'
+import setupAxiosInterceptors from './api/interceptor.tsx';
 
 const router = createBrowserRouter([
   {
@@ -18,6 +22,13 @@ const router = createBrowserRouter([
     children: [
       {
         path: '/',
+        loader: async ({request}) => {
+          console.log("Loader...", request)
+          const isAuth = await isAuthenticated(request)
+          if (!isAuth) {
+            return redirect("/login")
+          }
+        },
         Component: Dashboard,
         children: [
           {
@@ -36,11 +47,21 @@ const router = createBrowserRouter([
             path: 'send',
             Component: SendPage
           },
-        ]
+          {
+            path: 'activity',
+            Component: ActivityPage
+          },
+        ],
       },
+      {
+        path: '/login',
+        Component: AuthPage,
+      }
     ],
   },
 ]);
+
+setupAxiosInterceptors(router)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

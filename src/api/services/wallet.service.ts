@@ -7,6 +7,9 @@ import { getSignerKeyHex } from './circuit.service.js';
 import { AccountDatum, MintRedeemer } from '../../utils/contract-types.js';
 import { getCircuit } from '../../repositories/circuit.repository.js';
 import { randomUUID } from 'crypto';
+import type { User } from '../../models/user.js';
+import type { AccountBalance } from '../../models/account-balance.js';
+import { getLedgerAccountBalance } from '../../utils/ledger-api.js';
 
 const validators = readValidators();
 
@@ -48,6 +51,15 @@ export async function createAccountTx(username: string, network: Network, hash: 
     }
     const newUser = await createUser(user)
     return newUser
+}
+
+export async function getWalletAccount(userId: string): Promise<AccountBalance> {
+    const user = await getUserById(userId)
+    if (!user) {
+        throw new Error('User not found')
+    }
+
+    return getLedgerAccountBalance(user.spend_address)
 }
 
 export async function buildSpend(userId: string, amount: number, receiveAddress: string, network: Network, assets: Assets): Promise<{tx: string}> {
