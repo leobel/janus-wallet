@@ -22,6 +22,7 @@ interface AuthProviderProps {
 }
 
 const STORAGE_KEY = 'jw_session';
+const BALANCE_POLLING_INTERVAL = Number(import.meta.env.VITE_BALANCE_POLLING_INTERVAL) || 60000
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
     const [auth, setAuth] = useState<AuthSession>(() => {
@@ -29,7 +30,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const storedAuth = localStorage.getItem(STORAGE_KEY);
         return storedAuth ? JSON.parse(storedAuth) : {};
     });
-    const { data, start, stop } = useAccountBalance(10000);
+    const { data, start, stop } = useAccountBalance(BALANCE_POLLING_INTERVAL);
 
     // Save to localStorage whenever auth changes
     useEffect(() => {

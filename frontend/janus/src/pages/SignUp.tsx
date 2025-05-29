@@ -1,22 +1,22 @@
-import { Box, Button, List, ListItem, ListItemIcon, ListItemButton, ListItemText, Snackbar, styled, Typography, Stack, Divider, IconButton, TextField, StepContent, InputAdornment } from '@mui/material';
-import { CARDANO_NETWORK, checkWalletNetwork, getMintAccountPrice, getSupportedWallets, getWalletFunds, openWallet, walletSignTx, type SupportedWallet, type Wallet } from '../utils/walletApi';
-import { NotificationsProvider, useNotifications } from '@toolpad/core';
-import Base64Icon from '../components/utility/Base64Icon';
-import { useState } from 'react';
-import CheckIcon from '@mui/icons-material/Check';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import CircleIcon from '@mui/icons-material/Circle';
-import { mintAccount, userExist } from '../services/wallet.service';
+import { Box, Button, List, ListItem, ListItemIcon, ListItemButton, ListItemText, Snackbar, styled, Typography, Stack, Divider, IconButton, TextField, StepContent, InputAdornment } from '@mui/material'
+import { CARDANO_NETWORK, checkWalletNetwork, getMintAccountPrice, getSupportedWallets, getWalletFunds, openWallet, walletSignTx, type SupportedWallet, type Wallet } from '../utils/walletApi'
+import { NotificationsProvider, useNotifications } from '@toolpad/core'
+import Base64Icon from '../components/utility/Base64Icon'
+import { useState } from 'react'
+import CheckIcon from '@mui/icons-material/Check'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import CircleIcon from '@mui/icons-material/Circle'
+import { mintAccount, userExist } from '../services/wallet.service'
 
-import Stepper from '@mui/material/Stepper';
-import Step from '@mui/material/Step';
-import StepLabel from '@mui/material/StepLabel';
-import { createAccount } from '../services/auth.service';
-import useAuth from '../hooks/useAuth';
-import { hashCredentials, hashPassword } from '../utils/hashing';
-import { useNavigate } from 'react-router';
+import Stepper from '@mui/material/Stepper'
+import Step from '@mui/material/Step'
+import StepLabel from '@mui/material/StepLabel'
+import { createAccount } from '../services/auth.service'
+import useAuth from '../hooks/useAuth'
+import { hashCredentials, hashPassword } from '../utils/hashing'
+import { useNavigate } from 'react-router'
 
 
 const ContainsDigitRegexp = /\d/
@@ -165,15 +165,15 @@ function ScopedContent() {
         setValidRules(rules.reduce((acc, rule) => ({ ...acc, [rule]: true }), {}))
     }
 
-    const handleClickShowPassword = () => setShowPassword((show) => !show);
+    const handleClickShowPassword = () => setShowPassword((show) => !show)
 
     const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.preventDefault();
-    };
+        event.preventDefault()
+    }
 
     const handleMouseUpPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.preventDefault();
-    };
+        event.preventDefault()
+    }
 
     return (
         <Box
@@ -333,7 +333,7 @@ function ScopedContent() {
                 </Box>
             </Box>
         </Box>
-    );
+    )
 }
 
 export default function SignUp() {

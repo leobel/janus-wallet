@@ -9,7 +9,7 @@ import StakingPage from './pages/Staking';
 import ReceivePage from './pages/Receive';
 import SendPage from './pages/Send';
 import ActivityPage from './pages/Activity';
-import AuthPage from './pages/AuthPage';
+import SignIn from './pages/SignIn.tsx';
 import isAuthenticated from './guards/auth'
 
 import App from './App.tsx'
@@ -56,7 +56,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/login',
-        Component: AuthPage,
+        Component: SignIn,
       },
       {
         path: '/signup',
