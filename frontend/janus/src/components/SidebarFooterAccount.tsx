@@ -78,7 +78,7 @@ function SidebarFooterAccountPopover() {
                 <Typography variant="h6" sx={{ mt: 2, fontWeight: 'bold' }}>
                     {session.user?.username}
                 </Typography>
-                <Address address={session.user?.address || ''} shrink copy />
+                <Address value={session.user?.address || ''} shrink copy />
             </Box>
 
             <Divider />

@@ -1,33 +1,48 @@
 import { Stack, Typography, IconButton, Tooltip } from "@mui/material"
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 export interface AddressProps {
-    address: string
+    value: string
+    size?: number
     shrink?: boolean
     copy?: boolean
+    explore?: boolean
 }
 
 export default function Address(props: AddressProps) {
-    const { address, shrink, copy } = props
+    const address = props.value
+    const size = props.size || 10
 
-    const displayAddress = shrink 
-        ? `${address.slice(0, 10)}...${address.slice(-10)}`
+    const displayAddress = props.shrink
+        ? `${address.slice(0, size)}...${address.slice(-size)}`
         : address
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(address)
+    function handleCopy() {
+        navigator.clipboard.writeText(props.value)
+    }
+
+    function handleOpen() {
+        const url = `${import.meta.env.VITE_CARDANO_EXPLORER}address/${address}`
+        window.open(url, '_blank', "noopener noreferrer")
     }
 
     return (
         <Stack direction="row" alignItems="center" spacing={1}>
             <Typography>{displayAddress}</Typography>
-            {copy && (
+            {props.copy && (
                 <Tooltip title="Copy to clipboard">
                     <IconButton size="small" onClick={handleCopy}>
                         <ContentCopyIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
             )}
+            {props.explore && <Tooltip title="View onchain">
+                <IconButton size="small" onClick={handleOpen} >
+                    <OpenInNewIcon fontSize="small"/>
+                </IconButton>
+            </Tooltip>
+            }
         </Stack>
     )
 }
