@@ -7,7 +7,7 @@ import useAuth from "../hooks/useAuth";
 import AdaBalance from "./AdaBalance";
 
 export function AppTitle() {
-    const { auth: session } = useAuth()
+    const { balance } = useAuth()
     const [privacy, setPrivacy] = useState(false)
 
     const togglePrivacy = () => {
@@ -21,7 +21,7 @@ export function AppTitle() {
             <Chip size="small" label="BETA" color="info" />
             <Box>
                 <AdaBalance
-                    balance={session.balance?.account.lovelace}
+                    balance={balance?.lovelace}
                     privacy={privacy}
                 />
             </Box>

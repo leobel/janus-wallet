@@ -1,7 +1,7 @@
 import { Typography, Box } from "@mui/material"
 
 export interface AdaBalanceProps {
-    balance: string
+    balance?: string
     privacy: boolean
 }
 
@@ -30,7 +30,7 @@ function formatAdaBalance(balance: string): { whole: string, decimal: string } {
 }
 
 export default function AdaBalance(props: AdaBalanceProps) {
-    const { whole, decimal } = formatAdaBalance(props.balance)
+    const { whole, decimal } = formatAdaBalance(props.balance || '0')
     
     return (
         <Typography sx={{

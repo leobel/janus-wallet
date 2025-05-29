@@ -7,6 +7,7 @@ interface ViteTypeOptions {
   }
   
   interface ImportMetaEnv {
+    readonly VITE_SERVER_BASE_URL: string
     readonly VITE_APP_TITLE: string
     readonly VITE_CARDANO_NETWORK: string
     readonly VITE_COINS_PER_UTXO_BYTE: number

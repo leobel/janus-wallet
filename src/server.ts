@@ -45,7 +45,7 @@ app.get('/refreshToken', refresh as RequestHandler)
 app.get('/auth/me', isAuthenticated as RequestHandler)
 app.post('/userExist', verifyUser as RequestHandler)
 
-app.use('/wallets', /*authenticateToken as RequestHandler,*/ walletRouter(network));
+app.use('/wallets', authenticateToken as RequestHandler, walletRouter(network));
 app.use('/circuits', circuitRouter(network))
 
 // Start the server

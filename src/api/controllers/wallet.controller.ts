@@ -100,7 +100,7 @@ export default (network: Network) => {
       const { userId } = req.params
 
       const account = await getWalletAccount(userId)
-      res.status(200).json({ account });
+      res.status(200).json(account);
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message })
     }
