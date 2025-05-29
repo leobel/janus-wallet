@@ -1,19 +1,26 @@
 import { Request, Response } from 'express';
-import { ACCESS_TOKEN_KEY, generateAccessToken, generateRefreshToken, getUserByCredentials, isLoggedIn, REFRESH_TOKEN_KEY, refreshToken, removeToken } from '../services/auth.service';
+import { ACCESS_TOKEN_KEY, generateAccessToken, generateRefreshToken, getUserByCredentials, isLoggedIn, REFRESH_TOKEN_KEY, refreshToken, removeToken, userExist } from '../services/auth.service';
 import { Network, toText } from '@lucid-evolution/lucid';
 import { createAccountTx } from '../services/wallet.service';
+import type { User } from '../../models/user';
 
-
-export function register(network: Network) {
+export function createAccount(network: Network) {
     return async (req: Request, res: Response) => {
         try {
-          const { user_name } = req.params;
-          const { hash, kdf_hash: kdfHash, nonce } = req.body
-          const result = await createAccountTx(user_name, network, hash, kdfHash, nonce)
-    
-          res.status(200).json(result);
+            const { username, hash, kdf_hash: kdfHash, nonce, utxos, change_address } = req.body
+            const {user, cborTx} = await createAccountTx(username, network, hash, kdfHash, utxos, change_address, nonce)
+
+            addCookies(user, res);
+            res.status(200).json({
+                user: {
+                    id: user.id,
+                    username: toText(user.token_name),
+                    address: user.spend_address
+                },
+                cbor_tx: cborTx
+            });
         } catch (error: any) {
-          res.status(500).json({ success: false, error: error.message });
+            res.status(500).json({ success: false, error: error.message });
         }
     }
 }
@@ -22,19 +29,33 @@ const accessExpiresIn = 15 * 60
 const refreshExpiresIn = 7 * 24 * 60 * 60
 
 export async function login(req: Request, res: Response) {
-  try {
-    const { username, password } = req.body;
-    
-    const user = await getUserByCredentials(username, password)
-    if (!user) {
-        return res.status(401).json({ message: 'Invalid credentials' })
+    try {
+        const { username, password } = req.body;
+
+        const user = await getUserByCredentials(username, password)
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid credentials' })
+        }
+        addCookies(user, res);
+        res.status(200).json({
+            user: {
+                id: user.id,
+                username: toText(user.token_name),
+                address: user.spend_address
+            }, message: 'Logged in'
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message });
     }
+}
+
+function addCookies(user: User, res: Response<any, Record<string, any>>) {
     const data = {
         id: user.id,
         username: user.token_name,
         address: user.spend_address,
-    }
-    
+    };
+
     const accessToken = generateAccessToken(data, accessExpiresIn);
     const refreshToken = generateRefreshToken(data, refreshExpiresIn);
 
@@ -50,17 +71,8 @@ export async function login(req: Request, res: Response) {
         httpOnly: true,
         secure: false, // TODO: set it true on production
         sameSite: 'lax',
-        maxAge: refreshExpiresIn * 1000, // 7 days
+        maxAge: refreshExpiresIn * 1000,
     });
-
-    res.status(200).json({ user: {
-        id: user.id,
-        username: toText(user.token_name),
-        address: user.spend_address
-    }, message: 'Logged in' });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
 }
 
 export async function refresh(req: Request, res: Response) {
@@ -73,8 +85,8 @@ export async function refresh(req: Request, res: Response) {
         sameSite: 'lax',
         maxAge: accessExpiresIn * 1000, // 15 minutes
     });
-    
-    
+
+
     res.sendStatus(200)
 }
 
@@ -93,4 +105,14 @@ export async function logout(req: Request, res: Response) {
     res.clearCookie(ACCESS_TOKEN_KEY)
     res.clearCookie(REFRESH_TOKEN_KEY)
     res.json({ message: 'Logged out' })
+}
+
+export async function verifyUser(req: Request, res: Response) {
+    try {
+        const { username } = req.body
+        const existUser = await userExist(username)
+        res.json(existUser)
+    } catch (error) {
+        res.sendStatus(500)        
+    }
 }

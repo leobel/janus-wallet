@@ -1,19 +1,21 @@
 import { Assets, CertificateValidator, CML, Data, fromText, Network, Script, TxOutput, UTxO, validatorToRewardAddress } from '@lucid-evolution/lucid';
-import { createUser, getUserById } from '../../repositories/user.repository.js'
-import { readValidators, generateSpendScript, spendTx, ZkInput, buildSpendTx, buildZKProofRedeemer, buildAllSpendRedeemers, mintAssetsTx, fromMintUtxoRefAssetsToAssets, getMinAda, registerAndDelegateTx, delegateTx, delegateDrepTx, DRepresentative, buildDrep, withdrawTx } from '../../utils/prepare-contracts.js';
+import { createUser, getUserById, updateUser } from '../../repositories/user.repository.js'
+import { readValidators, generateSpendScript, spendTx, ZkInput, buildSpendTx, buildZKProofRedeemer, buildAllSpendRedeemers, buildMintAssetsUnsignedTx, fromMintUtxoRefAssetsToAssets, getMinAda, registerAndDelegateTx, delegateTx, delegateDrepTx, DRepresentative, buildDrep, withdrawTx, buildMintAssetsTx, getTransactionId, getUtxoSignerKeys } from '../../utils/prepare-contracts.js';
 import { getLucid } from '../../utils/index.js';
 import { coinSelection } from '../../utils/coin-selection.js';
 import { getSignerKeyHex } from './circuit.service.js';
 import { AccountDatum, MintRedeemer } from '../../utils/contract-types.js';
 import { getCircuit } from '../../repositories/circuit.repository.js';
 import { randomUUID } from 'crypto';
-import type { User } from '../../models/user.js';
+import type { AccountTokenStatus, User } from '../../models/user.js';
 import type { AccountBalance } from '../../models/account-balance.js';
 import { getLedgerAccountBalance } from '../../utils/ledger-api.js';
 
 const validators = readValidators();
+const prvKey = process.env.FAKE_PRV_KEY!
+const fakePrvKey = CML.PrivateKey.from_bech32(prvKey)
 
-export async function createAccountTx(username: string, network: Network, hash: string, kdfHash: string, nonce?: string) {
+export async function createAccountTx(username: string, network: Network, hash: string, kdfHash: string, utxos: string[], changeAddress: string, nonce?: string): Promise<{user: User, cborTx: string}> {
     const circuit = await getCircuit();
     if (!circuit) {
         throw new Error('Circuit not found')
@@ -22,7 +24,6 @@ export async function createAccountTx(username: string, network: Network, hash: 
 
     const lucid = await getLucid;
     lucid.selectWallet.fromPrivateKey(getSignerKeyHex());
-    const walletAddress = await lucid.wallet().address();
     
     const addrNonce = fromText(nonce || randomUUID())
     const tokenName = fromText(username);
@@ -38,8 +39,12 @@ export async function createAccountTx(username: string, network: Network, hash: 
     const { spend, spendAddress } = generateSpendScript(validators.spend.script, network, policy_id, asset_name, tokenName, hash, kdfHash, addrNonce)
 
     const validTo = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
-    const utxoRef = await mintAssetsTx(lucid, datum, mintRedeemer, tokenName, walletAddress, mint_script as Script, policy_id, spendAddress, validTo, '', { localUPLCEval: true })
+
+    const signerKeys = getUtxoSignerKeys(utxos)
+    const prvKeys = signerKeys.map(_ => fakePrvKey)
+    const {utxoRef, cborTx: unsignedTx} = await buildMintAssetsUnsignedTx(utxos, lucid, datum, mintRedeemer, tokenName, changeAddress, mint_script as Script, policy_id, spendAddress, validTo, signerKeys, prvKeys, { localUPLCEval: true })
     const user = {
+        token_status: "pending" as AccountTokenStatus,
         token_name: tokenName,
         pwd_hash: hash,
         pwd_kdf_hash: kdfHash,
@@ -47,10 +52,35 @@ export async function createAccountTx(username: string, network: Network, hash: 
         policy_id: policy_id,
         nonce: addrNonce,
         spend_script: spend,
-        mint_utxo_ref: utxoRef
+        mint_utxo_ref: utxoRef,
     }
     const newUser = await createUser(user)
-    return newUser
+    return {user: newUser, cborTx: unsignedTx}
+}
+
+export async function mintAccountTx(userId: string, unsignedTx: string, txWitnessSet: string): Promise<string> {
+    const user = await getUserById(userId)
+    if (!user) {
+        throw new Error('User not found')
+    }
+
+    const txId = getTransactionId(unsignedTx)
+    if (txId !== user.mint_utxo_ref.tx_hash) {
+        throw new Error(`Invalid txId: ${txId}, was expecting: ${user.mint_utxo_ref.tx_hash}`)
+    }
+    
+    const tx = buildMintAssetsTx(unsignedTx, txWitnessSet, fakePrvKey)
+    const cbor = tx.to_cbor_hex()
+    console.log('Final Tx:', cbor)
+
+    const lucid = await getLucid;
+    const provider = lucid.config().provider
+
+    let updatedUser = await updateUser(user.id, { token_status: "submitted" as AccountTokenStatus })
+    const txHash = await provider.submitTx(cbor)
+    console.log('Tx Id (Submit):', txHash);
+    updatedUser = await updateUser(user.id, { token_status: "success" as AccountTokenStatus })
+    return txHash
 }
 
 export async function getWalletAccount(userId: string): Promise<AccountBalance> {

@@ -1,5 +1,5 @@
 import { CML, Data, fromText, getAddressDetails, Network, TxOutput } from "@lucid-evolution/lucid";
-import { generateMintPolicy, getMinAda, mintAssetsTx, readValidators } from "../../utils/prepare-contracts";
+import { generateMintPolicy, getMinAda, buildMintAssetsUnsignedTx, readValidators } from "../../utils/prepare-contracts";
 import { getLucid } from '../../utils/index.js';
 import * as fs from 'fs';
 import path from "path";
@@ -43,7 +43,14 @@ export async function mintCircuit(network: Network, tokenName: string, circuitVe
     const { mint, policyId, mintAddress } = generateMintPolicy(network, validators.mint.script, signerKey, version, circuitNonce);
 
     const validTo = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
-    const utxoRef = await mintAssetsTx(lucid, datum, mintRedeemer, assetName, walletAddress, mint, policyId, mintAddress, validTo, signerKey, { localUPLCEval: true })
+    const utxos = (await lucid.utxosAt(walletAddress))
+    const { utxoRef, cborTx} = await buildMintAssetsUnsignedTx(utxos, lucid, datum, mintRedeemer, assetName, walletAddress, mint, policyId, mintAddress, validTo, [signerKey], [privateKey],{ localUPLCEval: true })
+
+    // submit transaction
+    const provider = lucid.config().provider
+    const txHash = await provider.submitTx(cborTx)
+    console.log('Tx Id (Submit):', txHash);
+
     await createCircuit({
         version: version,
         signer_key: signerKey,

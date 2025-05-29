@@ -49,3 +49,13 @@ export async function getLedgerAccountBalance(address: string): Promise<AccountB
     }
     
 }
+
+export async function tokenExist(policyId: string, assetName: string): Promise<boolean> {
+    try {
+        const unit = `${policyId+assetName}`;
+        await axiosInstance.get(`assets/${unit}`)
+        return true
+    } catch {
+        return false
+    }
+}

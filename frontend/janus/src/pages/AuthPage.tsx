@@ -43,7 +43,7 @@ export default function AuthPage() {
   const { setAuth } = useAuth();
   const [errMsg, setErrMsg] = useState("")
   const [tabValue, setTabValue] = useState(0);
- const navigate = useNavigate()
+  const navigate = useNavigate()
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -55,13 +55,13 @@ export default function AuthPage() {
       password: '',
     },
     validationSchema: validationSchema,
-    onSubmit: async ({username, password}) => {
+    onSubmit: async ({ username, password }) => {
       try {
         const user = await login(username, password)
         if (user) {
           console.log('User:', user)
-          setAuth({ user });
-          navigate('/');
+          setAuth({ user })
+          navigate('/')
         } else {
           setErrMsg('Login failed, please try again');
         }

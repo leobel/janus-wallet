@@ -1,5 +1,5 @@
 import express, { Request, RequestHandler, Response } from 'express';
-import { spendWalletFunds, generateRedeemer, buildSpend, createAccountTx, registerAndDelegate, delegate, delegateDrep, withdrawRewards, getWalletAccount } from '../services/wallet.service';
+import { spendWalletFunds, generateRedeemer, buildSpend, registerAndDelegate, delegate, delegateDrep, withdrawRewards, getWalletAccount, mintAccountTx } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
 import { circuitHashTest } from '../../zkproof';
 import { authenticateToken } from '../services/auth.service';
@@ -9,12 +9,11 @@ import { authenticateToken } from '../services/auth.service';
 const router = express.Router();
 
 export default (network: Network) => {
-  const createAccount = async (req: Request, res: Response) => {
+  const submitAccountTx = async (req: Request, res: Response) => {
     try {
-      const { user_name } = req.params;
-      const { hash, kdf_hash: kdfHash, nonce } = req.body
-      const result = await createAccountTx(user_name, network, hash, kdfHash, nonce)
-
+      const { userId } = req.params;
+      const { cbor_tx, vk_witnesses } = req.body
+      const result = await mintAccountTx(userId, cbor_tx, vk_witnesses)
       res.status(200).json(result);
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
@@ -94,12 +93,12 @@ export default (network: Network) => {
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
-  }; 
+  };
 
   const getAccountBalance = async (req: Request, res: Response) => {
     try {
       const { userId } = req.params
-     
+
       const account = await getWalletAccount(userId)
       res.status(200).json({ account });
     } catch (error: any) {
@@ -120,7 +119,7 @@ export default (network: Network) => {
     }
   }
 
-  // router.post('/:user_name', createAccount)
+  router.post('/:userId/mintAccount', submitAccountTx)
   router.get('/:userId/balance', getAccountBalance)
   router.post('/:userId/build', buildSpendFunds)
   router.post('/:userId/pools/:poolId/registerAndDelegate', registerAndDelegateToPool)

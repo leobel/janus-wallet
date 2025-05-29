@@ -79,6 +79,7 @@ async function compile(fileName: string, options: any) {
     if (options.inspect) flags += "--inspect ";
 
     try {
+        console.log(`Executing: circom ${flags} ${fileName}`)
         let b = await exec("circom " + flags + fileName);
         if (options.verbose) {
             console.log(b.stdout);

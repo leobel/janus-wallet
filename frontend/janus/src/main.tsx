@@ -15,6 +15,7 @@ import isAuthenticated from './guards/auth'
 import App from './App.tsx'
 import './index.css'
 import setupAxiosInterceptors from './api/interceptor.tsx';
+import SignUp from './pages/SignUp.tsx';
 
 const router = createBrowserRouter([
   {
@@ -56,6 +57,10 @@ const router = createBrowserRouter([
       {
         path: '/login',
         Component: AuthPage,
+      },
+      {
+        path: '/signup',
+        Component: SignUp
       }
     ],
   },

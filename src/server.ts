@@ -3,7 +3,7 @@ import express, { Request, Response, RequestHandler } from 'express';
 import walletRouter from './api/controllers/wallet.controller';
 import circuitRouter from './api/controllers/circuit.controller';
 import { Network } from '@lucid-evolution/lucid';
-import { isAuthenticated, login, logout, refresh, register } from './api/controllers/auth.controller';
+import { isAuthenticated, login, logout, refresh, createAccount, verifyUser } from './api/controllers/auth.controller';
 import cookieParser from 'cookie-parser';
 import cors from 'cors'
 import { authenticateToken } from './api/services/auth.service';
@@ -40,11 +40,12 @@ app.get('/health', (req: Request, res: Response) => {
 
 app.post('/login', login as RequestHandler)
 app.get('/logout', logout as RequestHandler)
-app.post('/register', register(network) as RequestHandler)
+app.post('/register', createAccount(network) as RequestHandler)
 app.get('/refreshToken', refresh as RequestHandler)
 app.get('/auth/me', isAuthenticated as RequestHandler)
+app.post('/userExist', verifyUser as RequestHandler)
 
-app.use('/wallets', authenticateToken as RequestHandler, walletRouter(network));
+app.use('/wallets', /*authenticateToken as RequestHandler,*/ walletRouter(network));
 app.use('/circuits', circuitRouter(network))
 
 // Start the server

@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect, useCallback } from "react";
-import type { UserSession } from "../models/user";
+import type { UserSession } from "../models/user-session";
 import { setSignOutFunction } from "../api/interceptor";
 
 export interface AuthSession {

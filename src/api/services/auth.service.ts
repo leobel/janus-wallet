@@ -8,6 +8,8 @@ import { NextFunction,  Request, Response  } from "express";
 import { getUserByTokenName } from "../../repositories/user.repository";
 import { fromText } from "../../utils/converter";
 import { toText } from "@lucid-evolution/lucid";
+import { tokenExist } from "../../utils/ledger-api";
+import { getCircuit } from "../../repositories/circuit.repository";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -95,4 +97,18 @@ export async function getUserByCredentials(username: string, password: string): 
     } catch {
         return null
     }
+}
+
+export async function userExist(username: string): Promise<boolean> {
+    const circuit = await getCircuit();
+    if (!circuit) {
+        throw new Error('Circuit not found')
+    }
+    const tokenName = fromText(username)
+    const user = await getUserByTokenName(tokenName)
+    if (user) {
+        return true
+    }
+
+    return tokenExist(circuit.policy_id, tokenName)
 }

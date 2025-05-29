@@ -1,6 +1,5 @@
-import { MintUtxoRef } from "./mint-utxo-ref";
-
 export type AccountTokenStatus = "pending" | "submitted" | "success" | "failed"
+
 export interface User {
     id: string;
     token_status: AccountTokenStatus,
@@ -18,3 +17,12 @@ export interface User {
     created_at: Date;
     updated_at: Date;
 }
+
+export interface MintUtxoRef {
+    tx_hash: string;
+    output_index: number;
+    assets: MintUtxoRefAssets;
+    datum: string;
+}
+
+export type MintUtxoRefAssets = Record<string | "lovelace", number>;

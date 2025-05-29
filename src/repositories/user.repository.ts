@@ -4,6 +4,7 @@ import { User } from '../models/user.js'
 export const createUser = async (user: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<User> => {
     const [newUser] = await db('users')
         .insert({ 
+            token_status: user.token_status,
             token_name: user.token_name,
             pwd_hash: user.pwd_hash,
             pwd_kdf_hash: user.pwd_kdf_hash,
@@ -15,6 +16,13 @@ export const createUser = async (user: Omit<User, 'id' | 'created_at' | 'updated
         })
         .returning('*')
     return newUser
+}
+
+export const updateUser = async (userId: string, data: Partial<Omit<User, 'id' | 'created_at' | 'updated_at'>>): Promise<User> => {
+    const [user] = await db('users').where({ id: userId })
+        .update(data)
+        .returning('*')
+    return user
 }
 
 export const getUserById = async (userId: string): Promise<User | null> => {

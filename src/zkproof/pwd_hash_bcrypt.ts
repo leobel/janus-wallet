@@ -15,18 +15,18 @@ function getArg(flag: string): string | undefined {
 const password = getArg('-p')
 const saltRounds = Number(getArg('-r') || 10)
 const s = getArg('-s')
-console.log('salt:', s)
 
 if (!password) {
   console.error('Usage: pwd_hash_bcrypt.ts -p "pwd" -r 10')
   process.exit(1)
 }
 
-const salt = s || bcrypt.genSaltSync(saltRounds)
+const salt = s || await bcrypt.genSalt(saltRounds)
 
 const hash = await bcrypt.hash(password, salt)
 
 console.log('salt:', salt)
+console.log('salt rounds:', saltRounds)
 console.log('bcrypt hash:', hash)
 console.log('bcrypt hash (hex):', fromText(hash))
 console.log('bcrypt hash:', toText(fromText(hash)))

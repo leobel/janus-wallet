@@ -1,11 +1,14 @@
-import { applyDoubleCborEncoding, applyParamsToScript, Data, MintingPolicy, Network, SpendingValidator, Credential, validatorToAddress, validatorToScriptHash,
-     Blockfrost, Lucid, getAddressDetails, UTxO, Assets, CML, TxBuilderConfig, Wallet, utxoToTransactionInput, 
-     utxoToTransactionOutput, SLOT_CONFIG_NETWORK, LucidEvolution, Script, makeTxSignBuilder, 
-     TxBuilderError, stringify, isEqualUTxO, selectUTxOs, assetsToValue, sortUTxOs, utxoToCore, 
-     EvalRedeemer, toCMLRedeemerTag, PROTOCOL_PARAMETERS_DEFAULT, createCostModels, CertificateValidator, 
-     validatorToRewardAddress, PoolId, TxSignBuilder, PolicyId, Lovelace, CBORHex, RedeemerTag, 
-     TxOutput,
-     DRep} from "@lucid-evolution/lucid";
+import {
+    applyDoubleCborEncoding, applyParamsToScript, Data, MintingPolicy, Network, SpendingValidator, Credential, validatorToAddress, validatorToScriptHash,
+    Blockfrost, Lucid, getAddressDetails, UTxO, Assets, CML, TxBuilderConfig, Wallet, utxoToTransactionInput,
+    utxoToTransactionOutput, SLOT_CONFIG_NETWORK, LucidEvolution, Script, makeTxSignBuilder,
+    TxBuilderError, stringify, isEqualUTxO, selectUTxOs, assetsToValue, sortUTxOs, utxoToCore,
+    EvalRedeemer, toCMLRedeemerTag, PROTOCOL_PARAMETERS_DEFAULT, createCostModels, CertificateValidator,
+    validatorToRewardAddress, PoolId, TxSignBuilder, PolicyId, Lovelace, CBORHex, RedeemerTag,
+    TxOutput,
+    DRep,
+    coresToUtxos,
+} from "@lucid-evolution/lucid";
 import * as UPLC from "@lucid-evolution/uplc";
 import blueprint from "../../plutus.json" assert { type: 'json' };
 import { AccountDatum, Address, Certificate, Challenge, ChallengeOutput, Credential as ContractCredential, Datum, DelegateRepresentative, Input, Mint, MintRedeemer, Output, OutputReference, Proof, PublishRedeemer, Redeemer, ReferenceInputs, Signals, Spend, StakeCredential, Value, WithdrawRedeemer } from "./contract-types";
@@ -35,19 +38,21 @@ export type DRepresentative = {
     hash?: string
 }
 
-export async function mintAssetsTx(
+export async function buildMintAssetsUnsignedTx(
+    txUtxos: string[] | UTxO[],
     lucid: LucidEvolution,
     datum: string,
     mintRedeemer: MintRedeemer,
     tokenName: string,
     walletAddress: string,
-    mint: Script, 
-    policyId: string, 
+    mint: Script,
+    policyId: string,
     mintAddress: string,
     validTo: number,
-    signerKey: string,
+    signerKeys: string[],
+    privateKeys: CML.PrivateKey[],
     options?: CompleteOptions
-): Promise<MintUtxoRef> {
+): Promise<{ utxoRef: MintUtxoRef, cborTx: string }> {
 
     // const { mint, policyId, mintAddress } = generateMintPolicy(network, validators.mint.script, owner, version, nonce);
     console.log('PolicyId:', policyId);
@@ -61,16 +66,16 @@ export async function mintAssetsTx(
     const { lovelace } = getMinAda(assets, lucidConfig.protocolParameters.coinsPerUtxoByte, mintAddress, datum)!
     console.log("lovelace:", lovelace)
 
-    const utxos = (await lucid.utxosAt(walletAddress))
-    
-    const outputs: TxOutput[] = [{ address: walletAddress, assets: { lovelace: lovelace + 1_000_000n }}] 
+    const outputs: TxOutput[] = [{ address: walletAddress, assets: { lovelace: lovelace + 1_000_000n } }]
+
+    const utxos = txUtxos.every(utxo => typeof utxo === 'object') ? txUtxos : coresToUtxos(txUtxos.map(utxo => CML.TransactionUnspentOutput.from_cbor_hex(utxo)))
     const { inputs } = coinSelection(utxos, outputs, walletAddress)
     const redeemer = Data.to(mintRedeemer, MintRedeemer);
     console.log('Redeemer:', redeemer);
 
-    const config = await makeMintAssetsTxBuilderConfig(lucid, inputs, redeemer, mint, mintAddress, assets, datum, lovelace, validTo, signerKey)
+    const config = await makeMintAssetsTxBuilderConfig(lucid, inputs, redeemer, mint, mintAddress, assets, datum, lovelace, validTo, signerKeys)
     const collaterals = await getCollaterls(config);
-    
+
     // Set collateral input if there are script executions
     setCollateral(config, collaterals.inputs, collaterals.address);
 
@@ -88,24 +93,98 @@ export async function mintAssetsTx(
     applyUPLCEval(uplcEval, config.txBuilder, walletAddress);
 
     const tx = config.txBuilder
-    .build(
-        CML.ChangeSelectionAlgo.Default,
-        CML.Address.from_bech32(walletAddress),
-    )
-    .build_unchecked();
+        .build(
+            CML.ChangeSelectionAlgo.Default,
+            CML.Address.from_bech32(walletAddress),
+        )
+        .build_unchecked();
 
-    const prvKey = getSignerKey()
-    const finalTx = await buildFinalTx(tx, [redeemer], lucidConfig.costModels, [prvKey])
+    console.log('How many signers?', privateKeys.length)
+    const unsignedTx = await buildFinalTx(tx, [redeemer], lucidConfig.costModels, privateKeys)
 
-    const cbor = finalTx.to_cbor_hex()
+    const cbor = unsignedTx.to_cbor_hex()
     console.log('cbor', cbor);
-    const txId = CML.hash_transaction(finalTx.body()).to_hex()
+    const txId = getTransactionId(unsignedTx)
     console.log('Tx Id:', txId);
+    return {
+        utxoRef: { tx_hash: txId, output_index: 0, assets: fromAssetsToMintUtxoRefAssets({ ...assets, lovelace }), datum },
+        cborTx: cbor
+    }
+}
+
+export function getTransactionId(tx: CML.Transaction | string): string {
+    if (typeof tx === "string") {
+        tx = CML.Transaction.from_cbor_hex(tx)
+    }
+    return CML.hash_transaction(tx.body()).to_hex()
+}
+
+export function getUtxoSignerKeys(utxos: string[]): string[] {
+    const signers = utxos.reduce((acc, utxo) => {
+            const credential = CML.TransactionUnspentOutput.from_cbor_hex(utxo).output().address().payment_cred()
+            if (credential) {
+                const hash = credential.kind() == CML.CredentialKind.PubKey ? credential.as_pub_key()!.to_hex() : credential.as_script()!.to_hex()
+                if (!acc[hash]) {
+                    acc[hash] = true
+                }
+            }
+            return acc
+    }, {} as Record<string, boolean>)
+
+    return Object.keys(signers)
+}
+
+export function buildMintAssetsTx(cborTx: string, keyWitnessSet: string, fakePrvKey: CML.PrivateKey): CML.Transaction {
+    const tx = CML.Transaction.from_cbor_hex(cborTx)
+    const body = tx.body()
+    const witnessSet = tx.witness_set()
+    const fakeHash = fakePrvKey.to_public().hash().to_hex()
+    const {keys: vKeyWitnesses, map} = buildKeyWitnessesMap(witnessSet.vkeywitnesses(), fakeHash)
+
+    // add collateral signature
+    const collateralWitness = signCollateral(body)
+    const collateralPubKeyHash = collateralWitness.vkey().hash().to_hex()
+    if (!map[collateralPubKeyHash]) {
+        vKeyWitnesses.add(collateralWitness)
+    }
     
-    const provider = lucid.config().provider
-    const txHash = await provider.submitTx(cbor)
-    console.log('Tx Id (Submit):', txHash);
-    return {tx_hash: txId, output_index: 0, assets: fromAssetsToMintUtxoRefAssets({...assets,  lovelace}), datum};
+    // add key witness signatures
+    const txWitnessSet = CML.TransactionWitnessSet.from_cbor_hex(keyWitnessSet)
+    const vkeywitnesses = txWitnessSet.vkeywitnesses()
+    if (vkeywitnesses) {
+        for (let i = 0; i < vkeywitnesses.len(); i++){
+            const witness = vkeywitnesses.get(i)
+            const hash = witness.vkey().hash().to_hex()
+            if (fakeHash != hash && !map[witness.vkey().hash().to_hex()]) {
+                vKeyWitnesses.add(witness)
+            }
+        }
+    }
+
+    witnessSet.set_vkeywitnesses(vKeyWitnesses)
+
+    return CML.Transaction.new(
+        body,
+        witnessSet,
+        true,
+        tx.auxiliary_data(),
+    );
+}
+
+function buildKeyWitnessesMap(vKeyWitnesses: CML.VkeywitnessList | undefined, fakeHash: string): {keys: CML.VkeywitnessList, map: Record<string, boolean>} {
+    const keys = CML.VkeywitnessList.new()
+    const map: Record<string, boolean> = {}
+    if (vKeyWitnesses) {
+        for (let i = 0; i < vKeyWitnesses.len(); i++){
+            const witness = vKeyWitnesses.get(i)
+            const hash = witness.vkey().hash().to_hex()
+            if (hash !== fakeHash && !map[hash]) {
+                map[hash] = true
+                keys.add(witness)
+            }
+        }
+    }
+    return {keys, map}
 }
 
 export async function buildSpendTx(
@@ -139,7 +218,7 @@ export async function buildSpendTx(
     // });
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
-        assets: {...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
+        assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
         datum: Data.to({ user_id: userId, hash: pwdHash, nonce }, AccountDatum)
     }]
 
@@ -192,7 +271,7 @@ export async function buildSpendTx(
             const { lucid, referenceInputs, inputs, redeemers, scripts, lovelace, validTo, evalRedeemers, evalScripts } = params as SpendTxParams;
             const spendRedeemers = evalRedeemers || redeemers;
             const [spendScript] = evalScripts || scripts;
-            
+
             return makeSpendTxBuilderConfig(lucid, referenceInputs, inputs, spendRedeemers, spendScript, receiptAddress, lovelace, validTo);
         })
 }
@@ -248,7 +327,7 @@ export async function registerAndDelegateTx(
     const [circuitRefInput, userRefInput] = referenceInputs
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
-        assets: {...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
+        assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
         datum: Data.to({ user_id: userId, hash: pwdHash, nonce }, AccountDatum)
     }]
 
@@ -329,7 +408,7 @@ export async function delegateTx(
     const [circuitRefInput, userRefInput] = referenceInputs
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
-        assets: {...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
+        assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
         datum: Data.to({ user_id: userId, hash: pwdHash, nonce }, AccountDatum)
     }]
 
@@ -410,7 +489,7 @@ export async function delegateDrepTx(
     const [circuitRefInput, userRefInput] = referenceInputs
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
-        assets: {...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
+        assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
         datum: Data.to({ user_id: userId, hash: pwdHash, nonce }, AccountDatum)
     }]
 
@@ -491,7 +570,7 @@ export async function withdrawTx(
     const [circuitRefInput, userRefInput] = referenceInputs
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
-        assets: {...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
+        assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
         datum: Data.to({ user_id: userId, hash: pwdHash, nonce }, AccountDatum)
     }]
 
@@ -537,7 +616,7 @@ export async function withdrawTx(
         evalScripts: [evalSpendScript, evalSpendScript],
         options,
         // TODO: once using the new SC check if this is still necessary
-        scriptIncrements: [{ tag: CML.RedeemerTag.Reward, increment: 0.013, scriptHash: withdrawRedeemer}]
+        scriptIncrements: [{ tag: CML.RedeemerTag.Reward, increment: 0.013, scriptHash: withdrawRedeemer }]
     };
 
     return _buildUncheckedTx(params, evalInputs, evalReferenceInputs, (params) => {
@@ -598,11 +677,11 @@ async function _buildUncheckedTx(
     applyUPLCEval(uplcEval, config.txBuilder, walletAddress);
 
     const tx = config.txBuilder
-    .build(
-        CML.ChangeSelectionAlgo.Default,
-        CML.Address.from_bech32(walletAddress),
-    )
-    .build_unchecked();
+        .build(
+            CML.ChangeSelectionAlgo.Default,
+            CML.Address.from_bech32(walletAddress),
+        )
+        .build_unchecked();
     return tx;
 }
 
@@ -717,7 +796,7 @@ export function generateSpendScript(
         nonce,
         for_evaluation: forEvaluation
     }, Spend);
-  
+
     console.log('Spend params:', params);
     const spendParams = Data.from(params);
     console.log('Spend params:', spendParams.toString());
@@ -1185,7 +1264,7 @@ async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costM
 
     // console.log('New witnessSet', witnessSet.to_cbor_hex());
     // console.log('New Redeemers:', newRedeemers.to_cbor_hex());
-    
+
     body.set_script_data_hash(scriptDataHash);
 
     const txBodyHash = CML.hash_transaction(body)
@@ -1226,20 +1305,20 @@ async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costM
 }
 
 export function fromAssetsToMintUtxoRefAssets(assets: Assets): MintUtxoRefAssets {
-    return Object.entries(assets).reduce((map, [key, value]) => ({...map, [key]: Number(value)}), {} as MintUtxoRefAssets)
+    return Object.entries(assets).reduce((map, [key, value]) => ({ ...map, [key]: Number(value) }), {} as MintUtxoRefAssets)
 }
 
 export function fromMintUtxoRefAssetsToAssets(assets: MintUtxoRefAssets): Assets {
-    return Object.entries(assets).reduce((map, [key, value]) => ({...map, [key]: BigInt(value)}), {} as Assets)
+    return Object.entries(assets).reduce((map, [key, value]) => ({ ...map, [key]: BigInt(value) }), {} as Assets)
 }
-   
+
 export function buildZKProofRedeemer(txCbor: string, zkInput: ZkInput, self_idx: number, idx: number, jdx: number): Promise<string> {
     const txBody = CML.Transaction.from_cbor_hex(txCbor).body()
     return buildRedeemer(txBody, zkInput, self_idx, idx, jdx)
 }
 
 export function buildAllSpendRedeemers(redeemer: string, size: number): string[] {
-    return [redeemer, ...Array.from({length: size - 1}, (_, i) => buildDummySpendReedemer(i + 1, 0))]
+    return [redeemer, ...Array.from({ length: size - 1 }, (_, i) => buildDummySpendReedemer(i + 1, 0))]
 }
 
 export function buildDummySpendReedemer(self_idx: number, idx: number): string {
@@ -1264,11 +1343,11 @@ function makeSpendTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[
     let txBuilder = lucid
         .newTx()
         .readFrom(reference_inputs)
-    
+
     for (let i = 0; i < inputs.length; i++) {
         txBuilder = txBuilder.collectFrom([inputs[i]], spendRedeemers[i])
     }
-    
+
     return txBuilder
         // consume script
         .attach.SpendingValidator(spend)
@@ -1282,7 +1361,7 @@ function makeSpendTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[
         .config();
 }
 
-function makeMintAssetsTxBuilderConfig(lucid: LucidEvolution, inputs: UTxO[], mintRedeemer: string, mint: Script, mintAddress: string, assets: Assets, datum: string, lovelace: bigint, validTo: number, signerKey?: string) {
+function makeMintAssetsTxBuilderConfig(lucid: LucidEvolution, inputs: UTxO[], mintRedeemer: string, mint: Script, mintAddress: string, assets: Assets, datum: string, lovelace: bigint, validTo: number, signerKey?: string[]) {
     let builder = lucid
         .newTx()
         .collectFrom(inputs)
@@ -1307,7 +1386,9 @@ function makeMintAssetsTxBuilderConfig(lucid: LucidEvolution, inputs: UTxO[], mi
         )
         .validTo(validTo)
     if (signerKey) {
-        builder = builder.addSignerKey(signerKey)
+        for (let key of signerKey) {
+            builder = builder.addSignerKey(key)
+        }
     }
     return builder.config()
 }
@@ -1320,7 +1401,7 @@ function makeRegisterAndDelegateStakeTxBuilderConfig(lucid: LucidEvolution, refe
     for (let i = 0; i < inputs.length; i++) {
         txBuilder = txBuilder.collectFrom([inputs[i]], spendRedeemers[i])
     }
-    
+
     return txBuilder
         .attach.CertificateValidator(stake)
         .attach.SpendingValidator(spend)
@@ -1337,7 +1418,7 @@ function makeDelegateStakeTxBuilderConfig(lucid: LucidEvolution, reference_input
     for (let i = 0; i < inputs.length; i++) {
         txBuilder = txBuilder.collectFrom([inputs[i]], spendRedeemers[i])
     }
-    
+
     return txBuilder
         .attach.CertificateValidator(stake)
         .attach.SpendingValidator(spend)
@@ -1354,7 +1435,7 @@ function makeDelegateDrepTxBuilderConfig(lucid: LucidEvolution, reference_inputs
     for (let i = 0; i < inputs.length; i++) {
         txBuilder = txBuilder.collectFrom([inputs[i]], spendRedeemers[i])
     }
-    
+
     return txBuilder
         .attach.CertificateValidator(stake)
         .attach.SpendingValidator(spend)
@@ -1368,9 +1449,9 @@ function makeWithdrawTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UT
         .newTx()
         .readFrom(reference_inputs)
 
-        for (let i = 0; i < inputs.length; i++) {
-            txBuilder = txBuilder.collectFrom([inputs[i]], spendRedeemers[i])
-        }
+    for (let i = 0; i < inputs.length; i++) {
+        txBuilder = txBuilder.collectFrom([inputs[i]], spendRedeemers[i])
+    }
 
     return txBuilder
         .withdraw(rewardAddress, amount, withdrawRedeemer)
@@ -1591,7 +1672,7 @@ async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
     const [cirChallenge, overflow] = numChallenge > r ? [(numChallenge % r).toString(), "1"] : [numChallenge.toString(), "0"];
     // challenge for circuit
     console.log('Challenge (in circuit)', cirChallenge, overflow);
-    
+
     const numUserId = BigInt(`0x${userId}`).toString() // decimal number
     const numPwd = BigInt(`0x${pwd}`).toString() // decimal number
     const numCredentialHash = BigInt(`0x${hash}`).toString() // decimal number
@@ -1601,22 +1682,22 @@ async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
     const numHash = await circuitHashWithCircom("poseidon_hash_circuit.circom", [numPwd, numUserId, numCredentialHash, cirChallenge, overflow])
 
     // TODO: use new challengeId to build zkProof so the evaluation pass (update pA, pB, pC)
-    console.log('Circuit Full Signals:', { 
+    console.log('Circuit Full Signals:', {
         userId: numUserId,
-        credentialHash: numCredentialHash, 
-        challenge: cirChallenge, 
-        challengeFlag: overflow, 
-        circuitHash: numHash, 
-        pwd: numPwd 
+        credentialHash: numCredentialHash,
+        challenge: cirChallenge,
+        challengeFlag: overflow,
+        circuitHash: numHash,
+        pwd: numPwd
     });
 
-    const { proof } = await generate({ 
+    const { proof } = await generate({
         userId: numUserId,
-        credentialHash: numCredentialHash, 
-        challenge: cirChallenge, 
-        challengeFlag: overflow, 
-        circuitHash: numHash, 
-        pwd: numPwd 
+        credentialHash: numCredentialHash,
+        challenge: cirChallenge,
+        challengeFlag: overflow,
+        circuitHash: numHash,
+        pwd: numPwd
     });
     return [challengeId, numberToHex(numHash), ...proof];
 
@@ -2080,7 +2161,7 @@ export function buildDrep(drep: DRepresentative): DRep {
             return { __typename: "AlwaysAbstain" }
         }
         case "AlwaysNoConfidence": {
-            return { __typename: "AlwaysNoConfidence"}
+            return { __typename: "AlwaysNoConfidence" }
         }
         default: {
             throw new Error(`invalid drep type: ${drep.type}`)
