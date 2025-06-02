@@ -26,7 +26,7 @@ export function createAccount(network: Network) {
     }
 }
 
-const accessExpiresIn = 15 * 60
+const accessExpiresIn = 60 * 60
 const refreshExpiresIn = 7 * 24 * 60 * 60
 
 export async function login(req: Request, res: Response) {
