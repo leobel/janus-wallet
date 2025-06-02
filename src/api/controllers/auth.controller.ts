@@ -15,7 +15,8 @@ export function createAccount(network: Network) {
                 user: {
                     id: user.id,
                     username: toText(user.token_name),
-                    address: user.spend_address
+                    hash: user.pwd_hash,
+                    address: user.spend_address,
                 },
                 cbor_tx: cborTx
             });
@@ -41,6 +42,7 @@ export async function login(req: Request, res: Response) {
             user: {
                 id: user.id,
                 username: toText(user.token_name),
+                hash: user.pwd_hash,
                 address: user.spend_address
             }, message: 'Logged in'
         });

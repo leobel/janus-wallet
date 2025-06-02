@@ -1,12 +1,12 @@
-import init from './poseidon_hash_credential.wasm?init'
-import symbolsContent from './poseidon_hash_credential.sym?raw'
+// import init from './poseidon_hash_credential.wasm?init'
+// import symbolsContent from './poseidon_hash_credential.sym?raw'
 import * as utils from "./utils"
 import { WitnessCalculator } from './witness_calculator'
 import type { WitnessExports } from './witnessExports'
 import { CircomCircuit } from './circom_circuit'
 
 
-export default async function getCircuit(sanityCheck?: any): Promise<CircomCircuit> {
+export default async function getCircuit(init: (options?: WebAssembly.Imports) => Promise<WebAssembly.Instance>, symbolsContent: string, sanityCheck?: any): Promise<CircomCircuit> {
     let errStr = ""
     let msgStr = ""
     const imports = {

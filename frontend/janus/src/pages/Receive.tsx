@@ -22,7 +22,7 @@ export default function ReceivePage() {
               <Box sx={{ ml: 2 }}>
                 <Address
                   shrink
-                  size={45}
+                  size={35}
                   copy
                   explore
                   value={session.user?.address}

@@ -1,11 +1,11 @@
 import { Typography, Box } from "@mui/material"
 
 export interface AdaBalanceProps {
-    balance?: string
-    privacy: boolean
+    balance?: number
+    privacy?: boolean
 }
 
-function formatAdaBalance(balance: string): { whole: string, decimal: string } {
+export function formatAdaBalance(balance: string): { whole: string, decimal: string } {
     const num = parseFloat(balance)
     if (isNaN(num)) return { whole: balance, decimal: '' }
 
@@ -30,7 +30,7 @@ function formatAdaBalance(balance: string): { whole: string, decimal: string } {
 }
 
 export default function AdaBalance(props: AdaBalanceProps) {
-    const { whole, decimal } = formatAdaBalance(props.balance || '0')
+    const { whole, decimal } = formatAdaBalance(props.balance ? props.balance.toString() : '0')
     
     return (
         <Typography sx={{

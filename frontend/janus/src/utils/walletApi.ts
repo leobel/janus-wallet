@@ -290,7 +290,7 @@ function mapAssets(multiAssets: CML.MultiAsset): Record<string, Record<string, n
     return result
 }
 
-function mapFlatAssets(multiAssets: CML.MultiAsset): Record<string, bigint> {
+export function mapFlatAssets(multiAssets: CML.MultiAsset): Record<string, bigint> {
     let result: Record<string, bigint> = {}
     const policies = multiAssets.keys()
     for (let i = 0; i < policies.len(); i++) {

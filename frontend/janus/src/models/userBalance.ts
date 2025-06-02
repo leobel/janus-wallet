@@ -1,5 +1,5 @@
 export interface UserBalance {
-    lovelace: string
-    assets: Record<string, string>
+    lovelace: number
+    assets: Record<string, number>
     tx_count: number
 }

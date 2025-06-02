@@ -18,6 +18,7 @@ interface ViteTypeOptions {
     readonly VITE_FAKE_USER_PWD_HASH: string
     readonly VITE_FAKE_USER_ADDRESS: string
     readonly VITE_BALANCE_POLLING_INTERVAL: number
+    readonly VITE_CARDANO_EXPLORER: string
   }
   
   interface ImportMeta {

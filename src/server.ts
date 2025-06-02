@@ -7,6 +7,7 @@ import { isAuthenticated, login, logout, refresh, createAccount, verifyUser } fr
 import cookieParser from 'cookie-parser';
 import cors from 'cors'
 import { authenticateToken } from './api/services/auth.service';
+import { listStakePools } from './api/controllers/stake.controller';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -45,7 +46,8 @@ app.get('/refreshToken', refresh as RequestHandler)
 app.get('/auth/me', isAuthenticated as RequestHandler)
 app.post('/userExist', verifyUser as RequestHandler)
 
-app.use('/wallets', authenticateToken as RequestHandler, walletRouter(network));
+app.use('/wallets', authenticateToken as RequestHandler, walletRouter(network))
+app.use('/stakePools', authenticateToken as RequestHandler, listStakePools)
 app.use('/circuits', circuitRouter(network))
 
 // Start the server
