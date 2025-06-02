@@ -2,6 +2,7 @@ import 'dotenv/config';
 import axios from "axios";
 import type { AccountBalance } from '../models/account-balance';
 import type { AddressTotalResponse } from '../models/ledger/address-total';
+import type { StakePool } from '../models/ledger/stake-pool';
 
 const axiosInstance = axios.create({
     baseURL: process.env.BLOCKFROST_API_URL!,
@@ -58,4 +59,9 @@ export async function tokenExist(policyId: string, assetName: string): Promise<b
     } catch {
         return false
     }
+}
+
+export async function getStakePools(count: number, page: number): Promise<StakePool[]> {
+    const response = await axiosInstance.get(`pools/extended?count=${count}&page=${page}`)
+    return response.data
 }
