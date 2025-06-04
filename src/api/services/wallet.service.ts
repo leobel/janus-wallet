@@ -9,7 +9,8 @@ import { getCircuit } from '../../repositories/circuit.repository.js';
 import { randomUUID } from 'crypto';
 import type { AccountTokenStatus, User } from '../../models/user.js';
 import type { AccountBalance } from '../../models/account-balance.js';
-import { getLedgerAccountBalance } from '../../utils/ledger-api.js';
+import { getLedgerAccountBalance, getStakeInfo } from '../../utils/ledger-api.js';
+import type { StakeInfo } from '../../models/ledger/stake-info.js';
 
 const validators = readValidators();
 const prvKey = process.env.FAKE_PRV_KEY!
@@ -38,10 +39,10 @@ export async function createAccountTx(username: string, network: Network, hash: 
     const mintRedeemer: MintRedeemer = "CreateAccount";
     const { spend, spendAddress } = generateSpendScript(validators.spend.script, network, policy_id, asset_name, tokenName, hash, kdfHash, addrNonce)
 
-    const validTo = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
-
     const signerKeys = getUtxoSignerKeys(utxos)
     const prvKeys = signerKeys.map(_ => fakePrvKey)
+
+    const validTo = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
     const {utxoRef, cborTx: unsignedTx} = await buildMintAssetsUnsignedTx(utxos, lucid, datum, mintRedeemer, tokenName, changeAddress, mint_script as Script, policy_id, spendAddress, validTo, signerKeys, prvKeys, { localUPLCEval: true })
     const user = {
         token_status: "pending" as AccountTokenStatus,
@@ -273,6 +274,16 @@ export async function delegate(network: Network, userId: string, poolId: string)
     const validTo = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
     const tx = await delegateTx(lucid, [circuitUtxoRef, userUtxoRef], inputs, rewardAddress, stakeScript, spendAddress, poolId, spendAddress, zkInput, policyId, tokenName, circuit.asset_name, nonce, network, validTo, { localUPLCEval: true })
     return {tx: tx.to_cbor_hex()}
+}
+
+export async function getStakingDetails(network: Network, userId: string): Promise<StakeInfo> {
+    const user = await getUserById(userId)
+    if (!user) {
+        throw new Error('User not found')
+    }
+
+    const stakeAddress = validatorToRewardAddress(network, user.spend_script as CertificateValidator)
+    return getStakeInfo(stakeAddress)
 }
 
 export async function delegateDrep(network: Network, userId: string, dRepresentative: DRepresentative) {

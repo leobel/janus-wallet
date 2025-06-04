@@ -22,8 +22,8 @@ const NAVIGATION: Navigation = [
     icon: <DashboardIcon />,
   },
   {
-    segment: 'staking',
-    title: 'Staking',
+    segment: 'earning',
+    title: 'Earning',
     icon: <StackedBarChartIcon />,
   },
   {

@@ -1,5 +1,5 @@
 import express, { Request, RequestHandler, Response } from 'express';
-import { spendWalletFunds, generateRedeemer, buildSpend, registerAndDelegate, delegate, delegateDrep, withdrawRewards, getWalletAccount, mintAccountTx } from '../services/wallet.service';
+import { spendWalletFunds, generateRedeemer, buildSpend, registerAndDelegate, delegate, delegateDrep, withdrawRewards, getWalletAccount, mintAccountTx, getStakingDetails } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
 import { circuitHashTest } from '../../zkproof';
 import { authenticateToken } from '../services/auth.service';
@@ -73,6 +73,16 @@ export default (network: Network) => {
     }
   };
 
+  const getStakingInfo = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const result = await getStakingDetails(network, userId)
+      res.status(200).json(result)
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
   const delegateToDrep = async (req: Request, res: Response) => {
     try {
       const { userId, drepId } = req.params
@@ -119,6 +129,8 @@ export default (network: Network) => {
     }
   }
 
+
+
   router.post('/:userId/mintAccount', submitAccountTx)
   router.get('/:userId/balance', getAccountBalance)
   router.post('/:userId/build', buildSpendFunds)
@@ -126,6 +138,7 @@ export default (network: Network) => {
   router.post('/:userId/pools/:poolId/delegate', delegateToPool)
   router.post('/:userId/pools/:poolId/register', registerToPool)
   router.post('/:userId/dreps/:drepId/delegate', delegateToDrep)
+  router.get('/:userId/stakingDetails', getStakingInfo)
   router.post('/:userId/withdraw', withdraw)
   router.post('/:userId/sign', sign)
   router.post('/:userId/send', spendFunds)

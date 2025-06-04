@@ -119,19 +119,31 @@ export function getTransactionId(tx: CML.Transaction | string): string {
     return CML.hash_transaction(tx.body()).to_hex()
 }
 
-export function getUtxoSignerKeys(utxos: string[]): string[] {
+export function getUtxoSignerKeys(utxos: string[] | UTxO[]): string[] {
     const signers = utxos.reduce((acc, utxo) => {
-            const credential = CML.TransactionUnspentOutput.from_cbor_hex(utxo).output().address().payment_cred()
-            if (credential) {
-                const hash = credential.kind() == CML.CredentialKind.PubKey ? credential.as_pub_key()!.to_hex() : credential.as_script()!.to_hex()
-                if (!acc[hash]) {
-                    acc[hash] = true
-                }
-            }
-            return acc
+        const hash = getUtxoAddressPaymentHash(utxo)
+        if (hash && !acc[hash]) {
+            acc[hash] = true
+        }
+        return acc
     }, {} as Record<string, boolean>)
 
     return Object.keys(signers)
+}
+
+function getUtxoAddressPaymentHash(utxo: string | UTxO): string | undefined {
+    if (typeof utxo === 'string') {
+        const credential = CML.TransactionUnspentOutput.from_cbor_hex(utxo).output().address().payment_cred()
+        if (credential) {
+            return credential.kind() == CML.CredentialKind.PubKey ? credential.as_pub_key()!.to_hex() : credential.as_script()!.to_hex()
+        }
+        return 
+    }
+
+    const credential = getAddressDetails(utxo.address).paymentCredential
+    if (credential) {
+        return credential.hash
+    }
 }
 
 export function buildMintAssetsTx(cborTx: string, keyWitnessSet: string, fakePrvKey: CML.PrivateKey): CML.Transaction {
@@ -289,12 +301,12 @@ export async function spendTx(
 
     const cbor = tx.to_cbor_hex()
     console.log('cbor', cbor);
-    const txId = CML.hash_transaction(tx.body()).to_hex();
-    console.log('Tx Id:', txId);
+    // const txId = CML.hash_transaction(tx.body()).to_hex();
+    // console.log('Tx Id:', txId);
 
 
-    const txHash = await provider.submitTx(cbor)
-    console.log('Tx Id (Submit):', txHash);
+    const txId = await provider.submitTx(cbor)
+    console.log('Tx Id (Submit):', txId);
 
 
     // const success = await lucid.awaitTx(txHash);
@@ -372,6 +384,8 @@ export async function registerAndDelegateTx(
         evalRedeemers: [publishRedeemer, ...buildAllSpendRedeemers(evalSpendRedeemer, evalInputs.length)],
         evalScripts: [evalSpendScript, evalSpendScript],
         options,
+        // TODO: once using the new SC check if this is still necessary
+        scriptIncrements: [{ tag: CML.RedeemerTag.Spend, increment: 0.003, scriptHash: evalSpendRedeemer }]
     };
 
     return _buildUncheckedTx(params, evalInputs, evalReferenceInputs, (params) => {
@@ -654,7 +668,9 @@ async function _buildUncheckedTx(
     const increments = getEvalIncrements(scriptIncrements, txRedeemerBuilder.draft_tx().witness_set().redeemers()!);
     let uplcEval: ScriptEvaluation[] = [];
     if (options?.localUPLCEval !== false) {
+        console.log("increments:", increments)
         uplcEval = evalTransaction(config, txRedeemerBuilder.draft_tx(), increments);
+        console.log('Evaluation:', uplcEval.map(ev => ev.exUnits.to_json()))
     } else {
         uplcEval = await evalTransactionProvider(config, txRedeemerBuilder.draft_tx(), evalInputs, increments);
         // uplcEval[0].ex_units.mem = 8455482;
@@ -958,7 +974,7 @@ function evalTransaction(
     extraIncrements?: Map<CML.RedeemerTag, Map<number, number>>,
 ): ScriptEvaluation[] {
     const txEvaluation = setRedeemerstoZero(tx)!;
-    console.log("Eval Tx:", txEvaluation.to_json())
+    // console.log("Eval Tx:", txEvaluation.to_json())
     const txUtxos = [
         ...config.collectedInputs,
         ...config.readInputs,
@@ -986,6 +1002,7 @@ function evalTransaction(
             const index = redeemer.index();
 
             const increment = 1 + getRedeemerIncrement(increments, tag, Number(index));
+            console.log("increments eval:", increment, tag, index, Math.ceil(Number(redeemer.ex_units().mem()) * increment), Math.ceil(Number(redeemer.ex_units().steps()) * increment))
             return {
                 tag: tag,
                 index: index,

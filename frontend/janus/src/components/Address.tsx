@@ -1,6 +1,6 @@
 import { Stack, Typography, IconButton, Tooltip } from "@mui/material"
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 
 export interface AddressProps {
     value: string

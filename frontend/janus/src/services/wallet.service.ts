@@ -1,4 +1,5 @@
 import axios from "../api/axios";
+import type { StakeInfo } from "../models/stake-info";
 
 export async function getWalletBalance(userId: string): Promise<any> {
     const response = await axios.get(`wallets/${userId}/balance`)
@@ -24,6 +25,21 @@ export async function buildSpendTx(userId: string, recipient: string, amount: nu
         receive_address: recipient,
         assets
     })
+    return response.data
+}
+
+export async function getStakeDetials(userId: string): Promise<StakeInfo> {
+    const response = await axios.get(`wallets/${userId}/stakingDetails`)
+    return response.data
+}
+
+export async function registerAndDelegateToStakePool(userId: string, poolId: string): Promise<{tx: string }> {
+    const response = await axios.post(`wallets/${userId}/pools/${poolId}/registerAndDelegate`)
+    return response.data
+}
+
+export async function delegateToStakePool(userId: string, poolId: string): Promise<{tx: string }> {
+    const response = await axios.post(`wallets/${userId}/pools/${poolId}/delegate`)
     return response.data
 }
 

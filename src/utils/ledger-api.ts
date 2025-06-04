@@ -3,6 +3,7 @@ import axios from "axios";
 import type { AccountBalance } from '../models/account-balance';
 import type { AddressTotalResponse } from '../models/ledger/address-total';
 import type { StakePool } from '../models/ledger/stake-pool';
+import type { StakeInfo } from '../models/ledger/stake-info';
 
 const axiosInstance = axios.create({
     baseURL: process.env.BLOCKFROST_API_URL!,
@@ -63,5 +64,10 @@ export async function tokenExist(policyId: string, assetName: string): Promise<b
 
 export async function getStakePools(count: number, page: number): Promise<StakePool[]> {
     const response = await axiosInstance.get(`pools/extended?count=${count}&page=${page}`)
+    return response.data
+}
+
+export async function getStakeInfo(stakeAddress: string): Promise<StakeInfo> {
+    const response = await axiosInstance.get(`accounts/${stakeAddress}`)
     return response.data
 }

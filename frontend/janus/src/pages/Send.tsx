@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, Grid, IconButton, InputAdornment, Paper, Stack, Step, StepButton, StepContent, StepLabel, Stepper, TextField } from '@mui/material'
+import { Alert, Box, Button, Chip, CircularProgress, Divider, Grid, IconButton, InputAdornment, Paper, Stack, Step, StepButton, StepContent, StepLabel, Stepper, TextField } from '@mui/material'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
@@ -8,14 +8,12 @@ import AdaBalance, { formatAdaBalance } from '../components/AdaBalance'
 import { calculateFees, fromLovelace, sleep, toLovelace } from '../utils'
 import { buildSpendTx, sendTx } from '../services/wallet.service'
 import type { TransactionFees } from '../models/fees'
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
-import VisibilityIcon from '@mui/icons-material/Visibility'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorIcon from '@mui/icons-material/Error'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import StepIcon, { type StepIconProps } from '@mui/material/StepIcon'
-import { generateRedeemer } from '../utils/hashing'
+import { ApproveTransaction } from '../components/ApproveTransaction'
 
 export default function SendPage() {
   const { balance, auth: session } = useAuth()
@@ -29,7 +27,6 @@ export default function SendPage() {
   const [tx, setTx] = useState('')
   const [txId, setTxId] = useState('')
   const [openSignTx, setOpenSignTx] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
   const [sendingTx, setSendingTx] = useState(false)
   const [txErrMsg, setTxErrMsg] = useState('')
 
@@ -77,24 +74,15 @@ export default function SendPage() {
     setFees(fees)
   }
 
-  const handleClickShowPassword = () => setShowPassword((show) => !show)
-
-  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault()
-  }
-
-  const handleMouseUpPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault()
-  }
-
   async function handleConfirm() {
-    setOpenSignTx(true)
+    if (session.user) {
+      setOpenSignTx(true)
+    }
   }
 
-  async function handleSendTx(pwd: string) {
+  async function handleSendTx(redeemers: string[]) {
     setOpenSignTx(false)
     if (session.user) {
-      const redeemers = await generateRedeemer(session.user.username, session.user.hash, pwd, tx)
       console.log('Redeemers:', redeemers)
       try {
         setSendingTx(true)
@@ -296,60 +284,13 @@ export default function SendPage() {
           </Step>
         </Stepper>
       </Box>
-      <Dialog
-        open={openSignTx}
-        maxWidth="lg"
-        slotProps={{
-          paper: {
-            component: 'form',
-            onSubmit: (event: React.FormEvent<HTMLFormElement>) => {
-              event.preventDefault()
-              const formData = new FormData(event.currentTarget)
-              const formJson = Object.fromEntries((formData as any).entries())
-              handleSendTx(formJson.password)
-            },
-          },
-        }}
-      >
-        <DialogTitle>
-          Approval Required
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ pb: 2 }}>
-            Enter your password to confirm this transaction
-          </DialogContentText>
-          <TextField
-            fullWidth
-            autoFocus
-            required
-            id="password"
-            name="password"
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            slotProps={{
-              input: {
-                endAdornment: <InputAdornment position='end'>
-                  <IconButton
-                    aria-label={
-                      showPassword ? 'hide the password' : 'display the password'
-                    }
-                    onClick={handleClickShowPassword}
-                    onMouseDown={handleMouseDownPassword}
-                    onMouseUp={handleMouseUpPassword}
-                    edge="end"
-                  >
-                    {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                  </IconButton>
-                </InputAdornment>
-              }
-            }}
-          />
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button color='inherit' onClick={() => setOpenSignTx(false)}>Cancel</Button>
-          <Button type='submit' variant="contained" autoFocus>Send</Button>
-        </DialogActions>
-      </Dialog>
+      <ApproveTransaction 
+        open={openSignTx} 
+        username={session.user!.username} 
+        hash={session.user!.hash} 
+        tx={tx} 
+        onApprove={handleSendTx} 
+        onCancel={() => setOpenSignTx(false)} />
     </Box >
   )
 }

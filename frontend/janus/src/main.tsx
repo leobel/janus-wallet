@@ -5,7 +5,7 @@ import GlobalStyles from '@mui/material/GlobalStyles';
 import { createBrowserRouter, RouterProvider, redirect } from 'react-router';
 import Dashboard from './layouts/Dashboard';
 import HomePage from './pages/Home';
-import StakingPage from './pages/Staking';
+import Earning from './pages/Earning.tsx';
 import ReceivePage from './pages/Receive';
 import SendPage from './pages/Send';
 import ActivityPage from './pages/Activity';
@@ -37,8 +37,8 @@ const router = createBrowserRouter([
             Component: HomePage
           },
           {
-            path: 'staking',
-            Component: StakingPage
+            path: 'earning',
+            Component: Earning
           },
           {
             path: 'receive',
