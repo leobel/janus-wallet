@@ -3,7 +3,7 @@ import symbolsContentCredentials from './circuits/poseidon_hash_credential.sym?r
 import initCircuit from './circuits/poseidon_hash_circuit.wasm?init'
 import symbolsContentCircuit from './circuits/poseidon_hash_circuit.sym?raw'
 import bcrypt from "bcryptjs"
-import { CML, Data, fromText, getAddressDetails, type Assets } from '@lucid-evolution/lucid'
+import { CML, Data, fromText, getAddressDetails, sortUTxOs, type Assets, type OutRef } from '@lucid-evolution/lucid'
 import getCircuit from "./circuits/poseidon_hash_circuit"
 import type { ZkInput } from "../models/zk-input"
 import { Address, Challenge, ChallengeOutput, Certificate, Credential as ContractCredential, Datum, DelegateRepresentative, OutputReference, Proof, Redeemer, Signals, StakeCredential, Value } from "./contract-types"
@@ -200,15 +200,19 @@ function serialiseBody(txBody: CML.TransactionBody): string {
 }
 
 function convertInputs(txInputList: CML.TransactionInputList): OutputReference[] {
-    const txReferenceInputs: OutputReference[] = []
+    const txReferenceInputs: OutRef[] = [];
     for (let i = 0; i < txInputList.len(); i++) {
-        const input = txInputList.get(i)
+        const input = txInputList.get(i);
         txReferenceInputs.push({
-            transaction_id: input.transaction_id().to_hex(),
-            output_index: input.index()
-        })
+            txHash: input.transaction_id().to_hex(),
+            outputIndex: Number(input.index())
+        });
     }
-    return txReferenceInputs
+    return sortOutRefs(txReferenceInputs).map(out => ({ transaction_id: out.txHash, output_index: BigInt(out.outputIndex) }))
+}
+
+function sortOutRefs(outs: OutRef[]): OutRef[] {
+    return sortUTxOs(outs.map(out => ({...out, address: "", assets: {}})), "Canonical")
 }
 
 function convertOutputs(outputs: CML.TransactionOutputList): ChallengeOutput[] {
