@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Typography, Card, CardContent, Grid, Box, CircularProgress, Drawer, Button, Stack, Divider, Toolbar, CardActions, IconButton, Paper, Avatar, Alert } from '@mui/material'
+import { Typography, Card, CardContent, Grid, Box, CircularProgress, Drawer, Button, Stack, Divider, Toolbar, CardActions, IconButton, Paper, Avatar, Alert, Tabs, Tab } from '@mui/material'
 import { getStakePools } from '../services/stake.service'
 import type { StakePool } from '../models/stake-pool'
 import { ApproveTransaction } from '../components/ApproveTransaction'
@@ -13,7 +13,6 @@ import type { StakeInfo } from '../models/stake-info'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined'
 import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined'
-import BrokenImageOutlinedIcon from '@mui/icons-material/BrokenImageOutlined'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 
 export default function StakingPage() {
@@ -27,6 +26,7 @@ export default function StakingPage() {
   const initialLoadDone = useRef(false)
   const [confirmStake, setConfirmStake] = useState(false)
   const [stakeDetails, setStakeDetails] = useState(false)
+  const [activeTab, setActiveTab] = useState(0)
 
   async function loadStakePools() {
     if (loading || !hasMore) return
@@ -98,60 +98,137 @@ export default function StakingPage() {
     }
   }, [session.user])
 
-
-
-
   return (
-    <Box sx={{ p: 3, height: 'calc(100vh - 64px)', overflow: 'auto' }} onScroll={handleScroll}>
-      <Typography variant="h4" gutterBottom>
-        Stake Pools
-      </Typography>
-      <Grid container spacing={3}>
-        {stakePools.map((pool) => (
-          <Grid key={pool.pool_id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-            <Card
-              sx={{
-                cursor: 'pointer',
-                transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 6
-                }
-              }}
-              onClick={() => handleSelectPool(pool)}
-            >
+    <Box display="flex" flexDirection="column" sx={{ p: 3, height: 'calc(100vh - 64px)', overflow: 'auto' }}>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+          <Tab label="Stake Details" />
+          <Tab label="Pool List" />
+          <Tab label="Rewards History" />
+        </Tabs>
+      </Box>
+
+      {activeTab === 0 && (
+        <Box flexGrow={1} display="flex" flexDirection="column">
+          {stakeInfo && isDelegating(stakeInfo) ? (
+            <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {pool.metadata?.name || 'Unnamed Pool'}
-                </Typography>
-                <Typography color="textSecondary" gutterBottom>
-                  Ticker: {pool.metadata?.ticker || 'N/A'}
-                </Typography>
-                <Typography variant="body2">
-                  Active Stake: {pool.active_stake}
-                </Typography>
-                <Typography variant="body2">
-                  Live Saturation: {pool.live_saturation}%
-                </Typography>
-                <Typography variant="body2">
-                  Blocks Minted: {pool.blocks_minted}
-                </Typography>
+                <Stack spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Stake Address</Typography>
+                    <Typography variant="body1">{stakeInfo.stake_address}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Status</Typography>
+                    <Typography variant="body1">{stakeInfo.active ? 'Active' : 'Inactive'}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Active Since Epoch</Typography>
+                    <Typography variant="body1">{stakeInfo.active_epoch}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Controlled Amount</Typography>
+                    <AdaBalance balance={Number(stakeInfo.controlled_amount)} />
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Total Rewards</Typography>
+                    <AdaBalance balance={Number(stakeInfo.rewards_sum)} />
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Withdrawable Amount</Typography>
+                    <AdaBalance balance={Number(stakeInfo.withdrawable_amount)} />
+                  </Box>
+                </Stack>
               </CardContent>
-              <CardActions sx={{ justifyContent: 'flex-end' }}>
-                <Button size="small" color="primary" variant="contained" onClick={(e) => {
-                  e.stopPropagation()
-                  handleStake(pool)
-                }}>
-                  Stake
-                </Button>
-              </CardActions>
             </Card>
+          ) : (
+            <Box flexGrow={1} display="flex" flexDirection="column" justifyContent="center" alignItems="center">
+              <Typography>You are not staking your funds.</Typography>
+              <Typography>Go to <Button variant="text" onClick={() => setActiveTab(1)}>POOL LIST</Button> tab and select a pool to start earning!</Typography>
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {activeTab === 1 && (
+        <Box onScroll={handleScroll}>
+          <Grid container spacing={3}>
+            {stakePools.map((pool) => (
+              <Grid key={pool.pool_id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                <Card
+                  sx={{
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: 6
+                    }
+                  }}
+                  onClick={() => handleSelectPool(pool)}
+                >
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      {pool.metadata?.name || 'Unnamed Pool'}
+                    </Typography>
+                    <Typography color="textSecondary" gutterBottom>
+                      Ticker: {pool.metadata?.ticker || 'N/A'}
+                    </Typography>
+                    <Typography variant="body2">
+                      Active Stake: {pool.active_stake}
+                    </Typography>
+                    <Typography variant="body2">
+                      Live Saturation: {pool.live_saturation}%
+                    </Typography>
+                    <Typography variant="body2">
+                      Blocks Minted: {pool.blocks_minted}
+                    </Typography>
+                  </CardContent>
+                  <CardActions sx={{ justifyContent: 'flex-end' }}>
+                    <Button size="small" color="primary" variant="contained" onClick={(e) => {
+                      e.stopPropagation()
+                      handleStake(pool)
+                    }}>
+                      Stake
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
           </Grid>
-        ))}
-      </Grid>
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <CircularProgress />
+          {loading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <CircularProgress />
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {activeTab === 2 && (
+        <Box id="pool-list" flexGrow={1} display="flex" flexDirection="column">
+          {stakeInfo && isDelegating(stakeInfo) ? (
+            <Card>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Total Rewards Earned</Typography>
+                    <AdaBalance balance={Number(stakeInfo.rewards_sum)} />
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Total Withdrawals</Typography>
+                    <AdaBalance balance={Number(stakeInfo.withdrawals_sum)} />
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Current Withdrawable</Typography>
+                    <AdaBalance balance={Number(stakeInfo.withdrawable_amount)} />
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+           ): (
+            <Box flexGrow={1} display="flex" justifyContent="center" alignItems="center" sx={{ height: '200px' }}>
+              <Typography>No rewards history</Typography>
+            </Box>
+           )}
         </Box>
       )}
 
@@ -226,7 +303,7 @@ export default function StakingPage() {
           userHash={session.user!.hash}
           stakePool={selectedPool!}
           balance={balance!.lovelace}
-          isDelegating={!!stakeInfo?.active && !!stakeInfo.pool_id}
+          isDelegating={isDelegating(stakeInfo)}
           onClose={handleConfirmStakeClose}
           onConfirm={() => { }} />
       </Drawer>
@@ -454,4 +531,8 @@ function StakeConfirmation(props: StakeConfirmationProps) {
         onCancel={() => setOpenSignTx(false)} />
     </Box>
   )
+}
+
+function isDelegating(stakeInfo?: StakeInfo): boolean {
+  return !!stakeInfo?.active && !!stakeInfo.pool_id
 }
