@@ -6,7 +6,7 @@ import { authenticateToken } from '../services/auth.service';
 
 
 // Wallet routes
-const router = express.Router();
+const router = express.Router({ mergeParams: true});
 
 export default (network: Network) => {
   const submitAccountTx = async (req: Request, res: Response) => {
@@ -131,17 +131,17 @@ export default (network: Network) => {
 
 
 
-  router.post('/:userId/mintAccount', submitAccountTx)
-  router.get('/:userId/balance', getAccountBalance)
-  router.post('/:userId/build', buildSpendFunds)
-  router.post('/:userId/pools/:poolId/registerAndDelegate', registerAndDelegateToPool)
-  router.post('/:userId/pools/:poolId/delegate', delegateToPool)
-  router.post('/:userId/pools/:poolId/register', registerToPool)
-  router.post('/:userId/dreps/:drepId/delegate', delegateToDrep)
-  router.get('/:userId/stakingDetails', getStakingInfo)
-  router.post('/:userId/withdraw', withdraw)
-  router.post('/:userId/sign', sign)
-  router.post('/:userId/send', spendFunds)
+  router.post('/mintAccount', submitAccountTx)
+  router.get('/balance', getAccountBalance)
+  router.post('/build', buildSpendFunds)
+  router.post('/pools/:poolId/registerAndDelegate', registerAndDelegateToPool)
+  router.post('/pools/:poolId/delegate', delegateToPool)
+  router.post('/pools/:poolId/register', registerToPool)
+  router.post('/dreps/:drepId/delegate', delegateToDrep)
+  router.get('/stakingDetails', getStakingInfo)
+  router.post('/withdraw', withdraw)
+  router.post('/sign', sign)
+  router.post('/send', spendFunds)
 
   return router
 };

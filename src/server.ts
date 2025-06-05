@@ -6,7 +6,7 @@ import { Network } from '@lucid-evolution/lucid';
 import { isAuthenticated, login, logout, refresh, createAccount, verifyUser } from './api/controllers/auth.controller';
 import cookieParser from 'cookie-parser';
 import cors from 'cors'
-import { authenticateToken } from './api/services/auth.service';
+import { authenticateToken, authorized } from './api/services/auth.service';
 import { listStakePools } from './api/controllers/stake.controller';
 
 const app = express();
@@ -46,7 +46,7 @@ app.get('/refreshToken', refresh as RequestHandler)
 app.get('/auth/me', isAuthenticated as RequestHandler)
 app.post('/userExist', verifyUser as RequestHandler)
 
-app.use('/wallets', authenticateToken as RequestHandler, walletRouter(network))
+app.use('/wallets/:userId', authenticateToken as RequestHandler, authorized as RequestHandler, walletRouter(network))
 app.use('/stakePools', authenticateToken as RequestHandler, listStakePools)
 app.use('/circuits', circuitRouter(network))
 
