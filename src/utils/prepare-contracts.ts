@@ -8,6 +8,9 @@ import {
     TxOutput,
     DRep,
     coresToUtxos,
+    type ProtocolParameters,
+    type SlotConfig,
+    type OutRef,
 } from "@lucid-evolution/lucid";
 import * as UPLC from "@lucid-evolution/uplc";
 import blueprint from "../../plutus.json" assert { type: 'json' };
@@ -18,7 +21,7 @@ import { getCollaterls, signCollateral } from "../api/services/collateral.servic
 import { coinSelection } from "./coin-selection";
 import { getSignerKey } from "../api/services/circuit.service";
 import { MintUtxoRef, MintUtxoRefAssets } from "../models/mint-utxo-ref";
-import { numberToHex } from "./converter";
+import { numberToHex, toCostModels } from "./converter";
 
 export type Validators = {
     spend: SpendingValidator;
@@ -63,7 +66,7 @@ export async function buildMintAssetsUnsignedTx(
     const assets = { [assetName]: 1n }
 
     const lucidConfig = lucid.config()
-    const { lovelace } = getMinAda(assets, lucidConfig.protocolParameters.coinsPerUtxoByte, mintAddress, datum)!
+    const { lovelace } = getMinAda(assets, lucidConfig.protocolParameters!.coinsPerUtxoByte, mintAddress, datum)!
     console.log("lovelace:", lovelace)
 
     const outputs: TxOutput[] = [{ address: walletAddress, assets: { lovelace: lovelace + 1_000_000n } }]
@@ -83,7 +86,12 @@ export async function buildMintAssetsUnsignedTx(
     let txRedeemerBuilder = config.txBuilder.build_for_evaluation(CML.ChangeSelectionAlgo.Default, CML.Address.from_bech32(walletAddress));
     let uplcEval: ScriptEvaluation[] = [];
     if (options?.localUPLCEval !== false) {
-        uplcEval = evalTransaction(config, txRedeemerBuilder.draft_tx());
+        const txUtxos = [
+            ...config.collectedInputs,
+            ...config.readInputs,
+        ]
+        const slotConfig = SLOT_CONFIG_NETWORK[config.lucidConfig.network]
+        uplcEval = evalTransaction(txUtxos, txRedeemerBuilder.draft_tx(), config.lucidConfig.protocolParameters, slotConfig);
     } else {
         uplcEval = await evalTransactionProvider(config, txRedeemerBuilder.draft_tx());
     }
@@ -100,7 +108,7 @@ export async function buildMintAssetsUnsignedTx(
         .build_unchecked();
 
     console.log('How many signers?', privateKeys.length)
-    const unsignedTx = await buildFinalTx(tx, [redeemer], lucidConfig.costModels, privateKeys)
+    const unsignedTx = await buildFinalTx(tx, [redeemer], lucidConfig.costModels!, privateKeys)
 
     const cbor = unsignedTx.to_cbor_hex()
     console.log('cbor', cbor);
@@ -217,7 +225,7 @@ export async function buildSpendTx(
     options?: CompleteOptions) {
 
     // use eval redeemer and reference datum to pass all onchain checks
-    const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
+    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof;
     const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
 
     const [circuitRefInput, userRefInput] = referenceInputs
@@ -231,11 +239,11 @@ export async function buildSpendTx(
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
         assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
-        datum: Data.to({ user_id: userId, hash: pwdHash, nonce }, AccountDatum)
+        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce }, AccountDatum)
     }]
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdHash, nonce, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script))
         .hash()
@@ -294,9 +302,9 @@ export async function spendTx(
     txCbor: string) {
 
     const config = lucid.config()
-    const provider = config.provider
+    const provider = config.provider!
     const _tx = CML.Transaction.from_cbor_hex(txCbor);
-    const tx = await buildFinalTx(_tx, redeemers, config.costModels)
+    const tx = await buildFinalTx(_tx, redeemers, config.costModels!)
 
 
     const cbor = tx.to_cbor_hex()
@@ -333,21 +341,21 @@ export async function registerAndDelegateTx(
     options?: CompleteOptions) {
 
     // use eval redeemer and reference datum to pass all onchain checks
-    const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
+    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof;
     const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
 
     const [circuitRefInput, userRefInput] = referenceInputs
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
         assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
-        datum: Data.to({ user_id: userId, hash: pwdHash, nonce }, AccountDatum)
+        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce }, AccountDatum)
     }]
 
     const publish: PublishRedeemer = "RegisterAndDelegate";
     const publishRedeemer = Data.to(publish, PublishRedeemer);
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdHash, nonce, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true);
     const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Reward Address:', evalRewardAddress);
@@ -385,7 +393,7 @@ export async function registerAndDelegateTx(
         evalScripts: [evalSpendScript, evalSpendScript],
         options,
         // TODO: once using the new SC check if this is still necessary
-        scriptIncrements: [{ tag: CML.RedeemerTag.Spend, increment: 0.003, scriptHash: evalSpendRedeemer }]
+        // scriptIncrements: [{ tag: CML.RedeemerTag.Spend, increment: 0.003, scriptHash: evalSpendRedeemer }]
     };
 
     return _buildUncheckedTx(params, evalInputs, evalReferenceInputs, (params) => {
@@ -416,21 +424,21 @@ export async function delegateTx(
     options?: CompleteOptions) {
 
     // use eval redeemer and reference datum to pass all onchain checks
-    const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
+    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof;
     const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
 
     const [circuitRefInput, userRefInput] = referenceInputs
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
         assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
-        datum: Data.to({ user_id: userId, hash: pwdHash, nonce }, AccountDatum)
+        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce }, AccountDatum)
     }]
 
     const publish: PublishRedeemer = "Delegate";
     const publishRedeemer = Data.to(publish, PublishRedeemer);
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdHash, nonce, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true);
     const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Reward Address:', evalRewardAddress);
@@ -497,21 +505,21 @@ export async function delegateDrepTx(
     options?: CompleteOptions) {
 
     // use eval redeemer and reference datum to pass all onchain checks
-    const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
+    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof;
     const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
 
     const [circuitRefInput, userRefInput] = referenceInputs
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
         assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
-        datum: Data.to({ user_id: userId, hash: pwdHash, nonce }, AccountDatum)
+        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce }, AccountDatum)
     }]
 
     const publish: PublishRedeemer = "DelegateDRep";
     const publishRedeemer = Data.to(publish, PublishRedeemer);
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdHash, nonce, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true);
     const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Reward Address:', evalRewardAddress);
@@ -578,21 +586,21 @@ export async function withdrawTx(
     options?: CompleteOptions) {
 
     // use eval redeemer and reference datum to pass all onchain checks
-    const { userId, pwdHash, challenge, pA, pB, pC } = evalZkProof;
+    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof;
     const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
 
     const [circuitRefInput, userRefInput] = referenceInputs
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
         assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
-        datum: Data.to({ user_id: userId, hash: pwdHash, nonce }, AccountDatum)
+        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce }, AccountDatum)
     }]
 
     const withdraw: WithdrawRedeemer = "Withdraw";
     const withdrawRedeemer = Data.to(withdraw, WithdrawRedeemer);
 
     // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdHash, nonce, true);
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true);
     const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
     console.log('Eval Spend Address:', evalSpendAddress);
     console.log('Eval Reward Address:', evalRewardAddress);
@@ -668,8 +676,12 @@ async function _buildUncheckedTx(
     const increments = getEvalIncrements(scriptIncrements, txRedeemerBuilder.draft_tx().witness_set().redeemers()!);
     let uplcEval: ScriptEvaluation[] = [];
     if (options?.localUPLCEval !== false) {
-        console.log("increments:", increments)
-        uplcEval = evalTransaction(config, txRedeemerBuilder.draft_tx(), increments);
+        const txUtxos = [
+            ...config.collectedInputs,
+            ...config.readInputs,
+        ]
+        const slotConfig = SLOT_CONFIG_NETWORK[config.lucidConfig.network]
+        uplcEval = evalTransaction(txUtxos, txRedeemerBuilder.draft_tx(), config.lucidConfig.protocolParameters!, slotConfig, increments);
         console.log('Evaluation:', uplcEval.map(ev => ev.exUnits.to_json()))
     } else {
         uplcEval = await evalTransactionProvider(config, txRedeemerBuilder.draft_tx(), evalInputs, increments);
@@ -968,29 +980,26 @@ interface ScriptIncrements {
 }
 
 // TODO: this func is a **direct** copy from Lucid-Evolution, we should create a PR to expose and use it directly
-function evalTransaction(
-    config: TxBuilderConfig,
+export function evalTransaction(
+    txUtxos: UTxO[],
     tx: CML.Transaction,
+    protocolParameters: ProtocolParameters,
+    slotConfig: SlotConfig,
     extraIncrements?: Map<CML.RedeemerTag, Map<number, number>>,
 ): ScriptEvaluation[] {
     const txEvaluation = setRedeemerstoZero(tx)!;
-    // console.log("Eval Tx:", txEvaluation.to_json())
-    const txUtxos = [
-        ...config.collectedInputs,
-        ...config.readInputs,
-    ];
     const ins = txUtxos.map((utxo) => utxoToTransactionInput(utxo));
     const outs = txUtxos.map((utxo) => utxoToTransactionOutput(utxo));
-    const slotConfig = SLOT_CONFIG_NETWORK[config.lucidConfig.network];
     try {
         const uplcEval = UPLC.eval_phase_two_raw(
             txEvaluation.to_cbor_bytes(),
             ins.map((value) => value.to_cbor_bytes()),
             outs.map((value) => value.to_cbor_bytes()),
             // config.lucidConfig.costModels.to_cbor_bytes(),
-            createCostModels(PROTOCOL_PARAMETERS_DEFAULT.costModels).to_cbor_bytes(),
-            config.lucidConfig.protocolParameters.maxTxExSteps,
-            config.lucidConfig.protocolParameters.maxTxExMem,
+            // createCostModels(PROTOCOL_PARAMETERS_DEFAULT.costModels).to_cbor_bytes(),
+            createCostModels(toCostModels(protocolParameters.costModels)).to_cbor_bytes(),
+            protocolParameters.maxTxExSteps,
+            protocolParameters.maxTxExMem,
             BigInt(slotConfig.zeroTime),
             BigInt(slotConfig.zeroSlot),
             slotConfig.slotLength,
@@ -1129,14 +1138,15 @@ const validators = readValidators();
 
 const evalZkProof = {
     userId: "73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000000", // scalar.field_prime - 1
-    pwdHash: "73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000000", // scalar.field_prime - 1
+    pwdHash: "33fc9188a093a8445bdf8ace10a2ff7ecd9c74564b000a887b1ae717987f0807", // circuit credential hash poseidon(5)
+    pwdKdfHash: "243262243130246c7937437063726c42786e777977416b5a34494e444f5a766a6f3844386f49504a6274767938614e313467564d6c356a5746726243", // bcrypt.hash(userId, salt)
     // Guarantee overflow logic is executed and final value scalar.field_prime - 1, since number is 2 * scalar.field_prime - 1 
     challenge: "E7DB4EA6533AFA906673B0101343B00AA77B4805FFFCB7FDFFFFFFFE00000001",
     pA: "af46f51c9067ff3f6ae57ba0f76d9de33e979d01c0f91a40fc600f467b8fd0a3804d1968c2836632d728450b5d2614d4",
     pB: "816dc1b644722dcaf92aba79949fb514b19f0289dec36e9d49e9fec755244636e321ac6e6d37cc78381fc37eced6e5d7057e8187d6fd098df9647146154565800cbd3f64a809bb4e565416c967c60ad6e32f83a9def38b0ad5ba826ec45a1e0a",
     pC: "8881425d2cf63d3e019a4eb858b79d536804ce76ee499dc562cf0bac94db104963f7599c96ee98b2f47c58a780c62980"
 }
-// TODO: use more complexity point sin the curve (closer to field upper bound 2^381-1)
+// TODO: use more complexity points in the curve (closer to field upper bound 2^381-1)
 // Then run stress-test to determine a empirical maximum eval proof, meaning will returm bigger exUnits.
 // Apply a 5-10% to increase the likelihood of having an upper bound exUnit
 // const evalZkProof = {
@@ -1674,7 +1684,7 @@ function calculateMinLovelace(
         .coin();
 }
 
-async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
+export async function generateProof(txBody: CML.TransactionBody, zkInput: ZkInput) {
     const { userId, hash, pwd } = zkInput;
 
     if (!pwd) {
@@ -2038,15 +2048,19 @@ function convertMint(mint: CML.Mint | undefined, canonical = true): string {
 }
 
 function convertInputs(txInputList: CML.TransactionInputList): OutputReference[] {
-    const txReferenceInputs: OutputReference[] = [];
+    const txReferenceInputs: OutRef[] = [];
     for (let i = 0; i < txInputList.len(); i++) {
         const input = txInputList.get(i);
         txReferenceInputs.push({
-            transaction_id: input.transaction_id().to_hex(),
-            output_index: input.index()
+            txHash: input.transaction_id().to_hex(),
+            outputIndex: Number(input.index())
         });
     }
-    return txReferenceInputs;
+    return sortOutRefs(txReferenceInputs).map(out => ({ transaction_id: out.txHash, output_index: BigInt(out.outputIndex) }))
+}
+
+function sortOutRefs(outs: OutRef[]): OutRef[] {
+    return sortUTxOs(outs.map(out => ({...out, address: "", assets: {}})), "Canonical")
 }
 
 function convertOutputs(outputs: CML.TransactionOutputList): ChallengeOutput[] {

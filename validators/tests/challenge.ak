@@ -4,11 +4,19 @@ use cardano/address.{
   Address, Script, VerificationKey, with_delegation_key, with_delegation_script,
 }
 use cardano/assets
+use cardano/certificate.{
+  Certificate, DelegateBlockProduction, DelegateCredential,
+  DelegateRepresentative, DelegateVote, RegisterAndDelegateCredential,
+  RegisterCredential,
+}
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, Output, OutputReference, Redeemer, Spend,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Publish, Redeemer, Spend,
   Transaction,
 }
-use types.{AccountDatum, Proof, PubSignals, SpendRedeemer, ZkVerificationKey}
+use types.{
+  AccountDatum, Proof, PubSignals, RegisterAndDelegate, SpendRedeemer,
+  ZkVerificationKey,
+}
 use utils.{build_challenge, hash_challenge}
 
 test build_challenge_ok() {
@@ -244,6 +252,109 @@ test build_challenge_ok_1() {
         },
       ],
       redeemers: redeemers,
+    }
+  let challenge = build_challenge(tx)
+  //   trace @"serialise (challenge)": challenge |> cbor.serialise
+  let built_challenge_id = challenge |> hash_challenge
+  trace @"challenge_id:": challenge_id
+  trace @"built_challenge_id:": built_challenge_id
+  challenge_id == built_challenge_id
+}
+
+test build_challenge_register_and_delegate() {
+  let user_id = #"446566692d46726f6e74696572233032"
+  let hash =
+    #"243262243130246c7937437063726c42786e777977416b5a34494e444f594b3664755a426d48414735684c4752336d7279527869507a446a4b646161"
+  let zkey = get_zkey()
+  let nonce =
+    #"62396164306461352d383830652d343031322d626534302d643933313466633064303138"
+  let account_datum = AccountDatum { user_id, hash, nonce }
+  let policy_id = #"cadc50649cd1daf6e0dea610dd9392a8be1c8e6ac570dc3773101f97"
+  let circuit_asset_name = #"4369726375697423303032"
+  let address =
+    get_script_address(
+      #"63e4e268784458a25a06923eea5f380cb43e71db700eb02538c1e065",
+      Some(#"63e4e268784458a25a06923eea5f380cb43e71db700eb02538c1e065"),
+    )
+  let circuit_address = get_script_address(policy_id, Some(policy_id))
+  let circuit_input =
+    Input {
+      output_reference: OutputReference {
+        transaction_id: #"c7ac7e242699ee9ed6b9d7f7cfea9fd4c1ae4c457ec8bdd63a60186b8e188369",
+        output_index: 0,
+      },
+      output: Output {
+        address: circuit_address,
+        value: assets.from_asset_list(
+          [
+            Pair("", [Pair("", 4064330)]),
+            Pair(policy_id, [Pair(circuit_asset_name, 1)]),
+          ],
+        ),
+        datum: InlineDatum(zkey),
+        reference_script: None,
+      },
+    }
+  let user_input =
+    Input {
+      output_reference: OutputReference {
+        transaction_id: #"7c012ffd5ee328b356e07ad4c40208deb9958a46871574b448b4afc5b6b00b3b",
+        output_index: 0,
+      },
+      output: Output {
+        address,
+        value: assets.from_asset_list(
+          [Pair("", [Pair("", 1749860)]), Pair(policy_id, [Pair(user_id, 1)])],
+        ),
+        datum: InlineDatum(account_datum),
+        reference_script: None,
+      },
+    }
+
+  //   let mint = assets.from_asset_list([Pair(policy_id, [Pair(asset_name, 1)])])
+  let challenge_id =
+    #"c2874eed87a39e354dfd8e952174bb344e13c0ae9c73cc7f4d8f4957d0698863"
+
+  let scriptOutputReference =
+    OutputReference {
+      transaction_id: #"5ee2b7875764f9a7fa7a353d0372067a489ee2be0b4221b6832b0f33406a0dec",
+      output_index: 0,
+    }
+  let certificate =
+    RegisterAndDelegateCredential {
+      credential: Script(
+        #"63e4e268784458a25a06923eea5f380cb43e71db700eb02538c1e065",
+      ),
+      delegate: DelegateBlockProduction {
+        stake_pool: #"efae72c07a26e4542ba55ef59d35ad45ffaaac312865e3a758ede997",
+      },
+      deposit: 2000000,
+    }
+
+  let tx =
+    Transaction {
+      ..transaction.placeholder,
+      inputs: [
+        Input {
+          output_reference: scriptOutputReference,
+          output: Output {
+            address,
+            value: assets.from_lovelace(100_000_000),
+            datum: NoDatum,
+            reference_script: None,
+          },
+        },
+      ],
+      reference_inputs: [user_input, circuit_input],
+      outputs: [
+        Output {
+          address,
+          value: assets.from_lovelace(96639429),
+          datum: NoDatum,
+          reference_script: None,
+        },
+      ],
+      certificates: [certificate],
     }
   let challenge = build_challenge(tx)
   //   trace @"serialise (challenge)": challenge |> cbor.serialise

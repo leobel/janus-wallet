@@ -47,7 +47,7 @@ export async function mintCircuit(network: Network, tokenName: string, circuitVe
     const { utxoRef, cborTx} = await buildMintAssetsUnsignedTx(utxos, lucid, datum, mintRedeemer, assetName, walletAddress, mint, policyId, mintAddress, validTo, [signerKey], [privateKey],{ localUPLCEval: true })
 
     // submit transaction
-    const provider = lucid.config().provider
+    const provider = lucid.config().provider!
     const txHash = await provider.submitTx(cborTx)
     console.log('Tx Id (Submit):', txHash);
 

@@ -75,7 +75,7 @@ export async function mintAccountTx(userId: string, unsignedTx: string, txWitnes
     console.log('Final Tx:', cbor)
 
     const lucid = await getLucid;
-    const provider = lucid.config().provider
+    const provider = lucid.config().provider!
 
     let updatedUser = await updateUser(user.id, { token_status: "submitted" as AccountTokenStatus })
     const txHash = await provider.submitTx(cbor)
@@ -214,7 +214,7 @@ export async function registerAndDelegate(network: Network, userId: string, pool
 
     const lucid = await getLucid;
 
-    const { lovelace } = getMinAda({}, lucid.config().protocolParameters.coinsPerUtxoByte, spendAddress)!
+    const { lovelace } = getMinAda({}, lucid.config().protocolParameters!.coinsPerUtxoByte, spendAddress)!
     console.log("lovelace:", lovelace)
 
     const utxos = (await lucid.utxosAt(spendAddress))
@@ -264,7 +264,7 @@ export async function delegate(network: Network, userId: string, poolId: string)
 
     const lucid = await getLucid;
 
-    const { lovelace } = getMinAda({}, lucid.config().protocolParameters.coinsPerUtxoByte, spendAddress)!
+    const { lovelace } = getMinAda({}, lucid.config().protocolParameters!.coinsPerUtxoByte, spendAddress)!
     console.log("lovelace:", lovelace)
 
     const utxos = (await lucid.utxosAt(spendAddress))
@@ -324,7 +324,7 @@ export async function delegateDrep(network: Network, userId: string, dRepresenta
 
     const lucid = await getLucid;
 
-    const { lovelace } = getMinAda({}, lucid.config().protocolParameters.coinsPerUtxoByte, spendAddress)!
+    const { lovelace } = getMinAda({}, lucid.config().protocolParameters!.coinsPerUtxoByte, spendAddress)!
     console.log("lovelace:", lovelace)
 
     const utxos = (await lucid.utxosAt(spendAddress))
@@ -376,7 +376,7 @@ export async function withdrawRewards(network: Network, userId: string, amount: 
 
     const lucid = await getLucid;
 
-    const { lovelace } = getMinAda({}, lucid.config().protocolParameters.coinsPerUtxoByte, spendAddress)!
+    const { lovelace } = getMinAda({}, lucid.config().protocolParameters!.coinsPerUtxoByte, spendAddress)!
     console.log("lovelace:", lovelace)
 
     const utxos = (await lucid.utxosAt(spendAddress))

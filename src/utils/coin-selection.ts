@@ -1,4 +1,4 @@
-import { UTxO, TxOutput, Assets } from '@lucid-evolution/lucid'
+import { UTxO, TxOutput, Assets, sortUTxOs } from '@lucid-evolution/lucid'
 
 type TokensOnly = Omit<Assets, "lovelace">
 
@@ -159,16 +159,5 @@ export function coinSelection(
     })
   }
 
-  return { inputs: sortInputs(inputs), outputs: reqOutputs, change }
-}
-
-// Inputs are ordered first by txHash and then by outputIndex, this rule comes from the Ledger itself.
-function sortInputs(inputs: UTxO[]): UTxO[] {
-  return inputs.sort((a, b) => {
-      if (a.txHash == b.txHash) {
-        return a.outputIndex - b.outputIndex
-      } else {
-        return a.txHash.localeCompare(b.txHash)
-      }
-  })
+  return { inputs: sortUTxOs(inputs, "Canonical"), outputs: reqOutputs, change }
 }
