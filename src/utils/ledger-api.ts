@@ -4,6 +4,9 @@ import type { AccountBalance } from '../models/account-balance';
 import type { AddressTotalResponse } from '../models/ledger/address-total';
 import type { StakePool } from '../models/ledger/stake-pool';
 import type { StakeInfo } from '../models/ledger/stake-info';
+import type { PaginateOrder, PaginateParams } from '../models/ledger/paginate-params';
+import type { Reward } from '../models/ledger/stake-reward';
+import type { PaginateResponse } from '../models/ledger/paginate-response';
 
 const axiosInstance = axios.create({
     baseURL: process.env.BLOCKFROST_API_URL!,
@@ -13,6 +16,9 @@ const axiosInstance = axios.create({
      },
     withCredentials: true
 })
+
+
+type DefinedPaginateParams = Required<Pick<PaginateParams, 'count' | 'page' | 'order'>>
 
 export async function getLedgerAccountBalance(address: string): Promise<AccountBalance> {
     const response = await axiosInstance.get<AddressTotalResponse>(`addresses/${address}/total`)
@@ -62,12 +68,34 @@ export async function tokenExist(policyId: string, assetName: string): Promise<b
     }
 }
 
-export async function getStakePools(count: number, page: number): Promise<StakePool[]> {
-    const response = await axiosInstance.get(`pools/extended?count=${count}&page=${page}`)
+export async function getStakePools(count: number, page: number, order: PaginateOrder): Promise<StakePool[]> {
+    const response = await axiosInstance.get(`pools/extended?count=${count}&page=${page}&order=${order}`)
+    return response.data
+}
+
+export async function getStakingRewards(stakeAddress: string, count: number, page: number, order: PaginateOrder): Promise<Reward[]> {
+    const response = await axiosInstance.get(`accounts/${stakeAddress}/rewards?count=${count}&page=${page}&order=${order}`)
     return response.data
 }
 
 export async function getStakeInfo(stakeAddress: string): Promise<StakeInfo> {
     const response = await axiosInstance.get(`accounts/${stakeAddress}`)
     return response.data
+}
+
+export function getPagination(params: PaginateParams, defaultOrder?: PaginateOrder): DefinedPaginateParams {
+    const {count = 100, page = 1, order = defaultOrder || 'asc'} = params
+    const size = Math.min(count, 100)
+    return { count: size, page, order }
+}
+
+export function paginateResponse<T>(items: T[], paginate: DefinedPaginateParams): PaginateResponse<T> {
+    const { count, page, order } = paginate
+    const hasMore = items.length === count
+    const next = hasMore ? { count, page: page + 1, order } : null
+    return {
+        items: items.slice(0, count),
+        hasMore,
+        next
+    }
 }

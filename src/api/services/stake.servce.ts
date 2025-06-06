@@ -1,16 +1,25 @@
+import { validatorToRewardAddress, type CertificateValidator, type Network } from "@lucid-evolution/lucid";
 import type { PaginateParams } from "../../models/ledger/paginate-params";
-import type { StakePoolResponse } from "../../models/ledger/stake-pool-response";
-import { getStakePools as listStakePools } from "../../utils/ledger-api";
+import type { PaginateResponse } from "../../models/ledger/paginate-response";
+import type { StakePool } from "../../models/ledger/stake-pool";
+import { getPagination, getStakingRewards, getStakePools as listStakePools, paginateResponse } from "../../utils/ledger-api";
+import type { Reward } from "../../models/ledger/stake-reward";
+import { getUserById } from "../../repositories/user.repository";
 
-export async function getStakePools(params: PaginateParams): Promise<StakePoolResponse> {
-    const {count = 100, page = 1} = params
-    const size = Math.min(count, 100)
-    const pools = await listStakePools(size, page)
-    const hasMore = pools.length === size
-    const next = hasMore ? { count: size, page: page + 1 } : null
-    return {
-        pools: pools.slice(0, size),
-        hasMore,
-        next
-    }
+export async function getStakePools(params: PaginateParams): Promise<PaginateResponse<StakePool>> {
+    const { count, page, order } = getPagination(params)
+    const pools = await listStakePools(count, page, order)
+    return paginateResponse(pools, { count, page, order })
 } 
+
+export async function getStakingRewardsHistory(network: Network, userId: string, params: PaginateParams): Promise<PaginateResponse<Reward>> {
+    const user = await getUserById(userId)
+    if (!user) {
+        throw new Error('User not found')
+    }
+
+    const stakeAddress = validatorToRewardAddress(network, user.spend_script as CertificateValidator)
+    const { count, page, order } = getPagination(params, "desc")
+    const rewards = await getStakingRewards(stakeAddress, count, page, order)
+    return paginateResponse(rewards, { count, page, order })
+}
