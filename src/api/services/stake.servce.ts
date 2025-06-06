@@ -21,5 +21,5 @@ export async function getStakingRewardsHistory(network: Network, userId: string,
     const stakeAddress = validatorToRewardAddress(network, user.spend_script as CertificateValidator)
     const { count, page, order } = getPagination(params, "desc")
     const rewards = await getStakingRewards(stakeAddress, count, page, order)
-    return paginateResponse(rewards, { count, page, order })
+    return paginateResponse(rewards.map(r => ({...r, amount: Number(r.amount)})), { count, page, order })
 }

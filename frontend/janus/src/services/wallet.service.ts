@@ -43,6 +43,11 @@ export async function delegateToStakePool(userId: string, poolId: string): Promi
     return response.data
 }
 
+export async function getStakePoolRewards(userId: string): Promise<{tx: string }> {
+    const response = await axios.post(`wallets/${userId}/rewards`)
+    return response.data
+}
+
 export async function sendTx(userId: string, tx: string, redeemers: string[]): Promise<{tx_id: string}> {
     const response = await axios.post(`wallets/${userId}/send`, {
         redeemers,

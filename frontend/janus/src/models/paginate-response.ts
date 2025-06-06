@@ -1,8 +1,7 @@
 import type { PaginateParams } from "./paginate-params";
-import type { StakePool } from "./stake-pool";
 
-export interface StakePoolResponse {
-    pools: StakePool[]
+export interface PaginateResponse<T> {
+    items: T[]
     hasMore: boolean
     next: PaginateParams | null
 }
