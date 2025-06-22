@@ -1,7 +1,7 @@
 import { Typography, Box } from "@mui/material"
 
 export interface AdaBalanceProps {
-    balance?: number
+    balance?: number | string
     privacy?: boolean
 }
 

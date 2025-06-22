@@ -16,6 +16,7 @@ import App from './App.tsx'
 import './index.css'
 import setupAxiosInterceptors from './api/interceptor.tsx';
 import SignUp from './pages/SignUp.tsx';
+import { DrepPage } from './pages/Drep.tsx';
 
 const router = createBrowserRouter([
   {
@@ -23,7 +24,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        loader: async ({request}) => {
+        loader: async ({ request }) => {
           console.log("Loader...", request)
           const isAuth = await isAuthenticated(request)
           if (!isAuth) {
@@ -47,6 +48,15 @@ const router = createBrowserRouter([
           {
             path: 'send',
             Component: SendPage
+          },
+          {
+            path: 'governance',
+            children: [
+              {
+                  path: 'dreps',
+                  Component: DrepPage
+              }
+            ]
           },
           {
             path: 'activity',

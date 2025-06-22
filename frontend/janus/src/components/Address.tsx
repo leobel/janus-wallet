@@ -8,13 +8,15 @@ export interface AddressProps {
     shrink?: boolean
     copy?: boolean
     explore?: boolean
+    path?: string
 }
 
 export default function Address(props: AddressProps) {
     const address = props.value
     const size = props.size || 10
+    const path = props.path ?? 'address'
 
-    const displayAddress = props.shrink
+    const displayAddress = props.shrink && address.length > size
         ? `${address.slice(0, size)}...${address.slice(-size)}`
         : address
 
@@ -23,7 +25,7 @@ export default function Address(props: AddressProps) {
     }
 
     function handleOpen() {
-        const url = `${import.meta.env.VITE_CARDANO_EXPLORER}address/${address}`
+        const url = `${import.meta.env.VITE_CARDANO_EXPLORER}${path}/${address}`
         window.open(url, '_blank', "noopener noreferrer")
     }
 

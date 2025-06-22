@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors'
 import { authenticateToken, authorized } from './api/services/auth.service';
 import { listStakePools } from './api/controllers/stake.controller';
+import { getDrep, listDReps } from './api/controllers/drep.controller';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -48,6 +49,8 @@ app.post('/userExist', verifyUser as RequestHandler)
 
 app.use('/wallets/:userId', authenticateToken as RequestHandler, authorized as RequestHandler, walletRouter(network))
 app.use('/stakePools', authenticateToken as RequestHandler, listStakePools)
+app.use('/dreps/:drepId', authenticateToken as RequestHandler, getDrep)
+app.use('/dreps', authenticateToken as RequestHandler, listDReps)
 app.use('/circuits', circuitRouter(network))
 
 // Start the server

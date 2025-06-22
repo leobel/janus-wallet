@@ -44,20 +44,15 @@ const NAVIGATION: Navigation = [
     title: 'Analytics',
   },
   {
-    segment: 'reports',
-    title: 'Reports',
+    segment: 'governance',
+    title: 'Governance',
     icon: <BarChartIcon />,
     children: [
       {
-        segment: 'sales',
-        title: 'Sales',
+        segment: 'dreps',
+        title: 'Dreps',
         icon: <DescriptionIcon />,
-      },
-      {
-        segment: 'traffic',
-        title: 'Traffic',
-        icon: <DescriptionIcon />,
-      },
+      }
     ],
   },
   {

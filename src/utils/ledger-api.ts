@@ -7,6 +7,7 @@ import type { StakeInfo } from '../models/ledger/stake-info';
 import type { PaginateOrder, PaginateParams } from '../models/ledger/paginate-params';
 import type { Reward } from '../models/ledger/stake-reward';
 import type { PaginateResponse } from '../models/ledger/paginate-response';
+import type { Drep } from '../models/ledger/drep';
 
 const axiosInstance = axios.create({
     baseURL: process.env.BLOCKFROST_API_URL!,
@@ -80,6 +81,21 @@ export async function getStakingRewards(stakeAddress: string, count: number, pag
 
 export async function getStakeInfo(stakeAddress: string): Promise<StakeInfo> {
     const response = await axiosInstance.get(`accounts/${stakeAddress}`)
+    return response.data
+}
+
+export async function getDreps(count: number, page: number, order: PaginateOrder): Promise<Drep[]> {
+    const response = await axiosInstance.get(`governance/dreps?count=${count}&page=${page}&order=${order}`)
+    return response.data
+}
+
+export async function getDrep(drepId: string): Promise<Drep> {
+    const response = await axiosInstance.get(`governance/dreps/${drepId}`)
+    return response.data
+}
+
+export async function getDrepMetadata(drepId: string): Promise<Drep> {
+    const response = await axiosInstance.get(`governance/dreps/${drepId}/metadata`)
     return response.data
 }
 

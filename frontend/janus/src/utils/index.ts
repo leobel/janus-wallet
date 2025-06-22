@@ -1,6 +1,7 @@
 import { CML } from "@lucid-evolution/lucid"
 import { mapFlatAssets } from "./walletApi"
 import type { TransactionFees } from "../models/fees"
+import type { Drep, DrepType, FixedDrepType } from "../models/drep"
 
 export const Lovelace = 1_000_000
 
@@ -33,7 +34,53 @@ export function calculateFees(cborTx: string, assets?: Record<string, number>): 
     const tx = CML.Transaction.from_cbor_hex(cborTx)
     const txFee = Number(tx.body().fee())
     const assetsFee = assets ? getAssetsFee(tx, assets) : 0
-    return {txFee, assetsFee}
+    return { txFee, assetsFee }
+}
+
+export function getDrepImg(drep: Drep): string | undefined {
+    const image = drep?.json_metadata?.body?.image?.contentUrl
+    if (typeof image === 'object') {
+        return image["@value"]
+    }
+    return image
+}
+
+export function getDrepName(drep: Drep): string | undefined {
+    const name = drep?.json_metadata?.body?.givenName
+    if (typeof name === 'object') {
+        return name["@value"]
+    }
+    return name
+}
+
+export function isDrepFixed(type: DrepType): type is FixedDrepType {
+    return type === "AlwaysAbstain" || type === "AlwaysNoConfidence"
+}
+
+export function buildAlwaysAbstainDrep(): Drep {
+    return { 
+        drep_id: "", 
+        hex: "AlwaysAbstain", 
+        is_always_abstain: true, 
+        json_metadata: {
+            body: {
+                givenName: "Always Abstain" 
+            } 
+        } 
+    }
+}
+
+export function buildAlwaysNoConfidenceDrep(): Drep {
+    return { 
+        drep_id: "", 
+        hex: "AlwaysNoConfidence", 
+        is_always_non_confindence: true, 
+        json_metadata: {
+            body: {
+                givenName: "Always No Confidence" 
+            } 
+        } 
+    }
 }
 
 function getAssetsFee(tx: CML.Transaction, assets: Record<string, number>): number {
@@ -52,7 +99,7 @@ function getAssetsFee(tx: CML.Transaction, assets: Record<string, number>): numb
 }
 
 function mergeAssets(a: Record<string, number>, b: Record<string, number>): Record<string, number> {
-    return Object.entries(b).reduce((acc, [key, value]) => ({...acc, [key]: (acc[key] || 0) + value}), a)
+    return Object.entries(b).reduce((acc, [key, value]) => ({ ...acc, [key]: (acc[key] || 0) + value }), a)
 }
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
