@@ -48,6 +48,13 @@ export async function getStakePoolRewards(userId: string): Promise<{tx: string }
     return response.data
 }
 
+export async function withdrawRewards(userId: string, amount: number): Promise<{tx: string}> {
+    const response = await axios.post(`wallets/${userId}/withdraw`, {
+        amount
+    })
+    return response.data
+}
+
 export async function sendTx(userId: string, tx: string, redeemers: string[]): Promise<{tx_id: string}> {
     const response = await axios.post(`wallets/${userId}/send`, {
         redeemers,

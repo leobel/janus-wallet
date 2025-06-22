@@ -8,7 +8,7 @@ export async function getStakePools(count: number, page: number, order = "asc"):
     return response.data
 }
 
-export async function getStakeRewards(userId: string, count: number, page: number, order = "asc"): Promise<PaginateResponse<Reward>> {
+export async function getStakeRewards(userId: string, count: number, page: number, order = "desc"): Promise<PaginateResponse<Reward>> {
     const response = await axios.get<PaginateResponse<Reward>>(`wallets/${userId}/rewards?count=${count}&page=${page}&order=${order}`)
     return response.data
 }

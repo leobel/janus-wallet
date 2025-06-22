@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { getStakePools } from '../services/stake.servce'
+import { getStakePools } from '../services/stake.service'
 import { parsePaginateParams } from '../../utils'
 
 export async function listStakePools(req: Request, res: Response) {

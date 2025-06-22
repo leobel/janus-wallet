@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import { spendWalletFunds, generateRedeemer, buildSpend, registerAndDelegate, delegate, delegateDrep, withdrawRewards, getWalletAccount, mintAccountTx, getStakingDetails } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
 import { parsePaginateParams } from '../../utils';
-import { getStakingRewardsHistory } from '../services/stake.servce';
+import { getStakingRewardsHistory } from '../services/stake.service';
 
 
 // Wallet routes
