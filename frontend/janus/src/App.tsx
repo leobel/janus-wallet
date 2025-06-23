@@ -1,15 +1,15 @@
 import { ThemeProvider, createTheme } from '@mui/material';
 import { ReactRouterAppProvider } from '@toolpad/core/react-router';
 import { type Navigation } from '@toolpad/core/AppProvider';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import DescriptionIcon from '@mui/icons-material/Description';
 import { Outlet } from 'react-router';
 import { AuthProvider } from './context/AuthProvider';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import StackedBarChartIcon from '@mui/icons-material/StackedBarChart';
 import SendIcon from '@mui/icons-material/Send';
 import SouthWestIcon from '@mui/icons-material/SouthWest';
 import ImportExportIcon from '@mui/icons-material/ImportExport';
+import HowToVoteIcon from '@mui/icons-material/HowToVote';
+import BallotIcon from '@mui/icons-material/Ballot';
 
 const NAVIGATION: Navigation = [
   {
@@ -46,12 +46,12 @@ const NAVIGATION: Navigation = [
   {
     segment: 'governance',
     title: 'Governance',
-    icon: <BarChartIcon />,
+    icon: <HowToVoteIcon />,
     children: [
       {
         segment: 'dreps',
         title: 'Dreps',
-        icon: <DescriptionIcon />,
+        icon: <BallotIcon />,
       }
     ],
   },
