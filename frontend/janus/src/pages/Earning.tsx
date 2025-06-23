@@ -338,74 +338,77 @@ function WithdrawConfirm(props: WithdrawConfirmProps) {
           <Alert icon={false} severity='error'>{txErrMsg}</Alert>
         </Box>}
         {!txErrMsg && <>
-          <Box display="flex" flexDirection="column">
-            <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" sx={{ mb: 4 }}>
-              <Stack>
-                <Typography fontSize="small">Amount to withdraw</Typography>
-                <AdaBalance balance={props.amount} />
-              </Stack>
+          <Box flexGrow={1} display="flex" flexDirection="column" justifyContent="center" alignItems="center">
+            <Box display="flex" flexDirection="column" alignItems="center">
+              <Typography fontSize="small">Amount to withdraw</Typography>
+              <AdaBalance balance={props.amount} />
             </Box>
           </Box>
-          <Stack spacing={1}>
-            {buildingTx && <Stack direction="row" spacing={2} sx={{ pt: 2 }}>
-              <CircularProgress size={26} />
-              <Typography alignContent="center">Calculating cost...</Typography>
-            </Stack>}
-            {!buildingTx && <>
-              <Typography>Transaction cost</Typography>
-              <Divider />
-              {fees &&
-                <Box display="flex" justifyContent="space-between">
-                  <Typography>Fee</Typography>
-                  <AdaBalance balance={fees.txFee} />
-                </Box>
-              }
-              {buildingTxErrMsg && <Alert severity="error">{buildingTxErrMsg}</Alert>}
-            </>}
-          </Stack>
-        <Button
-          variant='contained'
-          sx={{ mt: 'auto' }}
-          onClick={() => setOpenSignTx(true)}
-        >Confirm</Button>
-      </>}
-    </>}
-{
-  !sendingTx && txId && <>
-    <Box flexGrow={1} display="flex" flexDirection="column" justifyContent="center" alignItems="center" >
-      <CheckCircleOutlinedIcon color='success' sx={{ width: 86, height: 86, mb: 2 }} />
-      <Typography>Congratulations! You've withdrawn your rewards</Typography>
-      <Paper sx={{ p: 2, mt: 2 }}>
-        <Box display="flex" flexDirection="column">
-          <Typography fontSize="small">Transaction Id:</Typography>
-          <Box display="flex">
-            <Stack flexGrow="1" direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
-              <Typography fontSize="small" textAlign="end" sx={{ wordBreak: 'break-word' }}>{txId}</Typography>
-              <Box>
-                <IconButton size="small" onClick={handleCopy}>
-                  <ContentCopyIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={handleOpen} >
-                  <OpenInNewIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            </Stack>
+          <Box flexGrow={1} display="flex" flexDirection="column">
+            {buildingTx &&
+              <Stack direction="row" spacing={2} sx={{ pt: 2 }}>
+                <CircularProgress size={26} />
+                <Typography>Calculating cost...</Typography>
+              </Stack>
+            }
+            {!buildingTx &&
+              <Stack spacing={1}>
+                <Typography>Transaction cost</Typography>
+                <Divider />
+                {fees &&
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography>Fee</Typography>
+                    <AdaBalance balance={fees.txFee} />
+                  </Box>
+                }
+                {buildingTxErrMsg && <Alert severity="error">{buildingTxErrMsg}</Alert>}
+              </Stack>
+            }
           </Box>
-        </Box>
-      </Paper>
-    </Box>
-    <Button
-      variant='contained'
-      sx={{ mt: 'auto' }}
-      onClick={props.onClose}
-    >Close</Button>
-  </>
-}
-      <Button
-        variant='contained'
-        sx={{ mt: 'auto' }}
-        onClick={() => setOpenSignTx(true)}
-      >Confirm</Button>
+          <Button
+            variant='contained'
+            sx={{ mt: 'auto' }}
+            onClick={() => setOpenSignTx(true)}
+          >Confirm</Button>
+        </>}
+      </>}
+      {
+        !sendingTx && txId && <>
+          <Box flexGrow={1} display="flex" flexDirection="column" justifyContent="center" alignItems="center" >
+            <CheckCircleOutlinedIcon color='success' sx={{ width: 86, height: 86, mb: 2 }} />
+            <Typography>Congratulations! You've withdrawn your rewards</Typography>
+            <Paper sx={{ p: 2, mt: 2 }}>
+              <Box display="flex" flexDirection="column">
+                <Typography fontSize="small">Transaction Id:</Typography>
+                <Box display="flex">
+                  <Stack flexGrow="1" direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography fontSize="small" textAlign="end" sx={{ wordBreak: 'break-word' }}>{txId}</Typography>
+                    <Box>
+                      <IconButton size="small" onClick={handleCopy}>
+                        <ContentCopyIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" onClick={handleOpen} >
+                        <OpenInNewIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </Stack>
+                </Box>
+              </Box>
+            </Paper>
+          </Box>
+          <Button
+            variant='contained'
+            sx={{ mt: 'auto' }}
+            onClick={props.onClose}
+          >Close</Button>
+        </>
+      }
+      {sendingTx && <Box flexGrow={1} display="flex" flexDirection="column" justifyContent="center" alignItems="center" >
+        <Stack direction="row" spacing={2} sx={{ pt: 2 }}>
+          <CircularProgress size={26} />
+          <Typography alignContent="center">Withdrawing rewards...</Typography>
+        </Stack>
+      </Box>}
       <ApproveTransaction
         open={openSignTx}
         username={props.userName}
