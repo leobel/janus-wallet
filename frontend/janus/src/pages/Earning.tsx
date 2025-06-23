@@ -5,7 +5,7 @@ import { ApproveTransaction } from '../components/ApproveTransaction'
 import CloseIcon from '@mui/icons-material/Close'
 import useAuth from '../hooks/useAuth'
 import AdaBalance from '../components/AdaBalance'
-import { calculateFees, sleep } from '../utils'
+import { calculateFees, Lovelace, sleep } from '../utils'
 import type { TransactionFees } from '../models/fees'
 import { delegateToStakePool, getStakeDetials, registerAndDelegateToStakePool, sendTx, withdrawRewards } from '../services/wallet.service'
 import type { StakeInfo } from '../models/stake-info'
@@ -16,6 +16,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { RewardHistory } from '../components/RewardHistory'
 import { StakePools } from '../components/StakePools'
 import { useNavigate } from 'react-router'
+import Address from '../components/Address'
 
 export default function StakingPage() {
   const navigate = useNavigate()
@@ -89,7 +90,7 @@ export default function StakingPage() {
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <Box>
                       <Typography variant="body2" color="textSecondary">Stake Address</Typography>
-                      <Typography variant="body1">{stakeInfo.stake_address}</Typography>
+                      <Address value={stakeInfo.stake_address} size={20} shrink copy explore path='stake'/>
                     </Box>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
@@ -125,8 +126,8 @@ export default function StakingPage() {
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <Box>
                       <Typography variant="body2" color="textSecondary">Rewards Available</Typography>
-                      <AdaBalance balance={Number(stakeInfo.withdrawable_amount)} />
-                      {stakeInfo.drep_id ? <Button size="small" color="primary" variant="contained" onClick={handleWithdraw}>Withdraw</Button>
+                      <AdaBalance balance={stakeInfo.withdrawable_amount} />
+                      {stakeInfo.drep_id ? <Button size="small" color="primary" variant="contained" disabled={stakeInfo.withdrawable_amount < Lovelace} onClick={handleWithdraw}>Withdraw</Button>
                         : <Typography>Go to <Button variant="text" onClick={() => navigate('/governance/dreps')}>DREP LIST</Button> and delegate your voting power before you can withdraw your rewards</Typography>}
                     </Box>
                   </Grid>
