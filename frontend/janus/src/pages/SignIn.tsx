@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Card, TextField, Button, Typography, Box, Link, IconButton, InputAdornment, Divider, Alert, Stack } from '@mui/material'
+import { Card, TextField, Button, Typography, Box, Link, IconButton, InputAdornment, Alert, Stack } from '@mui/material'
 import { useFormik } from 'formik'
 import * as yup from 'yup'
 import useAuth from '../hooks/useAuth'
@@ -8,27 +8,6 @@ import { login } from '../services/auth.service'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 
-interface TabPanelProps {
-  children?: React.ReactNode
-  index: number
-  value: number
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`auth-tabpanel-${index}`}
-      aria-labelledby={`auth-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  )
-}
 
 const validationSchema = yup.object({
   username: yup

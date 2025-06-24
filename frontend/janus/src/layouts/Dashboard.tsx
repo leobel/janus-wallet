@@ -5,7 +5,7 @@ import { AppTitle } from '../components/AppTitle';
 
 interface DashboardProps {}
 
-export default function Dashboard(props: DashboardProps) {
+export default function Dashboard(_props: DashboardProps) {
   return (
     <DashboardLayout
       slots={{

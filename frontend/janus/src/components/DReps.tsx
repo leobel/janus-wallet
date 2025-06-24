@@ -77,31 +77,39 @@ export interface DRepCardProps {
 }
 
 
+interface DrepLink {
+    uri?: string
+}
+
+interface UrlIconProps {
+    uri?: string
+}
+
 function DrepCard(props: DRepCardProps) {
     const drepImg = useMemo(() => getDrepImg(props.drep), [props.drep])
     const drepName = useMemo(() => getDrepName(props.drep), [props.drep])
     const drepLinks = useMemo(() => getDrepLinks(props.drep), [props.drep])
 
 
-    function getDrepLinks(drep: Drep) {
+    function getDrepLinks(drep: Drep): DrepLink[] {
         const links = drep.json_metadata?.body?.references ?? []
-        return links.map((l: any) => typeof l.uri === 'object' ? { ...l, uri: l.uri["@value"] } : l)
+        return links.map((l: any) => ({uri: typeof l.uri === 'object' ? l.uri["@value"] : l.uri}))
     }
 
-    function getUrlIcon(uri: string) {
-        if (uri?.startsWith("twitter.com") || uri?.includes("x.com")) {
+    function UrlIcon(props: UrlIconProps) {
+        if (props.uri?.startsWith("twitter.com") || props.uri?.includes("x.com")) {
             return <Twitter fontSize="small" />;
         }
-        if (uri?.includes("github.com")) {
+        if (props.uri?.includes("github.com")) {
             return <GitHub fontSize="small" />;
         }
-        if (uri?.includes("instagram.com")) {
+        if (props.uri?.includes("instagram.com")) {
             return <Instagram fontSize="small" />;
         }
-        if (uri?.includes("t.me")) {
+        if (props.uri?.includes("t.me")) {
             return <Telegram fontSize="small" />;
         }
-        if (uri?.includes("linkedin.com")) {
+        if (props.uri?.includes("linkedin.com")) {
             return <LinkedIn fontSize="small" />;
         }
         return <Language fontSize="small" />;
@@ -122,9 +130,9 @@ function DrepCard(props: DRepCardProps) {
                         <Stack>
                             <Typography>{drepName}</Typography>
                             <Stack direction="row">
-                                {drepLinks.map((l: any) => (
+                                {drepLinks.map(l => (
                                     <IconButton aria-label="twitter" size="small" sx={{ p: 0 }} onClick={() => window.open(l.uri, '_blank', 'noopener noreferrer')}>
-                                        {getUrlIcon(l.uri)}
+                                        <UrlIcon uri={l.uri} />
                                     </IconButton>
                                 ))}
                             </Stack>

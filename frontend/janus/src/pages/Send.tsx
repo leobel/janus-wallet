@@ -22,7 +22,7 @@ export default function SendPage() {
   const [formattedAmount, setFormattedAmount] = useState('')
   const [recipient, setRecipient] = useState('')
   const [amount, setAmount] = useState<number>(0)
-  const [assets, setAssets] = useState<Record<string, number>>()
+  const [assets] = useState<Record<string, number>>()
   const [fees, setFees] = useState<TransactionFees | null>()
   const [tx, setTx] = useState('')
   const [txId, setTxId] = useState('')

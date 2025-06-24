@@ -104,6 +104,7 @@ function ScopedContent() {
             const witnessSet = await walletSignTx(wallet.api, unsignedTx)
 
             const txId = await mintAccount(user.id, unsignedTx, witnessSet)
+            console.log('Mint TxId:', txId)
 
             setAuth({ user })
             navigate('/')
@@ -121,10 +122,6 @@ function ScopedContent() {
 
     function nextStep() {
         setActiveStep(prev => prev + 1)
-    }
-
-    function previuosStep() {
-        setActiveStep(prev => prev - 1)
     }
 
     async function verifyUserExist() {

@@ -346,7 +346,6 @@ function convertCertificate(cert: CML.Certificate): Certificate {
             }
         }
         case CML.CertificateKind.VoteDelegCert: {
-            console.log("Herererererererere!!!!")
             const c = cert.as_vote_deleg_cert()!
             return {
                 DelegateCredential: {
@@ -576,6 +575,7 @@ function getChallengeScriptReference(script: CML.Script | undefined): string | n
     return null
 }
 
+// @ts-ignore
 function getValue(assets: Assets): Value {
     const value = new Map<string, Map<string, bigint>>()
 
@@ -597,6 +597,7 @@ function getValue(assets: Assets): Value {
     return Data.from(serialise, Value)
 }
 
+// @ts-ignore
 function getDatum(dataHash?: string | null, data?: string | null): Datum {
     if (dataHash) {
         return { DatumHash: [dataHash] }

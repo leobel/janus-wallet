@@ -5,23 +5,6 @@ import type { Drep, DrepType, FixedDrepType } from "../models/drep"
 
 export const Lovelace = 1_000_000
 
-const feeAlgo = CML.LinearFee.new(
-    BigInt(44),
-    BigInt(155381),
-    BigInt(15),
-)
-
-const exUnitsPrices = CML.ExUnitPrices.new(
-    CML.Rational.new(
-        BigInt(0.0577 * 100_000_000),
-        100_000_000n,
-    ),
-    CML.Rational.new(
-        BigInt(0.0000721 * 100_000_000),
-        100_000_000n,
-    ),
-)
-
 export function toLovelace(num: number): number {
     return Math.floor(num * Lovelace)
 }
@@ -98,7 +81,7 @@ function getAssetsFee(tx: CML.Transaction, assets: Record<string, number>): numb
     return assetFees
 }
 
-function mergeAssets(a: Record<string, number>, b: Record<string, number>): Record<string, number> {
+export function mergeAssets(a: Record<string, number>, b: Record<string, number>): Record<string, number> {
     return Object.entries(b).reduce((acc, [key, value]) => ({ ...acc, [key]: (acc[key] || 0) + value }), a)
 }
 

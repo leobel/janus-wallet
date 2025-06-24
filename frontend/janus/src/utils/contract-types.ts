@@ -2,7 +2,6 @@ import { Data } from "@lucid-evolution/lucid";
 
 const HashBlake2b224Schema = Data.Bytes({ minLength: 28, maxLength: 28 });
 const HashBlake2b256Schema = Data.Bytes({ minLength: 32, maxLength: 32 });
-const DataHashSchema = HashBlake2b256Schema;
 const StakePoolIdSchema = HashBlake2b224Schema;
 
 const PolicyIdSchema = Data.Bytes({ minLength: 0, maxLength: 28 });;

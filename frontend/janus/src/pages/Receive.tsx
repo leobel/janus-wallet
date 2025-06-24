@@ -1,6 +1,6 @@
 import Typography from '@mui/material/Typography';
 import useAuth from '../hooks/useAuth';
-import { Box, Paper } from '@mui/material';
+import { Box } from '@mui/material';
 import { QRCodeSVG } from 'qrcode.react';
 import Address from '../components/Address';
 

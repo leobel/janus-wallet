@@ -1,11 +1,5 @@
-import { assetsToValue, CML, Data, fromHex, type Cardano, type WalletApi, type Assets, Lucid, Blockfrost, type Network, fromText, type UTxO } from "@lucid-evolution/lucid"
+import { assetsToValue, CML, Data, fromHex, type WalletApi, type Assets, Lucid, Blockfrost, type Network, fromText } from "@lucid-evolution/lucid"
 import AssetFingerprint from '@emurgo/cip14-js'
-
-// declare global {
-//     interface Window {
-//         cardano: Cardano
-//     }
-// }
 
 const AccountDatumSchema = Data.Object({
     user_id: Data.Bytes(),
@@ -63,13 +57,10 @@ export function getSupportedWallets(): SupportedWallet[] {
 }
 
 export async function openWallet(wallet: SupportedWallet): Promise<WalletApi> {
-    // const enable = await isEnable(wallet.code)
-    // if (!enable) {
-    //     throw new Error(`Wallet: ${wallet.code} is not enable`)
-    //     //show connecting wallet UI
-    //     // this.closePaymentOptionsView()
-    //     // this.openWalletConnectingView(option)
-    // }
+    const enable = await isEnable(wallet.code)
+    if (!enable) {
+        throw new Error(`Wallet: ${wallet.code} is not enable`)
+    }
     try {
         const api = await open(wallet.code)
         if (!api) {
@@ -224,8 +215,8 @@ function filterUtxos(utxos: string[], utxoCostPerByte: bigint): { amount: number
 }
 
 
-async function isEnable(wallet: string): Promise<boolean> {
-    return window.cardano[wallet].isEnabled()
+async function isEnable(walletCode: string): Promise<boolean> {
+    return window.cardano[walletCode].isEnabled()
 }
 
 async function open(walletCode: string): Promise<WalletApi | undefined> {
@@ -309,7 +300,7 @@ export function mapFlatAssets(multiAssets: CML.MultiAsset): Record<string, bigin
     return result
 }
 
-function mapAssetsToTokens(assets: Record<string, Record<string, number>>, encode = 'fingerprint'): Record<string, number> {
+export function mapAssetsToTokens(assets: Record<string, Record<string, number>>, encode = 'fingerprint'): Record<string, number> {
     if (encode == 'fingerprint') {
         return Object.entries(assets).reduce((dict, [policy, tokens]) => {
             const policyTokens = Object.entries(tokens).reduce((acc, [assetName, quantity]) => {

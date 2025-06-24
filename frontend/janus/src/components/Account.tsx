@@ -6,18 +6,10 @@ import Popover, { type PopoverProps } from '@mui/material/Popover';
 import Divider from '@mui/material/Divider';
 import Stack, { type StackProps } from '@mui/material/Stack';
 import { AccountPreview, type AccountPreviewProps } from './AccountPreview';
-import {  AccountPopoverHeader, SessionContext, useLocaleText, type LocaleText } from '@toolpad/core';
+import {  AccountPopoverHeader, useLocaleText, type LocaleText } from '@toolpad/core';
 import { SignInButton, SignOutButton, AccountPopoverFooter } from '@toolpad/core';
 import { AccountLocaleContext } from './AccountLocalContext';
 import AuthContext from '../context/AuthProvider';
-// import { SignInButton } from './SignInButton';
-// import { SignOutButton } from './SignOutButton';
-// import { AccountPreview, type AccountPreviewProps } from './AccountPreview';
-// import { AccountPopoverHeader } from './AccountPopoverHeader';
-// import { AccountPopoverFooter } from './AccountPopoverFooter';
-// import { SessionContext, AuthenticationContext } from '../AppProvider/AppProvider';
-// import { useLocaleText, type LocaleText } from '../AppProvider/LocalizationProvider';
-// import { AccountLocaleContext } from './AccountLocaleContext';
 
 interface AccountLocaleText {
   accountSignInLabel: string;
