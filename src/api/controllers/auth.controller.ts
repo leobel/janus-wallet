@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, type CookieOptions } from 'express';
 import { ACCESS_TOKEN_KEY, generateAccessToken, generateRefreshToken, getUserByCredentials, isLoggedIn, REFRESH_TOKEN_KEY, refreshToken, removeToken, userExist } from '../services/auth.service';
 import { Network, toText } from '@lucid-evolution/lucid';
 import { createAccountTx } from '../services/wallet.service';
@@ -61,19 +61,24 @@ function addCookies(user: User, res: Response<any, Record<string, any>>) {
     const accessToken = generateAccessToken(data, accessExpiresIn);
     const refreshToken = generateRefreshToken(data, refreshExpiresIn);
 
+    const isProduction = process.env.NODE_ENV === 'production'
+    const secure = isProduction
+    const config: Partial<CookieOptions> = {
+        secure,
+        domain: isProduction ? process.env.DOMAIN : "localhost",
+        sameSite: isProduction ? "none" : "lax",
+    }
+
     // Set cookies
     res.cookie(ACCESS_TOKEN_KEY, accessToken, {
         httpOnly: true, // frontend have access to it.
-        secure: false, // TODO: set it true on production
-        domain: "localhost",
-        sameSite: 'lax',
         maxAge: accessExpiresIn * 1000, // 15 minutes
+        ...config
     });
     res.cookie(REFRESH_TOKEN_KEY, refreshToken, {
         httpOnly: true,
-        secure: false, // TODO: set it true on production
-        sameSite: 'lax',
         maxAge: refreshExpiresIn * 1000,
+        ...config
     });
 }
 
