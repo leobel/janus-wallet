@@ -57,10 +57,6 @@ export function getSupportedWallets(): SupportedWallet[] {
 }
 
 export async function openWallet(wallet: SupportedWallet): Promise<WalletApi> {
-    const enable = await isEnable(wallet.code)
-    if (!enable) {
-        throw new Error(`Wallet: ${wallet.code} is not enable`)
-    }
     try {
         const api = await open(wallet.code)
         if (!api) {
@@ -214,7 +210,7 @@ function filterUtxos(utxos: string[], utxoCostPerByte: bigint): { amount: number
     return wUtxos.filter(i => i.amount > 0)
 }
 
-
+// @ts-ignore
 async function isEnable(walletCode: string): Promise<boolean> {
     return window.cardano[walletCode].isEnabled()
 }
