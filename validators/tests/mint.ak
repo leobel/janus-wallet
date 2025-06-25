@@ -20,7 +20,7 @@ test mint_account_ok() {
   let policyId = #"92f2a8a5a3d76c31623ef7919b90d7bae4ad9176787f0883dd8c2f51"
   let script_hash = #"92f2a8a5a3d76c31623ef7919b90d7bae4ad9176787f0883dd8c2f50"
   let assetName = #"466f6e74757323303030"
-  let datum = get_datum(assetName)
+  let datum = get_datum(assetName, script_hash)
   let mint = assets.from_asset_list([Pair(policyId, [Pair(assetName, 1)])])
   let addr =
     Address { payment_credential: Script(script_hash), stake_credential: None }
@@ -86,7 +86,42 @@ test mint_account_different_user_id() fail {
   let policyId = #"92f2a8a5a3d76c31623ef7919b90d7bae4ad9176787f0883dd8c2f51"
   let script_hash = #"92f2a8a5a3d76c31623ef7919b90d7bae4ad9176787f0883dd8c2f50"
   let assetName = #"466f6e74757323303030"
-  let datum = get_datum(#"1234")
+  let datum = get_datum(#"1234", script_hash)
+  let mint = assets.from_asset_list([Pair(policyId, [Pair(assetName, 1)])])
+  let addr =
+    Address { payment_credential: Script(script_hash), stake_credential: None }
+  let address = with_delegation_script(addr, script_hash)
+  let tx =
+    Transaction {
+      ..transaction.placeholder,
+      mint: mint,
+      outputs: [
+        Output {
+          address,
+          value: assets.merge(assets.from_lovelace(1000000), mint),
+          datum: InlineDatum(datum),
+          reference_script: None,
+        },
+      ],
+      extra_signatories: [params.owner],
+    }
+  janus.wallet.mint(params, rdmr, policyId, tx)
+}
+
+test mint_account_different_output_script() fail {
+  let params =
+    WalletParameters {
+      version: 0,
+      owner: #"000000000000000000000000",
+      nounce: #"000000000000000000000000",
+    }
+  let rdmr = CreateAccount
+  let policyId = #"92f2a8a5a3d76c31623ef7919b90d7bae4ad9176787f0883dd8c2f51"
+  let script_hash = #"92f2a8a5a3d76c31623ef7919b90d7bae4ad9176787f0883dd8c2f50"
+  let other_script_hash =
+    #"92f2a8a5a3d76c31623ef7919b90d7bae4ad9176787f0883dd8c2f51"
+  let assetName = #"466f6e74757323303030"
+  let datum = get_datum(assetName, other_script_hash)
   let mint = assets.from_asset_list([Pair(policyId, [Pair(assetName, 1)])])
   let addr =
     Address { payment_credential: Script(script_hash), stake_credential: None }
@@ -117,8 +152,9 @@ test mint_account_send_to_same_script() fail {
     }
   let rdmr = CreateAccount
   let policyId = #"92f2a8a5a3d76c31623ef7919b90d7bae4ad9176787f0883dd8c2f51"
+  let script_hash = #"2001b7fbb6f955482edc974b2afd47ca11d259707e0e5207498eb595"
   let assetName = #"466f6e74757323303030"
-  let datum = get_datum(assetName)
+  let datum = get_datum(assetName, script_hash)
   let mint = assets.from_asset_list([Pair(policyId, [Pair(assetName, 1)])])
   let addr =
     Address { payment_credential: Script(policyId), stake_credential: None }
@@ -149,8 +185,9 @@ test mint_account_send_to_pub_prv_key() fail {
     }
   let rdmr = CreateAccount
   let policyId = #"92f2a8a5a3d76c31623ef7919b90d7bae4ad9176787f0883dd8c2f51"
+  let scriptHash = #"2001b7fbb6f955482edc974b2afd47ca11d259707e0e5207498eb595"
   let assetName = #"466f6e74757323303030"
-  let datum = get_datum(assetName)
+  let datum = get_datum(assetName, scriptHash)
   let mint = assets.from_asset_list([Pair(policyId, [Pair(assetName, 1)])])
   let addr =
     Address {
@@ -340,14 +377,14 @@ test mint_circuit_send_to_pub_prv_script() fail {
   janus.wallet.mint(params, rdmr, policy_id, tx)
 }
 
-fn get_datum(user_id: ByteArray) -> AccountDatum {
+fn get_datum(user_id: ByteArray, script_hash: ByteArray) -> AccountDatum {
   let hash =
     bytearray.from_int_big_endian(
       10343661163184219313272354919635983875711247223011266158462328948931637363678,
       32,
     )
   let nonce = #"1234567890"
-  AccountDatum { user_id, hash, nonce }
+  AccountDatum { user_id, hash, nonce, script_hash }
 }
 
 fn get_zkey() -> ZkVerificationKey {

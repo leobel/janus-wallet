@@ -21,10 +21,11 @@ test spend_evaluating_real_script() {
     )
   let zkey = get_zkey()
   let nonce = #"1234567890"
-  let accountData = AccountDatum { user_id, hash, nonce }
+  let scriptHash = #"a1715c515e4b0d213115f5faada8f0daf93598297cfc65166e2bbd2d"
+  let accountData =
+    AccountDatum { user_id, hash, nonce, script_hash: scriptHash }
   let scriptTxId =
     #"3658cf03ab7407f816548e5a465b6f51779be54bb45f57155776864e454804ac"
-  let scriptHash = #"a1715c515e4b0d213115f5faada8f0daf93598297cfc65166e2bbd2d"
   let address = get_script_address(scriptHash)
   let policy_id = #"b8a5e329b500a66376047165cdfce62c3ecf245fd81d101533f81422"
   let asset_name = #"466f6e74757323303030"
@@ -179,10 +180,11 @@ test spend_evaluating_script() {
     )
   let zkey = get_zkey()
   let nonce = #"1234567890"
-  let accountData = AccountDatum { user_id, hash, nonce }
+  let scriptHash = #"a1715c515e4b0d213115f5faada8f0daf93598297cfc65166e2bbd2d"
+  let accountData =
+    AccountDatum { user_id, hash, nonce, script_hash: scriptHash }
   let scriptTxId =
     #"3658cf03ab7407f816548e5a465b6f51779be54bb45f57155776864e454804ac"
-  let scriptHash = #"a1715c515e4b0d213115f5faada8f0daf93598297cfc65166e2bbd2d"
   let address = get_script_address(scriptHash)
   let policy_id = #"b8a5e329b500a66376047165cdfce62c3ecf245fd81d101533f81422"
   let asset_name = #"466f6e74757323303030"

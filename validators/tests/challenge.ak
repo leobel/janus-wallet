@@ -30,15 +30,12 @@ test build_challenge_ok() {
   let zkey = get_zkey()
   let nonce =
     #"37333665633465662d393332382d343966362d396230332d303464313237653161613662"
-  let account_datum = AccountDatum { user_id, hash, nonce }
+  let script_hash = #"2001b7fbb6f955482edc974b2afd47ca11d259707e0e5207498eb595"
+  let account_datum = AccountDatum { user_id, hash, nonce, script_hash }
   let policy_id = #"3c692631872308ff1f9fed102b940aecee160def9c2478b50b977091"
   let asset_name = #"466f6e74757323303034"
   let circuit_asset_name = #"4369726375697423303030"
-  let address =
-    get_script_address(
-      #"2001b7fbb6f955482edc974b2afd47ca11d259707e0e5207498eb595",
-      Some(#"2001b7fbb6f955482edc974b2afd47ca11d259707e0e5207498eb595"),
-    )
+  let address = get_script_address(script_hash, Some(script_hash))
   let circuit_input =
     Input {
       output_reference: OutputReference {
@@ -148,14 +145,11 @@ test build_challenge_ok_1() {
   let zkey = get_zkey()
   let nonce =
     #"63306531613062352d663339642d343432652d383462622d373463306335396265623439"
-  let account_datum = AccountDatum { user_id, hash, nonce }
+  let script_hash = #"3daf6abb8d762de665c903ca085d9b32a05cc1dd20745e0b07577577"
+  let account_datum = AccountDatum { user_id, hash, nonce, script_hash }
   let policy_id = #"cadc50649cd1daf6e0dea610dd9392a8be1c8e6ac570dc3773101f97"
   let circuit_asset_name = #"4369726375697423303032"
-  let address =
-    get_script_address(
-      #"3daf6abb8d762de665c903ca085d9b32a05cc1dd20745e0b07577577",
-      Some(#"3daf6abb8d762de665c903ca085d9b32a05cc1dd20745e0b07577577"),
-    )
+  let address = get_script_address(script_hash, Some(script_hash))
   let circuit_input =
     Input {
       output_reference: OutputReference {
@@ -268,14 +262,11 @@ test build_challenge_register_and_delegate() {
   let zkey = get_zkey()
   let nonce =
     #"62396164306461352d383830652d343031322d626534302d643933313466633064303138"
-  let account_datum = AccountDatum { user_id, hash, nonce }
+  let script_hash = #"63e4e268784458a25a06923eea5f380cb43e71db700eb02538c1e065"
+  let account_datum = AccountDatum { user_id, hash, nonce, script_hash }
   let policy_id = #"cadc50649cd1daf6e0dea610dd9392a8be1c8e6ac570dc3773101f97"
   let circuit_asset_name = #"4369726375697423303032"
-  let address =
-    get_script_address(
-      #"63e4e268784458a25a06923eea5f380cb43e71db700eb02538c1e065",
-      Some(#"63e4e268784458a25a06923eea5f380cb43e71db700eb02538c1e065"),
-    )
+  let address = get_script_address(script_hash, Some(script_hash))
   let circuit_address = get_script_address(policy_id, Some(policy_id))
   let circuit_input =
     Input {

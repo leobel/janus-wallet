@@ -28,16 +28,18 @@ export async function createAccountTx(username: string, network: Network, hash: 
     
     const addrNonce = fromText(nonce || randomUUID())
     const tokenName = fromText(username);
+    
+    const mintRedeemer: MintRedeemer = "CreateAccount";
+    const { spend, spendAddress, scriptHash } = generateSpendScript(validators.spend.script, network, policy_id, asset_name, tokenName, hash, kdfHash, addrNonce)
+
     const _datum: AccountDatum = {
         user_id: tokenName,
         hash: kdfHash, // bcrypt.hash(...)
-        nonce: addrNonce
+        nonce: addrNonce,
+        script_hash: scriptHash
     }
     const datum = Data.to(_datum, AccountDatum);
     console.log('Datum', datum);
-
-    const mintRedeemer: MintRedeemer = "CreateAccount";
-    const { spend, spendAddress } = generateSpendScript(validators.spend.script, network, policy_id, asset_name, tokenName, hash, kdfHash, addrNonce)
 
     const signerKeys = getUtxoSignerKeys(utxos)
     const prvKeys = signerKeys.map(_ => fakePrvKey)

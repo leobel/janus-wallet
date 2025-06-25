@@ -20,9 +20,9 @@ test verify_challenge_certs() {
     )
   let nonce = #"1234567890"
   let zkey = get_zkey()
-  let accountData = AccountDatum { user_id, hash, nonce }
-  let scriptHash = #"45e7ce17366d83c4c25d37ec2f9039cb614a305fdb4bead40f424876"
-  let address = get_script_address(scriptHash)
+  let script_hash = #"45e7ce17366d83c4c25d37ec2f9039cb614a305fdb4bead40f424876"
+  let accountData = AccountDatum { user_id, hash, nonce, script_hash }
+  let address = get_script_address(script_hash)
   let policy_id = #"b8a5e329b500a66376047165cdfce62c3ecf245fd81d101533f81422"
   let assetName = #"466f6e74757323303030"
   let circuit_asset_name = #"466f6e74757323303031"
@@ -59,7 +59,7 @@ test verify_challenge_certs() {
     }
   let cert =
     RegisterAndDelegateCredential {
-      credential: Script(scriptHash),
+      credential: Script(script_hash),
       delegate: DelegateBlockProduction {
         stake_pool: #"094dc39da2d8434f9ddb93749a1930288e5dd89ae04fa5914e157bd6",
       },

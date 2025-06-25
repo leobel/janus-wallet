@@ -63,12 +63,12 @@ validator wallet(params: WalletParameters) {
           trace @"output": output.address.payment_credential
           when output.address.payment_credential is {
             VerificationKey(_) -> False
-            Script(script_hash) -> {
+            Script(addr_hash) -> {
               // token not sent to this script address
-              expect policy_id != script_hash
+              expect policy_id != addr_hash
               expect InlineDatum(data) = output.datum
-              expect AccountDatum { user_id, .. } = data
-              asset_name == user_id
+              expect AccountDatum { user_id, script_hash, .. } = data
+              asset_name == user_id && addr_hash == script_hash
             }
           }
         }
@@ -133,7 +133,7 @@ validator account(params: AccountParameters) {
           |> find_account_input(policy_id, asset_name)
       expect InlineDatum(data) = account_input.output.datum
       trace @"AccountDatum": data
-      expect AccountDatum { user_id, hash: kdf_hash, nonce } = data
+      expect AccountDatum { user_id, hash: kdf_hash, nonce, .. } = data
       trace @"datum userId": user_id
       trace @"params userId": asset_name
       trace @"signals userId": signals.user_id

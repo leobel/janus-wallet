@@ -25,6 +25,7 @@ pub type AccountDatum {
   user_id: ByteArray,
   hash: ByteArray,
   nonce: ByteArray,
+  script_hash: ScriptHash,
 }
 
 pub type PubSignals {

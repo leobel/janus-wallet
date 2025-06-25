@@ -145,7 +145,7 @@ function getUtxoAddressPaymentHash(utxo: string | UTxO): string | undefined {
         if (credential) {
             return credential.kind() == CML.CredentialKind.PubKey ? credential.as_pub_key()!.to_hex() : credential.as_script()!.to_hex()
         }
-        return 
+        return
     }
 
     const credential = getAddressDetails(utxo.address).paymentCredential
@@ -159,7 +159,7 @@ export function buildMintAssetsTx(cborTx: string, keyWitnessSet: string, fakePrv
     const body = tx.body()
     const witnessSet = tx.witness_set()
     const fakeHash = fakePrvKey.to_public().hash().to_hex()
-    const {keys: vKeyWitnesses, map} = buildKeyWitnessesMap(witnessSet.vkeywitnesses(), fakeHash)
+    const { keys: vKeyWitnesses, map } = buildKeyWitnessesMap(witnessSet.vkeywitnesses(), fakeHash)
 
     // add collateral signature
     const collateralWitness = signCollateral(body)
@@ -167,12 +167,12 @@ export function buildMintAssetsTx(cborTx: string, keyWitnessSet: string, fakePrv
     if (!map[collateralPubKeyHash]) {
         vKeyWitnesses.add(collateralWitness)
     }
-    
+
     // add key witness signatures
     const txWitnessSet = CML.TransactionWitnessSet.from_cbor_hex(keyWitnessSet)
     const vkeywitnesses = txWitnessSet.vkeywitnesses()
     if (vkeywitnesses) {
-        for (let i = 0; i < vkeywitnesses.len(); i++){
+        for (let i = 0; i < vkeywitnesses.len(); i++) {
             const witness = vkeywitnesses.get(i)
             const hash = witness.vkey().hash().to_hex()
             if (fakeHash != hash && !map[witness.vkey().hash().to_hex()]) {
@@ -191,11 +191,11 @@ export function buildMintAssetsTx(cborTx: string, keyWitnessSet: string, fakePrv
     );
 }
 
-function buildKeyWitnessesMap(vKeyWitnesses: CML.VkeywitnessList | undefined, fakeHash: string): {keys: CML.VkeywitnessList, map: Record<string, boolean>} {
+function buildKeyWitnessesMap(vKeyWitnesses: CML.VkeywitnessList | undefined, fakeHash: string): { keys: CML.VkeywitnessList, map: Record<string, boolean> } {
     const keys = CML.VkeywitnessList.new()
     const map: Record<string, boolean> = {}
     if (vKeyWitnesses) {
-        for (let i = 0; i < vKeyWitnesses.len(); i++){
+        for (let i = 0; i < vKeyWitnesses.len(); i++) {
             const witness = vKeyWitnesses.get(i)
             const hash = witness.vkey().hash().to_hex()
             if (hash !== fakeHash && !map[hash]) {
@@ -204,7 +204,7 @@ function buildKeyWitnessesMap(vKeyWitnesses: CML.VkeywitnessList | undefined, fa
             }
         }
     }
-    return {keys, map}
+    return { keys, map }
 }
 
 export async function buildSpendTx(
@@ -225,29 +225,21 @@ export async function buildSpendTx(
     options?: CompleteOptions) {
 
     // use eval redeemer and reference datum to pass all onchain checks
-    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof;
-    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
+    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof
+    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0)
+
+    // get for validation script
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress, scriptHash } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true)
 
     const [circuitRefInput, userRefInput] = referenceInputs
-
-    // const evalReferenceInputs = referenceInputs.map(input => {
-    //     return {
-    //         ...input,
-    //         datum: evalReferenceDatum
-    //     }
-    // });
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
         assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
-        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce }, AccountDatum)
+        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce, script_hash: scriptHash }, AccountDatum)
     }]
 
-    // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true);
-    console.log('Eval Spend Address:', evalSpendAddress);
-    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script))
-        .hash()
-        .to_hex());
+    console.log('Eval Spend Address:', evalSpendAddress)
+    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex())
     const scriptIncrements: ScriptIncrements[] = [];
 
     const evalInputs = inputs.map((input, i) => {
@@ -341,25 +333,26 @@ export async function registerAndDelegateTx(
     options?: CompleteOptions) {
 
     // use eval redeemer and reference datum to pass all onchain checks
-    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof;
-    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
+    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof
+    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0)
+    
+    const publish: PublishRedeemer = "RegisterAndDelegate"
+    const publishRedeemer = Data.to(publish, PublishRedeemer)
+    
+    // get for validation script
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress, scriptHash } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true)
 
     const [circuitRefInput, userRefInput] = referenceInputs
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
         assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
-        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce }, AccountDatum)
+        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce, script_hash: scriptHash }, AccountDatum)
     }]
 
-    const publish: PublishRedeemer = "RegisterAndDelegate";
-    const publishRedeemer = Data.to(publish, PublishRedeemer);
-
-    // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true);
-    const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
-    console.log('Eval Spend Address:', evalSpendAddress);
-    console.log('Eval Reward Address:', evalRewardAddress);
-    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex());
+    const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript)
+    console.log('Eval Spend Address:', evalSpendAddress)
+    console.log('Eval Reward Address:', evalRewardAddress)
+    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex())
 
     const evalInputs = inputs.map((input, i) => {
         if (input.address === spendAddress) {
@@ -424,25 +417,26 @@ export async function delegateTx(
     options?: CompleteOptions) {
 
     // use eval redeemer and reference datum to pass all onchain checks
-    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof;
-    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
+    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof
+    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0)
+
+    const publish: PublishRedeemer = "Delegate"
+    const publishRedeemer = Data.to(publish, PublishRedeemer)
+
+    // get for validation script
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress, scriptHash } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true)
 
     const [circuitRefInput, userRefInput] = referenceInputs
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
         assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
-        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce }, AccountDatum)
+        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce, script_hash: scriptHash }, AccountDatum)
     }]
 
-    const publish: PublishRedeemer = "Delegate";
-    const publishRedeemer = Data.to(publish, PublishRedeemer);
-
-    // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true);
-    const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
-    console.log('Eval Spend Address:', evalSpendAddress);
-    console.log('Eval Reward Address:', evalRewardAddress);
-    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex());
+    const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript)
+    console.log('Eval Spend Address:', evalSpendAddress)
+    console.log('Eval Reward Address:', evalRewardAddress)
+    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex())
 
     const evalInputs = inputs.map((input, i) => {
         if (input.address === spendAddress) {
@@ -505,25 +499,26 @@ export async function delegateDrepTx(
     options?: CompleteOptions) {
 
     // use eval redeemer and reference datum to pass all onchain checks
-    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof;
-    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
+    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof
+    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0)
+
+    const publish: PublishRedeemer = "DelegateDRep"
+    const publishRedeemer = Data.to(publish, PublishRedeemer)
+
+    // get for validation script
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress, scriptHash } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true);
 
     const [circuitRefInput, userRefInput] = referenceInputs
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
         assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
-        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce }, AccountDatum)
+        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce, script_hash: scriptHash }, AccountDatum)
     }]
 
-    const publish: PublishRedeemer = "DelegateDRep";
-    const publishRedeemer = Data.to(publish, PublishRedeemer);
-
-    // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true);
-    const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
-    console.log('Eval Spend Address:', evalSpendAddress);
-    console.log('Eval Reward Address:', evalRewardAddress);
-    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex());
+    const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript)
+    console.log('Eval Spend Address:', evalSpendAddress)
+    console.log('Eval Reward Address:', evalRewardAddress)
+    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex())
 
     const evalInputs = inputs.map((input, i) => {
         if (input.address === spendAddress) {
@@ -586,25 +581,26 @@ export async function withdrawTx(
     options?: CompleteOptions) {
 
     // use eval redeemer and reference datum to pass all onchain checks
-    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof;
-    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0);
+    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof
+    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, 0, 0, 0)
+
+    const withdraw: WithdrawRedeemer = "Withdraw"
+    const withdrawRedeemer = Data.to(withdraw, WithdrawRedeemer)
+
+    // get for validation script
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress, scriptHash } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true)
 
     const [circuitRefInput, userRefInput] = referenceInputs
     const evalReferenceInputs = [circuitRefInput, {
         ...userRefInput,
         assets: { ...userRefInput.assets, [`${policyId}${userId}`]: userRefInput.assets[`${policyId}${tokenName}`] },
-        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce }, AccountDatum)
+        datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce, script_hash: scriptHash }, AccountDatum)
     }]
 
-    const withdraw: WithdrawRedeemer = "Withdraw";
-    const withdrawRedeemer = Data.to(withdraw, WithdrawRedeemer);
-
-    // get for validation script
-    const { spend: evalSpendScript, spendAddress: evalSpendAddress } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true);
-    const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript);
-    console.log('Eval Spend Address:', evalSpendAddress);
-    console.log('Eval Reward Address:', evalRewardAddress);
-    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex());
+    const evalRewardAddress = validatorToRewardAddress(network, evalSpendScript)
+    console.log('Eval Spend Address:', evalSpendAddress)
+    console.log('Eval Reward Address:', evalRewardAddress)
+    console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex())
 
     const evalInputs = inputs.map((input, i) => {
         if (input.address === spendAddress) {
@@ -853,7 +849,8 @@ export function generateSpendScript(
 
     return {
         spend,
-        spendAddress
+        spendAddress,
+        scriptHash
     };
 }
 
@@ -2060,7 +2057,7 @@ function convertInputs(txInputList: CML.TransactionInputList): OutputReference[]
 }
 
 function sortOutRefs(outs: OutRef[]): OutRef[] {
-    return sortUTxOs(outs.map(out => ({...out, address: "", assets: {}})), "Canonical")
+    return sortUTxOs(outs.map(out => ({ ...out, address: "", assets: {} })), "Canonical")
 }
 
 function convertOutputs(outputs: CML.TransactionOutputList): ChallengeOutput[] {
