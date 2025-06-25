@@ -133,7 +133,12 @@ validator account(params: AccountParameters) {
           |> find_account_input(policy_id, asset_name)
       expect InlineDatum(data) = account_input.output.datum
       trace @"AccountDatum": data
-      expect AccountDatum { user_id, hash: kdf_hash, nonce, .. } = data
+      expect AccountDatum { user_id, hash: kdf_hash, nonce, script_hash } = data
+      expect Some(input) =
+        inputs
+          |> transaction.find_input(self_ref)
+      expect Script(addr_hash) = input.output.address.payment_credential
+      expect addr_hash == script_hash
       trace @"datum userId": user_id
       trace @"params userId": asset_name
       trace @"signals userId": signals.user_id
@@ -243,7 +248,6 @@ validator account(params: AccountParameters) {
     }
   }
 
-  // TODO: don't build this until have tested, current withdraw and delegate to another pool(previuosly delegated)
   withdraw(_redeemer: Data, credential: Credential, self_tx: Transaction) {
     let Transaction { inputs, outputs, fee, withdrawals, .. } = self_tx
     expect Script(script_hash) = credential
@@ -264,9 +268,6 @@ validator account(params: AccountParameters) {
     trace @"rewards to withdraw:": rewards
     trace @"fee:": fee
     output_lovelace == input_lovelace + rewards - fee
-    // when redeemer is {
-    //   Withdraw -> True
-    // }
   }
 
   else(_) {
