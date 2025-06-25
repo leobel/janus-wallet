@@ -229,10 +229,7 @@ pub fn find_account_output(
 ) -> Option<Output> {
   list.find(
     outputs,
-    fn(output) {
-      let Output { value, .. } = output
-      assets.quantity_of(value, policy_id, asset_name) == 1
-    },
+    fn(output) { assets.quantity_of(output.value, policy_id, asset_name) == 1 },
   )
 }
 

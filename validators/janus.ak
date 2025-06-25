@@ -11,7 +11,8 @@ use cardano/certificate.{
   RegisterCredential,
 }
 use cardano/transaction.{
-  InlineDatum, Input, Output, OutputReference, Transaction,
+  InlineDatum, Input, Output, OutputReference, Transaction, find_input,
+  find_script_outputs,
 }
 use types.{
   AccountDatum, AccountParameters, BurnAccount, CreateAccount, CreateCircuit,
@@ -75,6 +76,55 @@ validator wallet(params: WalletParameters) {
 
       BurnAccount -> todo
     }
+  }
+
+  // ONLY Update account token
+  spend(
+    datum: Option<AccountDatum>,
+    _redeemer: Data,
+    self_ref: OutputReference,
+    self_tx: Transaction,
+  ) {
+    expect Some(data) = datum
+    let Transaction { inputs, reference_inputs, outputs, .. } = self_tx
+    let AccountDatum { user_id: asset_name, hash: kdf_hash, nonce, script_hash } =
+      data
+    // get account script input UTxO. It contains the token's policy_id
+    expect Some(account_input) =
+      inputs
+        |> find_input(self_ref)
+    // get policy_id (first and only policy in the UTxO)
+    let value = assets.without_lovelace(account_input.output.value)
+    expect [policy_id] = assets.policies(value)
+    // get reference input UTxO. This tx is an updating pwd therefore current address is in inputs and need the reference UTxO
+    // datum on reference UTxO must be equal to script input UTxO
+    expect Some(ref_input) =
+      reference_inputs
+        |> find_account_input(policy_id, asset_name)
+    expect InlineDatum(ref_datum) = ref_input.output.datum
+    expect reference_data: AccountDatum = ref_datum
+    expect data == reference_data
+
+    // get token output UTxO. Token must be sent to the new address generated on the updating pwd process
+    expect Some(output) =
+      outputs
+        |> find_account_output(policy_id, asset_name)
+    expect Script(addr_hash) = output.address.payment_credential
+    expect InlineDatum(new_data) = output.datum
+    expect AccountDatum {
+      user_id,
+      hash: new_kdf_hash,
+      nonce: new_nonce,
+      script_hash: new_script_hash,
+    } = new_data
+
+    // check new datum data against old datum data
+    expect
+      asset_name == user_id && kdf_hash != new_kdf_hash && nonce != new_nonce && script_hash != new_script_hash && addr_hash == new_script_hash
+    // all output UTxOs are new script address
+    list.length(outputs) == list.length(
+      find_script_outputs(outputs, new_script_hash),
+    )
   }
 
   else(_) {
