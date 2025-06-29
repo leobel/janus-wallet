@@ -1,4 +1,5 @@
 import { db } from '../db/database.js'
+import type { Circuit } from '../models/circuit.js'
 import { User } from '../models/user.js'
 
 export const createUser = async (user: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<User> => {
@@ -12,13 +13,14 @@ export const createUser = async (user: Omit<User, 'id' | 'created_at' | 'updated
             policy_id: user.policy_id,
             nonce: user.nonce,
             spend_script: user.spend_script,
-            mint_utxo_ref: user.mint_utxo_ref
+            mint_utxo_ref: user.mint_utxo_ref,
+            circuit_id: user.circuit_id,
         })
         .returning('*')
     return newUser
 }
 
-export const updateUser = async (userId: string, data: Partial<Omit<User, 'id' | 'created_at' | 'updated_at'>>): Promise<User> => {
+export const updateUser = async (userId: string, data: Partial<Omit<User, 'id' | 'created_at'>>): Promise<User> => {
     const [user] = await db('users').where({ id: userId })
         .update(data)
         .returning('*')

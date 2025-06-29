@@ -646,6 +646,102 @@ export async function withdrawTx(
     })
 }
 
+export async function buildUpdateTokenMetadataTx(
+    lucid: LucidEvolution,
+    referenceInputs: UTxO[],
+    inputs: UTxO[],
+    metadata: string,
+    spendAddress: string,
+    spend: Script,
+    lovelace: bigint,
+    validTo: number,
+    receiptAddress: string,
+    // zkInput: ZkInput,
+    policyId: string,
+    tokenName: string,
+    circuitTokenName: string,
+    nonce: string,
+    network: Network,
+    options?: CompleteOptions) {
+
+    // use eval redeemer and reference datum to pass all onchain checks
+    const { userId, pwdHash, pwdKdfHash, challenge, pA, pB, pC } = evalZkProof
+    const assetName = `${policyId}${tokenName}`
+    const index = inputs.findIndex(utxo => utxo.assets && !!utxo.assets[assetName])
+    const evalSpendRedeemer = getSpendRedeemer(userId, pwdHash, challenge, pA, pB, pC, index, index, index)
+
+    // get for validation script
+    const { spend: evalSpendScript, spendAddress: evalSpendAddress, scriptHash } = generateSpendScript(validators.spend.script, network, policyId, circuitTokenName, userId, pwdHash, pwdKdfHash, nonce, true)
+
+    const [circuitRefInput] = referenceInputs
+    const evalAssetName = `${policyId}${userId}`
+    console.log('Asset Name:', assetName)
+    console.log('Eval Asset Name:', evalAssetName)
+    const evalInputDatum = Data.to({ user_id: userId, hash: pwdKdfHash, nonce, script_hash: scriptHash }, AccountDatum)
+    const evalReferenceInputs = [circuitRefInput]
+    const newDatum = Data.from(metadata, AccountDatum)
+    const evalOutputDatum = Data.to({ user_id: userId, hash: newDatum.hash, nonce: newDatum.nonce, script_hash: newDatum.script_hash }, AccountDatum)
+    console.log('Eval Spend Address:', evalSpendAddress)
+    console.log('Eval Script', evalSpendScript.script)
+    console.log('Eval Script hash', scriptHash)
+    const scriptIncrements: ScriptIncrements[] = [];
+
+    const evalInputs = inputs.map((input, i) => {
+        if (input.address === spendAddress) {
+            const {[assetName]: inputAssetValue, ...inputAssets} = input.assets
+            return {
+                ...input,
+                txHash: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // can't use real address when evaluating tx with external provider since it'll use real address instead or eval
+                outputIndex: i,
+                address: evalSpendAddress,
+                ...(inputAssetValue ? { assets: {...inputAssets, [evalAssetName]: inputAssetValue} } : {}),
+                ...(input.datum ? { datum: evalInputDatum } : {})
+            }
+        }
+        return input;
+    });
+
+    console.log("Eval Inputs:", evalInputs)
+    console.log("Eval Input Datum", evalInputDatum)
+    console.log("Eval Output Datum", evalOutputDatum)
+    const lucidConfig = lucid.config()
+    const assets = { [assetName]: 1n }
+    const evalAssets = { [evalAssetName]: 1n }
+    const { lovelace: datumLovelace } = getMinAda(assets, lucidConfig.protocolParameters!.coinsPerUtxoByte, receiptAddress, metadata)!
+
+    const params: UpdatePasswordTxParams = {
+        lucid,
+        referenceInputs,
+        inputs,
+        redeemers: [""],
+        scripts: [spend],
+        lovelace: lovelace - datumLovelace,
+        spendAddress,
+        validTo,
+        walletAddress: receiptAddress,
+        evalWalletAddress: receiptAddress,
+        // zkInput,
+        policyId,
+        tokenName,
+        network,
+        evalRedeemers: buildAllSpendRedeemers(evalSpendRedeemer, evalInputs.length, index),
+        evalScripts: [evalSpendScript],
+        scriptIncrements,
+        options,
+    };
+
+    return _buildUncheckedTx(params, evalInputs, evalReferenceInputs,
+        (params) => {
+            const { lucid, referenceInputs, inputs, redeemers, scripts, lovelace, validTo, evalRedeemers, evalScripts } = params as UpdatePasswordTxParams;
+            const spendRedeemers = evalRedeemers || redeemers;
+            const [spendScript] = evalScripts || scripts;
+            const datum = evalScripts ? evalOutputDatum : metadata
+            const outputAssets = evalScripts ? evalAssets : assets
+
+            return makeUpdateMetadataTxBuilderConfig(lucid, referenceInputs, inputs, datumLovelace, outputAssets, datum, spendRedeemers, spendScript, receiptAddress, lovelace, validTo);
+        })
+}
+
 async function _buildUncheckedTx(
     params: TxBuilderParams,
     evalInputs: UTxO[],
@@ -660,8 +756,9 @@ async function _buildUncheckedTx(
         referenceInputs: evalReferenceInputs,
         inputs: evalInputs,
         evalRedeemers: evalRedeemers,
-        evalScripts: evalScripts
+        evalScripts: evalScripts,
     });
+
     const collaterals = await getCollaterls(config);
 
     // Set collateral input if there are script executions
@@ -985,7 +1082,9 @@ export function evalTransaction(
     extraIncrements?: Map<CML.RedeemerTag, Map<number, number>>,
 ): ScriptEvaluation[] {
     const txEvaluation = setRedeemerstoZero(tx)!;
+    console.log('Tx:', txEvaluation.to_cbor_hex())
     const ins = txUtxos.map((utxo) => utxoToTransactionInput(utxo));
+    console.log("Tx Inputs:", txUtxos)
     const outs = txUtxos.map((utxo) => utxoToTransactionOutput(utxo));
     try {
         const uplcEval = UPLC.eval_phase_two_raw(
@@ -1174,6 +1273,27 @@ type SpendTxParams = {
     network: Network,
     evalRedeemers?: string[],
     evalScripts?: Script[],
+    evalOutputDatum?: string,
+    scriptIncrements?: ScriptIncrements[],
+    options?: CompleteOptions
+}
+type UpdatePasswordTxParams = {
+    lucid: LucidEvolution,
+    referenceInputs: UTxO[],
+    inputs: UTxO[],
+    redeemers: string[],
+    scripts: Script[],
+    spendAddress: string,
+    lovelace: bigint,
+    validTo: number,
+    walletAddress: string,
+    evalWalletAddress: string,
+    zkInput?: ZkInput,
+    policyId: string,
+    tokenName: string,
+    network: Network,
+    evalRedeemers?: string[],
+    evalScripts?: Script[],
     scriptIncrements?: ScriptIncrements[],
     options?: CompleteOptions
 }
@@ -1196,6 +1316,7 @@ type StakeAndDelegateTxParams = {
     network: Network,
     evalRedeemers?: string[],
     evalScripts?: Script[],
+    evalOutputDatum?: string,
     scriptIncrements?: ScriptIncrements[],
     options?: CompleteOptions
 }
@@ -1218,6 +1339,7 @@ type DelegateDRepTxParams = {
     network: Network,
     evalRedeemers?: string[],
     evalScripts?: Script[],
+    evalOutputDatum?: string,
     scriptIncrements?: ScriptIncrements[],
     options?: CompleteOptions
 }
@@ -1240,11 +1362,12 @@ type WithdrawRewardsTxParams = {
     network: Network,
     evalRedeemers?: string[],
     evalScripts?: Script[],
+    evalOutputDatum?: string,
     scriptIncrements?: ScriptIncrements[],
     options?: CompleteOptions
 }
 
-type TxBuilderParams = SpendTxParams | StakeAndDelegateTxParams | DelegateDRepTxParams | WithdrawRewardsTxParams;
+type TxBuilderParams = SpendTxParams | StakeAndDelegateTxParams | DelegateDRepTxParams | WithdrawRewardsTxParams | UpdatePasswordTxParams;
 
 async function buildFinalTx(tx: CML.Transaction, finalRedeemers: string[], costModels: CML.CostModels, extraSigners?: CML.PrivateKey[]): Promise<CML.Transaction> {
     const body = tx.body();
@@ -1341,8 +1464,8 @@ export function buildZKProofRedeemer(txCbor: string, zkInput: ZkInput, self_idx:
     return buildRedeemer(txBody, zkInput, self_idx, idx, jdx)
 }
 
-export function buildAllSpendRedeemers(redeemer: string, size: number): string[] {
-    return [redeemer, ...Array.from({ length: size - 1 }, (_, i) => buildDummySpendReedemer(i + 1, 0))]
+export function buildAllSpendRedeemers(redeemer: string, size: number, targetIndex = 0): string[] {
+    return Array.from({ length: size }, (_, i) => i === targetIndex ? redeemer : buildDummySpendReedemer(i, targetIndex))
 }
 
 export function buildDummySpendReedemer(self_idx: number, idx: number): string {
@@ -1377,6 +1500,38 @@ function makeSpendTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[
         .attach.SpendingValidator(spend)
         .pay.ToAddress(
             walletAddress,
+            {
+                lovelace: BigInt(lovelace),
+            }
+        )
+        .validTo(validTo)
+        .config();
+}
+
+function makeUpdateMetadataTxBuilderConfig(lucid: LucidEvolution, reference_inputs: UTxO[], inputs: UTxO[], datumLovelace: bigint, assets: Assets, datum: string, spendRedeemers: string[], spend: Script, walletAddress: string, lovelace: bigint, validTo: number) {
+    let txBuilder = lucid
+        .newTx()
+        .readFrom(reference_inputs)
+
+    for (let i = 0; i < inputs.length; i++) {
+        txBuilder = txBuilder.collectFrom([inputs[i]], spendRedeemers[i])
+    }
+
+    return txBuilder
+        // consume script
+        .attach.SpendingValidator(spend)
+        .pay.ToContract(
+            walletAddress,
+            {
+                kind: "inline",
+                value: datum,
+            },
+            {
+                lovelace: BigInt(datumLovelace),
+                ...assets
+            }
+        )
+        .pay.ToAddress(walletAddress,
             {
                 lovelace: BigInt(lovelace),
             }

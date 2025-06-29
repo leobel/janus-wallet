@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { spendWalletFunds, generateRedeemer, buildSpend, registerAndDelegate, delegate, delegateDrep, withdrawRewards, getWalletAccount, mintAccountTx, getStakingDetails } from '../services/wallet.service';
+import { spendWalletFunds, generateRedeemer, buildSpend, registerAndDelegate, delegate, delegateDrep, withdrawRewards, getWalletAccount, mintAccountTx, getStakingDetails, changeUserPwd } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
 import { parsePaginateParams } from '../../utils';
 import { getStakingRewardsHistory } from '../services/stake.service';
@@ -127,6 +127,17 @@ export default (network: Network) => {
     }
   }
 
+  const changePassword = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const { hash, kdf_hash, nonce } = req.body
+      const result = await changeUserPwd(userId, network, hash, kdf_hash, nonce)
+      res.status(200).json(result)
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
   // TODO: this should be done on the client side (e.g browser)
   const sign = async (req: Request, res: Response) => {
     try {
@@ -152,6 +163,7 @@ export default (network: Network) => {
   router.get('/stakingDetails', getStakingInfo)
   router.get('/rewards', getStakingRewards)
   router.post('/withdraw', withdraw)
+  router.post('/changePassword', changePassword)
   router.post('/sign', sign)
   router.post('/send', spendFunds)
 

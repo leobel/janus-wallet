@@ -23,3 +23,8 @@ export const getCircuit = async (): Promise<Circuit | null> => {
         .orderBy("version", "desc")
         .first()
 }
+
+export const getCircuitById = async (circuitId: string): Promise<Circuit | null> => {
+    return await db('circuits').where({ id: circuitId })
+        .first()
+}

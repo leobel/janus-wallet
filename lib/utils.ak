@@ -5,24 +5,19 @@ use aiken/builtin.{
 use aiken/cbor
 use aiken/collection/list
 use aiken/collection/pairs
-use aiken/crypto.{Blake2b_224, Hash, ScriptHash, blake2b_256}
+use aiken/crypto.{ScriptHash, blake2b_256}
 use aiken/crypto/bls12_381/g1
 use aiken/crypto/bls12_381/g2
 use aiken/crypto/bls12_381/scalar.{Scalar} as scalar
-use aiken/option
-use aiken/primitive/bytearray
-use cardano/address.{
-  Address, Inline, Referenced, Script, StakeCredential, VerificationKey,
-  with_delegation_script,
-}
+use cardano/address.{Address, Inline, Script}
 use cardano/assets.{AssetName, Lovelace, PolicyId, Value, lovelace_of} as assets
 use cardano/certificate.{Certificate}
 use cardano/transaction.{
   Datum, DatumHash, InlineDatum, Input, NoDatum, Output, OutputReference,
-  Redeemer, ScriptPurpose, Spend, Transaction,
+  Redeemer, ScriptPurpose, Spend, Transaction, find_script_outputs,
 }
 use types.{
-  Challenge, ChallengeId, ChallengeOutput, Proof, SpendRedeemer,
+  AccountDatum, Challenge, ChallengeId, ChallengeOutput, Proof, SpendRedeemer,
   ZkVerificationKey,
 }
 
@@ -286,7 +281,7 @@ pub fn pairing(g1: G1Element, g2: G2Element) -> MillerLoopResult {
 }
 
 pub fn build_challenge_certificates(
-  certificates: List<Certificate>,
+  _certificates: List<Certificate>,
 ) -> ByteArray {
   todo
 }
@@ -339,6 +334,48 @@ pub fn is_script_address(
   } else {
     True
   }
+}
+
+pub fn isAccountDatum(datum: Option<Data>) -> Option<AccountDatum> {
+  when datum is {
+    Some(data) ->
+      if data is AccountDatum {
+        Some(data)
+      } else {
+        None
+      }
+    _ -> None
+  }
+}
+
+pub fn validUpdateDatum(
+  data: AccountDatum,
+  outputs: List<Output>,
+  policy_id: PolicyId,
+) -> Bool {
+  let AccountDatum { user_id: asset_name, hash: kdf_hash, nonce, script_hash } =
+    data
+
+  // get token output UTxO. Token must be sent to the new address generated on the updating pwd process
+  expect Some(output) =
+    outputs
+      |> find_account_output(policy_id, asset_name)
+  expect Script(addr_hash) = output.address.payment_credential
+  expect InlineDatum(new_data) = output.datum
+  expect AccountDatum {
+    user_id,
+    hash: new_kdf_hash,
+    nonce: new_nonce,
+    script_hash: new_script_hash,
+  } = new_data
+  trace @"New AccountDatum": new_data
+  // check new datum data against old datum data
+  expect
+    asset_name == user_id && kdf_hash != new_kdf_hash && nonce != new_nonce && script_hash != new_script_hash && addr_hash == new_script_hash
+  // all output UTxOs are new script address
+  (list.length(outputs) == list.length(
+    find_script_outputs(outputs, new_script_hash),
+  ))?
 }
 
 pub const stakeRegistrationDeposit: Lovelace = 2_000_000

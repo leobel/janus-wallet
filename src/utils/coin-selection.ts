@@ -5,7 +5,7 @@ type TokensOnly = Omit<Assets, "lovelace">
 // Tests showed that at least 50 inputs can be included, although it could be more (~85) if exUnits doesn't increase on each bypass script execution
 // Each bypass script execution is increasing exUnits because `list.at` is essentially a recursive func iterating over the collection until reaching the index (https://github.com/aiken-lang/stdlib/blob/2.2.0/lib/aiken/collection/list.ak#L133-L143).
 // There is a CIP to inlcude arrays to Plutus Core so look ups can be constant time O(1) see here: https://cips.cardano.org/cip/CIP-0138
-const COIN_SELECTION_INPUTS_LIMIT = 50
+export const COIN_SELECTION_INPUTS_LIMIT = 50
 
 interface CoinSelectionResult {
   inputs: UTxO[]

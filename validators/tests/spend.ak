@@ -437,6 +437,164 @@ test spend_evaluating_bypass() {
   janus.account.spend(params, None, redeemer, scriptOutputReference1, tx)
 }
 
+test spend_update_token() {
+  let user_id = #"466f6e74757323303030"
+  let hash =
+    bytearray.from_int_big_endian(
+      10343661163184219313272354919635983875711247223011266158462328948931637363678,
+      32,
+    )
+  let zkey = get_zkey()
+  let nonce = #"1234567890"
+  let scriptHash = #"a1715c515e4b0d213115f5faada8f0daf93598297cfc65166e2bbd2d"
+  let accountData =
+    AccountDatum { user_id, hash, nonce, script_hash: scriptHash }
+  let new_script_hash =
+    #"92f2a8a5a3d76c31623ef7919b90d7bae4ad9176787f0883dd8c2f51"
+  let new_hash =
+    bytearray.from_int_big_endian(
+      10343661163184219313272354919635983875711247223011266158462328948931637363679,
+      32,
+    )
+  let new_nonce = #"123456789a"
+  let new_datum =
+    AccountDatum {
+      user_id,
+      hash: new_hash,
+      nonce: new_nonce,
+      script_hash: new_script_hash,
+    }
+  let scriptTxId =
+    #"3658cf03ab7407f816548e5a465b6f51779be54bb45f57155776864e454804ac"
+  let address = get_script_address(scriptHash)
+  let new_address = get_script_address(new_script_hash)
+  let policy_id = #"b8a5e329b500a66376047165cdfce62c3ecf245fd81d101533f81422"
+  let asset_name = #"466f6e74757323303030"
+  let circuit_asset_name = #"466f6e74757323303031"
+  let output =
+    Output {
+      address,
+      value: assets.from_asset_list(
+        [Pair("", [Pair("", 1500000)]), Pair(policy_id, [Pair(asset_name, 1)])],
+      ),
+      datum: InlineDatum(accountData),
+      reference_script: None,
+    }
+  let txId = #"b8b523b596040bb749b23848ea976ee238d5693dca8daa3771e17f3874a9c17e"
+  let outputReference =
+    OutputReference { transaction_id: txId, output_index: 0 }
+  let input = Input { output_reference: outputReference, output }
+  let circuit_input =
+    Input {
+      output_reference: OutputReference {
+        transaction_id: txId,
+        output_index: 1,
+      },
+      output: Output {
+        address: get_script_address(policy_id),
+        value: assets.from_asset_list(
+          [
+            Pair("", [Pair("", 1000000)]),
+            Pair(policy_id, [Pair(circuit_asset_name, 1)]),
+          ],
+        ),
+        datum: InlineDatum(zkey),
+        reference_script: None,
+      },
+    }
+  let mint = assets.from_asset_list([Pair(policy_id, [Pair(asset_name, 1)])])
+  let scriptOutputReference =
+    OutputReference { transaction_id: scriptTxId, output_index: 0 }
+  let scriptOutputReference1 =
+    OutputReference { transaction_id: scriptTxId, output_index: 1 }
+  let scriptOutputReference2 =
+    OutputReference { transaction_id: scriptTxId, output_index: 2 }
+  let scriptRedeemer: Redeemer =
+    SpendRedeemer { self_idx: 0, idx: 0, jdx: 0, signals: None, proof: None }
+  let scriptRedeemer1: Redeemer =
+    SpendRedeemer { self_idx: 1, idx: 0, jdx: -1, signals: None, proof: None }
+  let scriptRedeemer2: Redeemer =
+    SpendRedeemer { self_idx: 2, idx: 0, jdx: -1, signals: None, proof: None }
+  let redeemers =
+    [
+      Pair(Spend(scriptOutputReference), scriptRedeemer),
+      Pair(Spend(scriptOutputReference1), scriptRedeemer1),
+      Pair(Spend(scriptOutputReference2), scriptRedeemer2),
+    ]
+  let tx =
+    Transaction {
+      ..transaction.placeholder,
+      reference_inputs: [input, circuit_input],
+      inputs: [
+        Input {
+          output_reference: scriptOutputReference,
+          output: Output {
+            address,
+            value: assets.merge(assets.from_lovelace(1500000), mint),
+            datum: InlineDatum(accountData),
+            reference_script: None,
+          },
+        },
+        Input {
+          output_reference: scriptOutputReference1,
+          output: Output {
+            address,
+            value: assets.from_lovelace(50000000),
+            datum: NoDatum,
+            reference_script: None,
+          },
+        },
+        Input {
+          output_reference: scriptOutputReference2,
+          output: Output {
+            address,
+            value: assets.from_lovelace(50000000),
+            datum: NoDatum,
+            reference_script: None,
+          },
+        },
+      ],
+      outputs: [
+        Output {
+          address: new_address,
+          value: assets.merge(assets.from_lovelace(101500000), mint),
+          datum: InlineDatum(new_datum),
+          reference_script: None,
+        },
+      ],
+      redeemers: redeemers,
+    }
+  let challenge = build_challenge(tx) |> hash_challenge
+  let signals = PubSignals { user_id, challenge, hash }
+  let p_a =
+    #"b5954b04ea1d2956fac946a3dabbe826cc4651322c23423a245d65f528bd5adead5aee7cbcfc3d86ae96a9ecfc40d3e8"
+  let p_b =
+    #"a3f50879ce5f27741ef8b0dfaf4b100f1fbc9ed503c2edd901dfbd080c449e40c97c8e465d191514565ede494209181e00f121f68062b2e6048d566ccfab5bd01271ade34d9e07362c41635ea371aef4487302db945e8aa8664ed73214a68216"
+  let p_c =
+    #"aa0b4443bb50d1c93ce088b2df5abb315fceb183c709008e071c196ae4e6d1a969ed62b747f4bf84e9d22eea9278dd9a"
+  let proof = Proof { p_a, p_b, p_c }
+  // trace @"serialise (challenge)": build_challenge(tx) |> cbor.serialise
+  let redeemer =
+    SpendRedeemer {
+      self_idx: 0,
+      idx: 0,
+      jdx: 0,
+      signals: Some(signals),
+      proof: Some(proof),
+    }
+  let params =
+    AccountParameters {
+      policy_id,
+      asset_name,
+      circuit_asset_name,
+      pwd_hash: hash,
+      pwd_kdf_hash: hash,
+      nonce,
+      for_evaluation: True,
+    }
+  janus.account.spend(params, None, redeemer, scriptOutputReference, tx)
+}
+
 test spend_evaluating_wrong_datum_script() fail {
   let user_id = #"466f6e74757323303030"
   let hash =

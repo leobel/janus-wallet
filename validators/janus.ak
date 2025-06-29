@@ -23,7 +23,8 @@ use types.{
 use utils.{
   build_challenge, evaluating_script, find_account_input, find_account_output,
   find_circuit_input, get_total_input_script_balance, hash_challenge,
-  is_script_address, stakeRegistrationDeposit, to_scalar_overflow, zk_verify,
+  isAccountDatum, is_script_address, stakeRegistrationDeposit,
+  to_scalar_overflow, validUpdateDatum, zk_verify,
 }
 
 validator wallet(params: WalletParameters) {
@@ -78,55 +79,6 @@ validator wallet(params: WalletParameters) {
     }
   }
 
-  // ONLY Update account token
-  spend(
-    datum: Option<AccountDatum>,
-    _redeemer: Data,
-    self_ref: OutputReference,
-    self_tx: Transaction,
-  ) {
-    expect Some(data) = datum
-    let Transaction { inputs, reference_inputs, outputs, .. } = self_tx
-    let AccountDatum { user_id: asset_name, hash: kdf_hash, nonce, script_hash } =
-      data
-    // get account script input UTxO. It contains the token's policy_id
-    expect Some(account_input) =
-      inputs
-        |> find_input(self_ref)
-    // get policy_id (first and only policy in the UTxO)
-    let value = assets.without_lovelace(account_input.output.value)
-    expect [policy_id] = assets.policies(value)
-    // get reference input UTxO. This tx is an updating pwd therefore current address is in inputs and need the reference UTxO
-    // datum on reference UTxO must be equal to script input UTxO
-    expect Some(ref_input) =
-      reference_inputs
-        |> find_account_input(policy_id, asset_name)
-    expect InlineDatum(ref_datum) = ref_input.output.datum
-    expect reference_data: AccountDatum = ref_datum
-    expect data == reference_data
-
-    // get token output UTxO. Token must be sent to the new address generated on the updating pwd process
-    expect Some(output) =
-      outputs
-        |> find_account_output(policy_id, asset_name)
-    expect Script(addr_hash) = output.address.payment_credential
-    expect InlineDatum(new_data) = output.datum
-    expect AccountDatum {
-      user_id,
-      hash: new_kdf_hash,
-      nonce: new_nonce,
-      script_hash: new_script_hash,
-    } = new_data
-
-    // check new datum data against old datum data
-    expect
-      asset_name == user_id && kdf_hash != new_kdf_hash && nonce != new_nonce && script_hash != new_script_hash && addr_hash == new_script_hash
-    // all output UTxOs are new script address
-    list.length(outputs) == list.length(
-      find_script_outputs(outputs, new_script_hash),
-    )
-  }
-
   else(_) {
     fail
   }
@@ -134,29 +86,33 @@ validator wallet(params: WalletParameters) {
 
 validator account(params: AccountParameters) {
   spend(
-    _datum: Option<Data>,
+    datum: Option<Data>,
     redeemer: SpendRedeemer,
     self_ref: OutputReference,
     self_tx: Transaction,
   ) {
     let SpendRedeemer { self_idx, idx, jdx, signals: r_signals, proof: r_proof } =
       redeemer
-    let Transaction { inputs, reference_inputs, redeemers, .. } = self_tx
+    let Transaction { inputs, reference_inputs, redeemers, outputs, .. } =
+      self_tx
+    let AccountParameters {
+      for_evaluation,
+      policy_id,
+      circuit_asset_name,
+      asset_name,
+      pwd_hash,
+      pwd_kdf_hash,
+      nonce: addr_nonce,
+    } = params
+    // check if updating password
+    let isDatum = isAccountDatum(datum)
     // check script is evaluated whether it's here or by another script in the transaction. Return tuple (eval_script, eval_this)
     expect (True, eval_this) =
       evaluating_script(self_idx, idx, jdx, self_ref, inputs, redeemers)
     if eval_this == False {
-      True
+      // can't bypass if UTxO carry account datum
+      isDatum == None
     } else {
-      let AccountParameters {
-        for_evaluation,
-        policy_id,
-        circuit_asset_name,
-        asset_name,
-        pwd_hash,
-        pwd_kdf_hash,
-        nonce: addr_nonce,
-      } = params
       expect Some(signals) = r_signals
       expect Some(proof) = r_proof
       let challenge_id = build_challenge(self_tx) |> hash_challenge
@@ -178,16 +134,28 @@ validator account(params: AccountParameters) {
           |> find_circuit_input(policy_id, circuit_asset_name)
       expect InlineDatum(circuit_data) = circuit_input.output.datum
       expect zkey: ZkVerificationKey = circuit_data
-      expect Some(account_input) =
-        reference_inputs
-          |> find_account_input(policy_id, asset_name)
-      expect InlineDatum(data) = account_input.output.datum
-      trace @"AccountDatum": data
-      expect AccountDatum { user_id, hash: kdf_hash, nonce, script_hash } = data
+      let account_data =
+        when isDatum is {
+          None -> {
+            expect Some(account_input) =
+              reference_inputs
+                |> find_account_input(policy_id, asset_name)
+            expect InlineDatum(data) = account_input.output.datum
+            expect ref_data: AccountDatum = data
+            ref_data
+          }
+          Some(d) -> {
+            trace @"UTxO Stored AccountDatum": d
+            expect validUpdateDatum(d, outputs, policy_id)
+            d
+          }
+        }
       expect Some(input) =
         inputs
           |> transaction.find_input(self_ref)
       expect Script(addr_hash) = input.output.address.payment_credential
+      let AccountDatum { user_id, hash: kdf_hash, nonce, script_hash } =
+        account_data
       expect addr_hash == script_hash
       trace @"datum userId": user_id
       trace @"params userId": asset_name
