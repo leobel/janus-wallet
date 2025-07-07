@@ -1,5 +1,5 @@
 import { Assets, CertificateValidator, CML, Data, fromText, Network, Script, TxOutput, UTxO, validatorToRewardAddress } from '@lucid-evolution/lucid';
-import { createUser, getUserById, updateUser } from '../../repositories/user.repository.js'
+import { changeUserPassword, changeUserPasswordTx, createUser, getChangeUserPasswordById, getUserById, updateChangeUserPassword, updateChangeUserPasswordTxByTxId, updateUser } from '../../repositories/user.repository.js'
 import { readValidators, generateSpendScript, spendTx, ZkInput, buildSpendTx, buildZKProofRedeemer, buildAllSpendRedeemers, buildMintAssetsUnsignedTx, fromMintUtxoRefAssetsToAssets, getMinAda, registerAndDelegateTx, delegateTx, delegateDrepTx, DRepresentative, buildDrep, withdrawTx, buildMintAssetsTx, getTransactionId, getUtxoSignerKeys, buildUpdateTokenMetadataTx } from '../../utils/prepare-contracts.js';
 import { getLucid } from '../../utils/index.js';
 import { COIN_SELECTION_INPUTS_LIMIT, coinSelection } from '../../utils/coin-selection.js';
@@ -12,6 +12,7 @@ import type { AccountBalance } from '../../models/account-balance.js';
 import { getLedgerAccountBalance, getStakeInfo } from '../../utils/ledger-api.js';
 import type { StakeInfo } from '../../models/ledger/stake-info.js';
 import _ from 'lodash'
+import type { ChangePasswordTx } from '../../models/change-pwd-tx.js';
 
 const validators = readValidators();
 const prvKey = process.env.FAKE_PRV_KEY!
@@ -180,9 +181,9 @@ export async function spendWalletFunds(userId: string, redeemers: string[], txCb
         throw new Error('User not found')
     }
     const lucid = await getLucid;
-    const txId = await spendTx(lucid, redeemers, txCbor);
+    const spend = await spendTx(lucid, redeemers, txCbor);
 
-    return txId;
+    return spend;
 };
 
 export async function registerAndDelegate(network: Network, userId: string, poolId: string) {
@@ -397,7 +398,7 @@ export async function withdrawRewards(network: Network, userId: string, amount: 
     return { tx: tx.to_cbor_hex() }
 }
 
-export async function changeUserPwd(userId: string, network: Network, hash: string, kdfHash: string, newNonce?: string) {
+export async function buildChangeUserPwd(userId: string, network: Network, hash: string, kdfHash: string, newNonce?: string) {
     const user = await getUserById(userId)
     if (!user) {
         throw new Error('User not found')
@@ -413,6 +414,7 @@ export async function changeUserPwd(userId: string, network: Network, hash: stri
     const addrNonce = fromText(newNonce || randomUUID())
     const { spend, spendAddress: receiveAddress, scriptHash } = generateSpendScript(validators.spend.script, network, policyId, circuit.asset_name, tokenName, hash, kdfHash, addrNonce)
     console.log('New spend address:', receiveAddress)
+    console.log('New spend script:', spend.script)
 
     const _datum: AccountDatum = {
         user_id: tokenName,
@@ -444,11 +446,13 @@ export async function changeUserPwd(userId: string, network: Network, hash: stri
     const [datumUtxo] = allUtxos.splice(datumUtxoIndex, 1)
 
     let updateUtxos = allUtxos.slice(0, COIN_SELECTION_INPUTS_LIMIT - 1)
-    const txs = []
+    let totalBalance = 0
+    const txs: Omit<ChangePasswordTx, 'id' | 'created_at' | 'updated_at'>[] = []
     // build tx sending funds to the new address
     for (let i = COIN_SELECTION_INPUTS_LIMIT; i < allUtxos.length; i += COIN_SELECTION_INPUTS_LIMIT) {
         const utxos = allUtxos.slice(i, i + COIN_SELECTION_INPUTS_LIMIT)
         const reqLovelace = utxos.reduce((sum, utxo) => sum + utxo.assets["lovelace"], 0n)
+        totalBalance += Number(reqLovelace)
         const assets = utxos.reduce((acc, utxo) => {
             const { lovelace, ...a } = utxo.assets
             return _.mergeWith(acc, a, (objValue, srcValue) => objValue + srcValue)
@@ -459,12 +463,21 @@ export async function changeUserPwd(userId: string, network: Network, hash: stri
 
         const validTo = Date.now() + (1 * 60 * 60 * 1000) // 1 hour
         const tx = await buildSpendTx(lucid, [circuitUtxoRef, userUtxoRef], inputs, spendAddress, spend_script as Script, reqLovelace - 3_000_000n, validTo, receiveAddress, policyId, tokenName, circuit.asset_name, nonce, network, { localUPLCEval: true })
-        txs.push(tx.to_cbor_hex())
+        const txId = getTransactionId(tx)
+        txs.push({
+            change_password_id: '',
+            tx_id: txId,
+            tx_cbor: tx.to_cbor_hex(),
+            amount: Number(reqLovelace),
+            type: "SEND_FUNDS",
+            status: "pending",
+        })
     }
 
     // build final spendTx where user token will be updated
     updateUtxos.unshift(datumUtxo)
     const reqLovelace = updateUtxos.reduce((sum, utxo) => sum + utxo.assets["lovelace"], 0n) // TODO: calculate tx fee
+    totalBalance += Number(reqLovelace)
     const assets = updateUtxos.reduce((acc, utxo) => {
         const { lovelace, ...a } = utxo.assets
         return _.mergeWith(acc, a, (objValue, srcValue) => {
@@ -480,11 +493,52 @@ export async function changeUserPwd(userId: string, network: Network, hash: stri
     console.log("Coin Selection Inputs:", inputs)
 
     const validTo = Date.now() + (1 * 60 * 60 * 1000) // 1 hour
-    const tx = await buildUpdateTokenMetadataTx(lucid, [circuitUtxoRef], inputs, newDatum, spendAddress, spend_script as Script, reqLovelace - 3_000_000n, validTo, receiveAddress, policyId, tokenName, circuit.asset_name, nonce, network, { localUPLCEval: true })
-    txs.push(tx.to_cbor_hex())
+    const utxoRef = await buildUpdateTokenMetadataTx(lucid, [circuitUtxoRef], inputs, newDatum, spendAddress, spend_script as Script, reqLovelace - 3_000_000n, validTo, receiveAddress, policyId, tokenName, circuit.asset_name, nonce, network, { localUPLCEval: true })
+    txs.push({
+        change_password_id: '',
+        tx_id: utxoRef.tx_hash,
+        tx_cbor: utxoRef.tx_cbor,
+        amount: Number(reqLovelace),
+        type: "UPDATE_ACCOUNT_TOKEN",
+        status: "pending",
+    })
 
     // update db
+    const changePwd = {
+        user_id: user.id,
+        spend_address: receiveAddress,
+        pwd_hash: hash,
+        pwd_kdf_hash: kdfHash,
+        nonce: addrNonce,
+        spend_script: spend,
+        mint_utxo_ref: utxoRef,
+        balance: totalBalance
+    }
+    const newPwd = await changeUserPassword(changePwd)
+    const transactions = txs.map(t => ({...t, change_password_id: newPwd.id}))
+    await changeUserPasswordTx(transactions)
+    return transactions
+}
 
+export async function changeUserPwdTx(userId: string, redeemers: string[], txId: string, txCbor: string, pwdId?: string) {
+    const spend = await spendWalletFunds(userId, redeemers, txCbor)
 
-    return txs
+    if (pwdId) {
+        const chPwd = await getChangeUserPasswordById(pwdId)
+        if (!chPwd) throw new Error(`Invalid Id: ${pwdId}`)
+        const utxoRef = {...chPwd.mint_utxo_ref, tx_hash: spend.txId }
+        const ch = await updateChangeUserPassword(pwdId, {mint_utxo_ref: utxoRef})
+        await updateUser(chPwd.user_id, {
+            spend_address: chPwd.spend_address,
+            pwd_hash: chPwd.pwd_hash,
+            pwd_kdf_hash: chPwd.pwd_kdf_hash,
+            nonce: chPwd.nonce,
+            spend_script: chPwd.spend_script,
+            mint_utxo_ref: ch.mint_utxo_ref
+        })
+    }
+
+    await updateChangeUserPasswordTxByTxId(txId, { tx_id: spend.txId, tx_cbor: spend.txCbor })
+    
+    return spend
 }

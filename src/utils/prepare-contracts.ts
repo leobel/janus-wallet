@@ -238,6 +238,7 @@ export async function buildSpendTx(
         datum: Data.to({ user_id: userId, hash: pwdKdfHash, nonce, script_hash: scriptHash }, AccountDatum)
     }]
 
+    console.log('Nonce:', nonce, evalReferenceInputs)
     console.log('Eval Spend Address:', evalSpendAddress)
     console.log('Eval Script hash', CML.PlutusV3Script.from_cbor_hex(applyDoubleCborEncoding(evalSpendScript.script)).hash().to_hex())
     const scriptIncrements: ScriptIncrements[] = [];
@@ -311,7 +312,7 @@ export async function spendTx(
 
     // const success = await lucid.awaitTx(txHash);
     // console.log('Success?', success);
-    return txId;
+    return { txId, txCbor: cbor };
 }
 
 export async function registerAndDelegateTx(
@@ -730,7 +731,7 @@ export async function buildUpdateTokenMetadataTx(
         options,
     };
 
-    return _buildUncheckedTx(params, evalInputs, evalReferenceInputs,
+    const tx = await _buildUncheckedTx(params, evalInputs, evalReferenceInputs,
         (params) => {
             const { lucid, referenceInputs, inputs, redeemers, scripts, lovelace, validTo, evalRedeemers, evalScripts } = params as UpdatePasswordTxParams;
             const spendRedeemers = evalRedeemers || redeemers;
@@ -740,6 +741,10 @@ export async function buildUpdateTokenMetadataTx(
 
             return makeUpdateMetadataTxBuilderConfig(lucid, referenceInputs, inputs, datumLovelace, outputAssets, datum, spendRedeemers, spendScript, receiptAddress, lovelace, validTo);
         })
+
+    const txId = getTransactionId(tx)
+    console.log('Tx Id:', txId);
+    return { tx_hash: txId, tx_cbor: tx.to_cbor_hex(), output_index: 0, assets: fromAssetsToMintUtxoRefAssets({ ...assets, lovelace: datumLovelace }), datum: metadata }
 }
 
 async function _buildUncheckedTx(

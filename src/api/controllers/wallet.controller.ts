@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { spendWalletFunds, generateRedeemer, buildSpend, registerAndDelegate, delegate, delegateDrep, withdrawRewards, getWalletAccount, mintAccountTx, getStakingDetails, changeUserPwd } from '../services/wallet.service';
+import { spendWalletFunds, generateRedeemer, buildSpend, registerAndDelegate, delegate, delegateDrep, withdrawRewards, getWalletAccount, mintAccountTx, getStakingDetails, buildChangeUserPwd, changeUserPwdTx } from '../services/wallet.service';
 import { Network } from '@lucid-evolution/lucid';
 import { parsePaginateParams } from '../../utils';
 import { getStakingRewardsHistory } from '../services/stake.service';
@@ -36,9 +36,9 @@ export default (network: Network) => {
     try {
       const { userId } = req.params;
       const { redeemers, tx } = req.body;
-      const txId = await spendWalletFunds(userId, redeemers, tx);
+      const spend = await spendWalletFunds(userId, redeemers, tx);
 
-      res.status(200).json({ tx_id: txId });
+      res.status(200).json({ tx_id: spend.txId });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -127,12 +127,24 @@ export default (network: Network) => {
     }
   }
 
-  const changePassword = async (req: Request, res: Response) => {
+  const buildChangePassword = async (req: Request, res: Response) => {
     try {
       const { userId } = req.params
       const { hash, kdf_hash, nonce } = req.body
-      const result = await changeUserPwd(userId, network, hash, kdf_hash, nonce)
+      const result = await buildChangeUserPwd(userId, network, hash, kdf_hash, nonce)
       res.status(200).json(result)
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  const changePassword = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { redeemers, tx, tx_id, pwd_id } = req.body;
+      const spend = await changeUserPwdTx(userId, redeemers, tx_id, tx, pwd_id);
+
+      res.status(200).json({ tx_id: spend.txId });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -163,6 +175,7 @@ export default (network: Network) => {
   router.get('/stakingDetails', getStakingInfo)
   router.get('/rewards', getStakingRewards)
   router.post('/withdraw', withdraw)
+  router.post('/buildChangePassword', buildChangePassword)
   router.post('/changePassword', changePassword)
   router.post('/sign', sign)
   router.post('/send', spendFunds)

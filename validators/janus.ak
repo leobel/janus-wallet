@@ -165,6 +165,8 @@ validator account(params: AccountParameters) {
       trace @"params kdf hash": pwd_kdf_hash
       trace @"datum kdf_hash": kdf_hash
       expect pwd_kdf_hash == kdf_hash
+      trace @"params addr_nonce": addr_nonce
+      trace @"datum nonce": nonce
       expect addr_nonce == nonce
       trace @"params credential hash": pwd_hash
       expect Some(scalar_user_id) = scalar.from_bytearray_big_endian(user_id)
