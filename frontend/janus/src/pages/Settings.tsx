@@ -1,49 +1,52 @@
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
-import Paper from '@mui/material/Paper';
+// import Box from '@mui/material/Box';
 import useAuth from '../hooks/useAuth';
 import { useColorScheme } from '@mui/material/styles';
 import Stack from '@mui/material/Stack';
+import Address from '../components/Address';
 
 export default function SettingsPage() {
-  const { auth: session, balance } = useAuth()
+  const { auth: session } = useAuth()
   const { mode, setMode } = useColorScheme()
 
   return (
     <Box sx={{ px: 5, mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Settings
-      </Typography>
-
       <Stack gap={4}>
-        {/* Account Section */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6">Account</Typography>
+        {/* General Section */}
+        <Box>
+          <Typography variant="h6">General</Typography>
           <Divider sx={{ my: 1 }} />
-          <Typography>Username: {session?.user?.username}</Typography>
-          <Typography>Address: {session?.user?.address}</Typography>
-          <Typography>Balance: {balance?.lovelace}</Typography>
-          {/* Add more account info as needed */}
-        </Paper>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography sx={{ mr: 1 }}>Username:</Typography>
+            <Typography>{session?.user?.username}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography sx={{ mr: 1 }}>Address: </Typography>
+            <Address value={session?.user?.address || ''} size={32} shrink copy />
+          </Box>
+        </Box>
 
         {/* Preferences Section */}
-        <Paper sx={{ p: 2 }}>
+        <Box>
           <Typography variant="h6">Preferences</Typography>
           <Divider sx={{ my: 1 }} />
-          {/* Example: */}
-          <Typography>Theme: {mode}</Typography>
-          {/* Add more preferences */}
-        </Paper>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography sx={{ mr: 1 }}>Theme:</Typography>
+            <Typography>{mode}</Typography>
+          </Box>
+        </Box>
 
         {/* Security Section */}
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Typography variant="h6">Network</Typography>
+        <Box>
+          <Typography variant="h6">Blockchain</Typography>
           <Divider sx={{ my: 1 }} />
-          {/* Example: */}
-          <Typography>Password: ••••••••</Typography>
-          {/* Add security settings/actions */}
-        </Paper>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography sx={{ mr: 1 }}>Network:</Typography>
+            <Typography>{import.meta.env.VITE_CARDANO_NETWORK}</Typography>
+          </Box>
+        </Box>
       </Stack>
     </Box>
   );
