@@ -8,14 +8,12 @@ import Stack from '@mui/material/Stack';
 import Address from '../components/Address';
 import { Button, List, ListItem, ListItemText } from '@mui/material';
 import WarningIcon from '@mui/icons-material/Warning';
+import { useNavigate } from 'react-router';
 
 export default function SettingsPage() {
   const { auth: session } = useAuth()
   const { mode, setMode } = useColorScheme()
-
-  function changePassword() {
-    
-  }
+  const navigate = useNavigate()
 
   return (
     <Box sx={{ px: 5, mt: 4 }}>
@@ -98,7 +96,7 @@ export default function SettingsPage() {
                 </Stack>
               </Box>
               <Box sx={{ display: 'flex', minWidth: 'fit-content' }}>
-                <Button variant='outlined' color='error' onClick={changePassword}>Change password</Button>
+                <Button variant='outlined' color='error' onClick={() => navigate('/change-pwd')}>Change password</Button>
               </Box>
             </Box>
           </Box>

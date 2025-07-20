@@ -18,6 +18,7 @@ import setupAxiosInterceptors from './api/interceptor.tsx';
 import SignUp from './pages/SignUp.tsx';
 import { DrepPage } from './pages/Drep.tsx';
 import SettingsPage from './pages/Settings.tsx';
+import { changePassword } from './components/ChangePassword.tsx';
 
 const router = createBrowserRouter([
   {
@@ -65,7 +66,11 @@ const router = createBrowserRouter([
           },
           {
             path: 'settings',
-            Component: SettingsPage
+            Component: SettingsPage,
+          },
+          {
+            path: 'change-pwd',
+            Component: changePassword
           }
         ],
       },
