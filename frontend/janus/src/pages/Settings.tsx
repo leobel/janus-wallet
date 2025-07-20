@@ -6,10 +6,16 @@ import useAuth from '../hooks/useAuth';
 import { useColorScheme } from '@mui/material/styles';
 import Stack from '@mui/material/Stack';
 import Address from '../components/Address';
+import { Button, List, ListItem, ListItemText } from '@mui/material';
+import WarningIcon from '@mui/icons-material/Warning';
 
 export default function SettingsPage() {
   const { auth: session } = useAuth()
   const { mode, setMode } = useColorScheme()
+
+  function changePassword() {
+    
+  }
 
   return (
     <Box sx={{ px: 5, mt: 4 }}>
@@ -45,6 +51,56 @@ export default function SettingsPage() {
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography sx={{ mr: 1 }}>Network:</Typography>
             <Typography>{import.meta.env.VITE_CARDANO_NETWORK}</Typography>
+          </Box>
+        </Box>
+
+        {/* Change Password */}
+        <Box>
+          <Typography variant="h6">Danger Zone</Typography>
+          <Box
+            sx={{
+              border: 1,
+              borderRadius: 2,
+              borderColor: 'error.main',
+              p: 2,
+              mt: 2,
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box sx={{ pr: 2 }}>
+                <Typography variant="body1">
+                  Change your password
+                </Typography>
+                <Stack>
+                  <Typography variant="body2">
+                    You're about to update your password. This process will:
+                  </Typography>
+                  <List dense>
+                    <ListItem>
+                      <ListItemText
+                        primary="Prompt signing one or more transaction(s) to re-initialize your wallet.">
+                      </ListItemText>
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText
+                        primary="Result in a new wallet address being generated, your current address will no longer receive future funds.">
+                      </ListItemText>
+                    </ListItem>
+                  </List>
+                  <Stack>
+                    <Typography sx={{ fontWeight: 600 }}>
+                      <WarningIcon color='warning'/> Please note:
+                    </Typography>
+                    <Typography sx={{ fontWeight: 600 }}>
+                      By proceeding, you're authorizing on-chain changes. 
+                      Ensure any scheduled or incoming transfers with your current wallet address are completed before continuing.</Typography>
+                  </Stack>
+                </Stack>
+              </Box>
+              <Box sx={{ display: 'flex', minWidth: 'fit-content' }}>
+                <Button variant='outlined' color='error' onClick={changePassword}>Change password</Button>
+              </Box>
+            </Box>
           </Box>
         </Box>
       </Stack>
