@@ -12,6 +12,7 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import useAuth from "../hooks/useAuth";
 import Address from "./Address";
+import { useNavigate } from "react-router";
 
 
 function AccountSidebarPreview(props: AccountPreviewProps & { mini: boolean }) {
@@ -35,9 +36,10 @@ const createPreviewComponent = (mini: boolean) => {
     return PreviewComponent;
 };
 
-function SidebarFooterAccountPopover() {
+function SidebarFooterAccountPopover({ onClose }: { onClose?: () => void }) {
     const { auth: session } = useAuth()
-    const { mode, setMode } = useColorScheme();
+    const { mode, setMode } = useColorScheme()
+    const navigate = useNavigate()
 
     const toggleTheme = useCallback(() => {
         setMode(mode === 'light' ? 'dark' : 'light')
@@ -98,7 +100,7 @@ function SidebarFooterAccountPopover() {
                     </ListItemIcon>
                     {mode === 'dark' ? 'Dark Mode' : 'Light Mode'}
                 </MenuItem>
-                <MenuItem
+                <MenuItem onClick={() => { onClose?.(); navigate('/settings'); }}
                     component="button"
                     sx={{
                         justifyContent: 'flex-start',

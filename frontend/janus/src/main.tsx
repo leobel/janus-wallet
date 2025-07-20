@@ -17,6 +17,7 @@ import './index.css'
 import setupAxiosInterceptors from './api/interceptor.tsx';
 import SignUp from './pages/SignUp.tsx';
 import { DrepPage } from './pages/Drep.tsx';
+import SettingsPage from './pages/Settings.tsx';
 
 const router = createBrowserRouter([
   {
@@ -62,6 +63,10 @@ const router = createBrowserRouter([
             path: 'activity',
             Component: ActivityPage
           },
+          {
+            path: 'settings',
+            Component: SettingsPage
+          }
         ],
       },
       {

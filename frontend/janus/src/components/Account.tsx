@@ -34,7 +34,7 @@ export interface AccountSlots {
    * The component used for the content of account popover
    * @default Stack
    */
-  popoverContent?: React.JSXElementConstructor<StackProps>;
+  popoverContent?: React.JSXElementConstructor<StackProps & { onClose?: () => void }>;
   /**
    * The component used for the sign in button.
    * @default Button
@@ -58,7 +58,7 @@ export interface AccountProps {
   slotProps?: {
     preview?: AccountPreviewProps;
     popover?: Omit<React.ComponentProps<typeof Popover>, 'open'>;
-    popoverContent?: React.ComponentProps<typeof Stack>;
+    popoverContent?: React.ComponentProps<typeof Stack> & { onClose?: () => void };
     signInButton?: React.ComponentProps<typeof SignInButton>;
     signOutButton?: React.ComponentProps<typeof Button>;
   };
@@ -112,76 +112,76 @@ function Account(props: AccountProps) {
     return null;
   }
 
-const accountContent = (
-  <React.Fragment>
-    {slots?.preview ? (
-      <slots.preview handleClick={handleClick} open={open} />
-    ) : (
-      <AccountPreview
-        variant="condensed"
-        handleClick={handleClick}
-        open={open}
-        {...slotProps?.preview}
-      />
-    )}
-    {slots?.popover ? (
-      <slots.popover
-        open={open}
-        onClick={handleClick}
-        onClose={handleClose}
-        {...slotProps?.popover}
-      />
-    ) : (
-      <Popover
-        anchorEl={anchorEl}
-        id="account-menu"
-        open={open}
-        onClose={handleClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        {...slotProps?.popover}
-        slotProps={{
-          paper: {
-            elevation: 0,
-            sx: {
-              overflow: 'visible',
-              filter: (theme) =>
-                `drop-shadow(0px 2px 8px ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.32)'})`,
-              mt: 1,
-              '&::before': {
-                content: '""',
-                display: 'block',
-                position: 'absolute',
-                top: 0,
-                right: 14,
-                width: 10,
-                height: 10,
-                bgcolor: 'background.paper',
-                transform: 'translateY(-50%) rotate(45deg)',
-                zIndex: 0,
+  const accountContent = (
+    <React.Fragment>
+      {slots?.preview ? (
+        <slots.preview handleClick={handleClick} open={open} />
+      ) : (
+        <AccountPreview
+          variant="condensed"
+          handleClick={handleClick}
+          open={open}
+          {...slotProps?.preview}
+        />
+      )}
+      {slots?.popover ? (
+        <slots.popover
+          open={open}
+          onClick={handleClick}
+          onClose={handleClose}
+          {...slotProps?.popover}
+        />
+      ) : (
+        <Popover
+          anchorEl={anchorEl}
+          id="account-menu"
+          open={open}
+          onClose={handleClose}
+          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+          {...slotProps?.popover}
+          slotProps={{
+            paper: {
+              elevation: 0,
+              sx: {
+                overflow: 'visible',
+                filter: (theme) =>
+                  `drop-shadow(0px 2px 8px ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.32)'})`,
+                mt: 1,
+                '&::before': {
+                  content: '""',
+                  display: 'block',
+                  position: 'absolute',
+                  top: 0,
+                  right: 14,
+                  width: 10,
+                  height: 10,
+                  bgcolor: 'background.paper',
+                  transform: 'translateY(-50%) rotate(45deg)',
+                  zIndex: 0,
+                },
               },
             },
-          },
-          ...slotProps?.popover?.slotProps,
-        }}
-      >
-        {slots?.popoverContent ? (
-          <slots.popoverContent {...slotProps?.popoverContent} />
-        ) : (
-          <Stack direction="column" {...slotProps?.popoverContent}>
-            <AccountPopoverHeader>
-              <AccountPreview variant="expanded" />
-            </AccountPopoverHeader>
-            <Divider />
-            <AccountPopoverFooter>
-              <SignOutButton {...slotProps?.signOutButton} />
-            </AccountPopoverFooter>
-          </Stack>
-        )}
-      </Popover>
-    )}
-  </React.Fragment>
-);
+            ...slotProps?.popover?.slotProps,
+          }}
+        >
+          {slots?.popoverContent ? (
+            <slots.popoverContent {...slotProps?.popoverContent} onClose={handleClose} />
+          ) : (
+            <Stack direction="column" {...slotProps?.popoverContent}>
+              <AccountPopoverHeader>
+                <AccountPreview variant="expanded" />
+              </AccountPopoverHeader>
+              <Divider />
+              <AccountPopoverFooter>
+                <SignOutButton {...slotProps?.signOutButton} />
+              </AccountPopoverFooter>
+            </Stack>
+          )}
+        </Popover>
+      )}
+    </React.Fragment>
+  );
 
   return (
     <AccountLocaleContext.Provider value={localeText}>
