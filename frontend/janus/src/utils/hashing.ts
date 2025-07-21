@@ -50,26 +50,30 @@ export async function generateRedeemer(username: string, pwdHash: string, pwd: s
         // pwd: "12345"
     }
 
-    const redeemer = await buildZKProofRedeemer(cborTx, zkInput, 0, 0, 0)
-
     // find how many spend redeemers are in the tx
     const tx = CML.Transaction.from_cbor_hex(cborTx)
     const witnessSet = tx.witness_set()
 
     const redeemers = witnessSet.redeemers()!
     let count = 0
+    let index = 0
     for (let i = 0; i < redeemers.as_arr_legacy_redeemer()!.len(); i++) {
         const redeemer = redeemers.as_arr_legacy_redeemer()!.get(i)
         if (redeemer.tag() == CML.RedeemerTag.Spend) {
             count++
+            const spendRedeemer = Data.from(redeemer.data().to_cbor_hex(), Redeemer);
+            if (spendRedeemer.jdx !== -1n) {
+                index = Number(redeemer.index())
+            }
         }
     }
+    const zkRedeemer = await buildZKProofRedeemer(cborTx, zkInput, index, index, index)
     console.log("total spend redeemers:", count)
-    return buildAllSpendRedeemers(redeemer, count)
+    return buildAllSpendRedeemers(zkRedeemer, count, index)
 }
 
-function buildAllSpendRedeemers(redeemer: string, size: number): string[] {
-    return [redeemer, ...Array.from({ length: size - 1 }, (_, i) => buildDummySpendReedemer(i + 1, 0))]
+export function buildAllSpendRedeemers(redeemer: string, size: number, targetIndex = 0): string[] {
+    return Array.from({ length: size }, (_, i) => i === targetIndex ? redeemer : buildDummySpendReedemer(i, targetIndex))
 }
 
 function buildDummySpendReedemer(self_idx: number, idx: number): string {

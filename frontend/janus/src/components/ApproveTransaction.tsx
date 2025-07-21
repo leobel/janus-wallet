@@ -4,17 +4,23 @@ import VisibilityIcon from '@mui/icons-material/Visibility'
 import { useState } from "react"
 import { generateRedeemer } from "../utils/hashing"
 
-export interface ApproveTransactionProps {
+// Define TxType as a union of string or string[]
+export type TxType = string | string[]
+
+// Encapsulate the conditional logic for redeemers type
+export type RedeemersType<T extends TxType> = T extends string ? string[] : string[][]
+
+export interface ApproveTransactionProps<T extends TxType> {
     open: boolean
     username: string
     hash: string
-    tx: string
+    tx: T
     approveText?: string
-    onApprove(redeemers: string[]): void
+    onApprove(redeemers: RedeemersType<T>): void
     onCancel(): void
 }
 
-export function ApproveTransaction(props: ApproveTransactionProps) {
+export function ApproveTransaction<T extends TxType>(props: ApproveTransactionProps<T>) {
     const [showPassword, setShowPassword] = useState(false)
     const [errMsg, setErrMsg] = useState('')
 
@@ -30,9 +36,19 @@ export function ApproveTransaction(props: ApproveTransactionProps) {
 
     async function buildRedeemers(pwd: string) {
         try {
-            const redeemers = await generateRedeemer(props.username, props.hash, pwd, props.tx)
-            console.log('Redeemers:', redeemers)
-            props.onApprove(redeemers)
+            if (Array.isArray(props.tx)) {
+                // Handle multiple transactions
+                const redeemersArray = await Promise.all(
+                    props.tx.map(tx => generateRedeemer(props.username, props.hash, pwd, tx))
+                )
+                console.log('Redeemers:', redeemersArray)
+                props.onApprove(redeemersArray as RedeemersType<T>)
+            } else {
+                // Handle single transaction
+                const redeemersSingle = await generateRedeemer(props.username, props.hash, pwd, props.tx)
+                console.log('Redeemers:', redeemersSingle)
+                props.onApprove(redeemersSingle as RedeemersType<T>)
+            }
         } catch (err) {
             setErrMsg('Invalid password')
             console.log('Buidling redeemers error:', err)
