@@ -101,11 +101,7 @@ export function DrepPage() {
                         <Box flexGrow={1} display="flex" flexDirection="column" justifyContent="center" alignItems="center">
                             <Typography>You are not delegating to a Delegated Representative (DRep) option: delegate to a DRep, choose to 'always abstain' or 'always no confidence.'</Typography>
                             <Typography> Rewards will continue to accumulate even without a DRep delegation. This requirement is enforced by the network.</Typography>
-                            <ButtonGroup variant="outlined" aria-label="Delegate to drep" sx={{ m: 2 }}>
-                                <Button variant='contained' onClick={() => setActiveTab(1)}>Browse Drep</Button>
-                                <Button>Always Abstain</Button>
-                                <Button>Always No Confidence</Button>
-                            </ButtonGroup>
+                            <DelegateAction />
                         </Box>
                     )}
                 </Box>

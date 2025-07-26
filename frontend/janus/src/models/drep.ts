@@ -16,6 +16,12 @@ export interface Drep {
     is_always_non_confindence?: boolean
 }
 
-export type DrepType = "Key" | "Script" | FixedDrepType
+export const AlwaysAbstainId = "drep_always_abstain"
+export const AlwaysNoConfidenceId = "drep_always_no_confidence"
+export const AlwaysAbstain = "AlwaysAbstain"
+export const AlwaysNoConfidence = "AlwaysNoConfidence"
 
-export type FixedDrepType = "AlwaysAbstain" | "AlwaysNoConfidence"
+export type DrepType = "Key" | "Script" | FixedDrepType
+export type FixedDrepType = 
+    | typeof AlwaysAbstain 
+    | typeof AlwaysNoConfidence

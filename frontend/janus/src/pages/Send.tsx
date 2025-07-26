@@ -222,7 +222,7 @@ export default function SendPage() {
                         <Typography fontSize="small" textAlign="end">{fromLovelace(fees.txFee)} ADA</Typography>
                       </Grid>
                       <Grid size={6}>
-                        <Typography fontSize="small">Additional ADA</Typography>
+                        <Typography fontSize="small">Additional Assets</Typography>
                       </Grid>
                       <Grid size={6}>
                         <Typography fontSize="small" textAlign="end">{fees.assetsFee ? fromLovelace(fees.assetsFee) : "None"}</Typography>
