@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router';
 
 export default function SettingsPage() {
   const { auth: session } = useAuth()
-  const { mode, setMode } = useColorScheme()
+  const { mode } = useColorScheme()
   const navigate = useNavigate()
 
   return (

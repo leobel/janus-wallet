@@ -7,10 +7,9 @@ import { useNavigate } from "react-router"
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import { hashCredentials, hashPassword } from "../utils/hashing"
-import { buildChangePassword, sendChangePasswordTx, sendTx } from "../services/wallet.service"
+import { buildChangePassword, sendChangePasswordTx } from "../services/wallet.service"
 import type { ChangePasswordTx } from "../models/change-pwd-tx"
 import { ApproveTransaction } from "./ApproveTransaction"
-import { sleep } from "../utils"
 import { useEffect } from "react"
 
 export function changePassword() {
@@ -20,7 +19,7 @@ export function changePassword() {
     const [changingPwd, setChangingPwd] = useState(false)
     const [openSignTx, setOpenSignTx] = useState(false)
     const [sendingTx, setSendingTx] = useState(false)
-    const [txErrMsg, setTxErrMsg] = useState('')
+    const [_, setTxErrMsg] = useState('')
     const [txs, setTxs] = useState<ChangePasswordTx[]>([])
     const [txIds, setTxIds] = useState<string[]>()
     const [countdown, setCountdown] = useState<number | null>(null)
