@@ -179,14 +179,17 @@ export default function StakingPage() {
               <Typography variant="body2">
                 <strong>Pool ID:</strong> {selectedPool.pool_id}
               </Typography>
-              <Typography variant="body2">
-                <strong>Active Stake:</strong> {selectedPool.active_stake}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2">
+                  <strong>Active Stake:</strong>
+                </Typography>
+                <AdaBalance balance={selectedPool.active_stake} />
+              </Box>
               <Typography variant="body2">
                 <strong>Live Stake:</strong> {selectedPool.live_stake}
               </Typography>
               <Typography variant="body2">
-                <strong>Live Saturation:</strong> {selectedPool.live_saturation}%
+                <strong>Live Saturation:</strong> {Number(selectedPool.live_saturation * 100).toFixed(2)}%
               </Typography>
               <Typography variant="body2">
                 <strong>Blocks Minted:</strong> {selectedPool.blocks_minted}
@@ -194,12 +197,18 @@ export default function StakingPage() {
               <Typography variant="body2">
                 <strong>Margin Cost:</strong> {selectedPool.margin_cost}%
               </Typography>
-              <Typography variant="body2">
-                <strong>Fixed Cost:</strong> {selectedPool.fixed_cost} ADA
-              </Typography>
-              <Typography variant="body2">
-                <strong>Declared Pledge:</strong> {selectedPool.declared_pledge} ADA
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2">
+                  <strong>Fixed Cost:</strong>
+                </Typography>
+                <AdaBalance balance={selectedPool.fixed_cost} />
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2">
+                  <strong>Declared Pledge:</strong>
+                </Typography>
+                <AdaBalance balance={selectedPool.declared_pledge} />
+              </Box>
             </Stack>
             {selectedPool.metadata?.description && (
               <Stack spacing={1}>

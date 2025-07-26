@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import type { StakePool } from "../models/stake-pool"
 import { getStakePools } from "../services/stake.service"
 import { Box, Button, Card, CardActions, CardContent, CircularProgress, Grid, Typography } from "@mui/material"
+import AdaBalance from "./AdaBalance"
 
 export interface StakePoolsProps {
     onSelectedPool(pool: StakePool): void
@@ -71,15 +72,18 @@ export function StakePools(props: StakePoolsProps) {
                                 <Typography color="textSecondary" gutterBottom>
                                     Ticker: {pool.metadata?.ticker || 'N/A'}
                                 </Typography>
-                                <Typography variant="body2">
-                                    Active Stake: {pool.active_stake}
-                                </Typography>
-                                <Typography variant="body2">
-                                    Live Saturation: {pool.live_saturation}%
-                                </Typography>
-                                <Typography variant="body2">
-                                    Blocks Minted: {pool.blocks_minted}
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="body2">Active Stake:</Typography>
+                                    <AdaBalance balance={pool.active_stake} />
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="body2">Live Saturation:</Typography>
+                                    <Typography variant="body2">{Number(pool.live_saturation * 100).toFixed(2)}%</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body2">Blocks Minted:</Typography>
+                                <Typography variant="body2">{pool.blocks_minted}</Typography>
+                                </Box>
                             </CardContent>
                             <CardActions sx={{ justifyContent: 'flex-end' }}>
                                 <Button size="small" color="primary" variant="contained" onClick={(e) => {
