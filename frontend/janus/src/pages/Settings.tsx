@@ -91,7 +91,7 @@ export default function SettingsPage() {
                     </Typography>
                     <Typography sx={{ fontWeight: 600 }}>
                       By proceeding, you're authorizing on-chain changes. 
-                      Ensure any scheduled or incoming transfers with your current wallet address are completed before continuing.</Typography>
+                      Ensure any scheduled or incoming transfers (e.g stake pool delegation rewards) with your current wallet address are completed before continuing.</Typography>
                   </Stack>
                 </Stack>
               </Box>
