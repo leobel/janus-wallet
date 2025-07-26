@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Typography, Paper, Box, CircularProgress, Drawer, Button, Stack, Divider, Grid, Toolbar, IconButton, Avatar, Alert, Tabs, Tab } from '@mui/material'
+import { Typography, Paper, Box, CircularProgress, Drawer, Button, Stack, Divider, Grid, Toolbar, IconButton, Avatar, Alert, Tabs, Tab, Tooltip } from '@mui/material'
 import type { StakePool } from '../models/stake-pool'
 import { ApproveTransaction } from '../components/ApproveTransaction'
 import CloseIcon from '@mui/icons-material/Close'
@@ -17,6 +17,7 @@ import { RewardHistory } from '../components/RewardHistory'
 import { StakePools } from '../components/StakePools'
 import { useNavigate } from 'react-router'
 import Address from '../components/Address'
+import InfoIcon from '@mui/icons-material/Info'
 
 export default function StakingPage() {
   const navigate = useNavigate()
@@ -90,7 +91,7 @@ export default function StakingPage() {
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <Box>
                       <Typography variant="body2" color="textSecondary">Stake Address</Typography>
-                      <Address value={stakeInfo.stake_address} size={20} shrink copy explore path='stake'/>
+                      <Address value={stakeInfo.stake_address} size={20} shrink copy explore path='stake' />
                     </Box>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
@@ -125,7 +126,12 @@ export default function StakingPage() {
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <Box>
-                      <Typography variant="body2" color="textSecondary">Rewards Available</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" color="textSecondary">Rewards Available</Typography>
+                        <Tooltip title="Rewards will continue to accrue as usual, however you must delegate to a DRep before you can withdraw any reward.">
+                          <InfoIcon />
+                        </Tooltip>
+                      </Box>
                       <AdaBalance balance={stakeInfo.withdrawable_amount} />
                       {stakeInfo.drep_id ? <Button size="small" color="primary" variant="contained" disabled={stakeInfo.withdrawable_amount < Lovelace} onClick={handleWithdraw}>Withdraw</Button>
                         : <Typography>Go to <Button variant="text" onClick={() => navigate('/governance/dreps')}>DREP LIST</Button> and delegate your voting power before you can withdraw your rewards</Typography>}
