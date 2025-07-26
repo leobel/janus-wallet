@@ -420,9 +420,6 @@ WALLET_PRV_KEY="ed25519_sk..."
 # wallet collateral
 COLLATERAL_PRV_KEY="ed25519_sk..."
 COLLATERAL_ADDRESS="addr_test..."
-COLLATERAL_UTXO_TX_ID="TX_ID..."
-COLLATERAL_UTXO_TX_INDEX="TX_INDEX..."
-COLLATERAL_UTXO_TX_AMOUNT="TX_AMOUNT..."
 ```
 You may noticed a couple of thinks needed from `.env`
 
@@ -449,9 +446,6 @@ Since Janus Wallet is a smart contract wallet, transactions containing the walle
 At this time, there isn't a real collateral provider available so you'll need to provide all the data bellow in order to act as your own collateral provider : 
 - `COLLATERAL_PRV_KEY`: Private key controlling the address where the collateral amount is
 - `COLLATERAL_ADDRESS`: Address holding the collateral amount is
-- `COLLATERAL_UTXO_TX_ID`: Transaction hash where the collateral amount is
-- `COLLATERAL_UTXO_TX_INDEX`: Transaction index where the collateral amount is
-- `COLLATERAL_UTXO_TX_AMOUNT`: Amount of ada to be used as collateral
 
 Once the `.env` is ready you can start the HTTP server with:
 ```

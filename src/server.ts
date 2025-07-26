@@ -9,6 +9,7 @@ import cors from 'cors'
 import { authenticateToken, authorized } from './api/services/auth.service';
 import { listStakePools } from './api/controllers/stake.controller';
 import { getDrep, listDReps } from './api/controllers/drep.controller';
+import { initCollaterals } from './api/services/collateral.service';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -54,6 +55,7 @@ app.use('/dreps', authenticateToken as RequestHandler, listDReps)
 app.use('/circuits', circuitRouter(network))
 
 // Start the server
-app.listen(port, () => {
+app.listen(port, async () => {
+    await initCollaterals()
     console.log(`Server is running on port ${port}`);
 }); 
