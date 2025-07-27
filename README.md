@@ -747,10 +747,31 @@ Upon success a transaction id will be shown so you can check it on-chain.
 
 
 ### Delegate to DRep
+Delegating to a representative (DRep) is needed not just to participate in Cardano's governance system but to be able to withdraw your stake pool rewards as a delegator. You can find the list of DReps under "Governance / Dreps" on the side bar menu. In case you've already delegated to a DRep you'll see the details of your current delegation like: Voting Power, DRep Id (along with a link to verify on-chain) and actions to change your status.
+<img width="1726" height="992" alt="Screenshot 2025-07-27 at 5 16 17 PM" src="https://github.com/user-attachments/assets/b5437d83-6a05-48d2-aa2b-052811410f81" />
+
+From the DRep list you can choose one to delegate by click on "DELEGATE" button. A dialog will show up displaying some information about the DRep selected as well as your voting power, drep id and fees for delegating.
 
 ### Withdraw Rewards
+To withdraw your rewards go to **Earning** section and click on "WITHDRAW" button. A confirmation dialog will prompt shwowing the entire amount to withdraw along with the fees you'll incur.
+> ⚠️ "WITHDRAW" button will only appear if there are rewards ready to be withdrawn (e.g after staking period had passed and pool had minted blocks).
+<img width="1725" height="989" alt="Screenshot 2025-07-27 at 5 03 32 PM" src="https://github.com/user-attachments/assets/47d24474-06a6-4534-8ec5-f39680ee241c" />
+
 
 ### Change Password
+This is one of the most critical actions inside Janus Wallet since it carry some irreversible changes. If you decide to update your password you should go to the footer on the sidebar menu click on the 3 vertical dots icon and then on settings which will navigate you to the settings page.
+<img width="1726" height="993" alt="Screenshot 2025-07-27 at 5 22 19 PM" src="https://github.com/user-attachments/assets/0d82a027-2c5a-41e4-a3e3-0a9d11daf981" />
+
+On the settings page you'll see a *Danger Zone* section at the bottom. There is a buttom there to effectively change your passoword.
+> ⚠️ Make sure to read carefully all the information provided on that section since all funds received the old address once you've changed your password will be lost (can't be recovered).
+<img width="1727" height="992" alt="Screenshot 2025-07-27 at 5 27 33 PM" src="https://github.com/user-attachments/assets/b62236aa-6d57-4d18-99a5-39df6b89b1d4" />
+
+
+The process will ask you for your new password and confirmation to send the transaction(s) to change the password. 
+> NOTE: There could be more than one transaction in the case of a wallet having too many UTxOs causing to split the process into multiple transactions to transfer all funds to the new address
+<img width="1725" height="986" alt="Screenshot 2025-07-26 at 3 20 33 PM" src="https://github.com/user-attachments/assets/d25cf78a-6efd-4ce6-8047-2887548ad5f3" />
+
+After all transactions succeed, you'll be logout so you can login again with the new password.
 
 ## Test
 ```jsx
