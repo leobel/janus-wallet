@@ -1,3 +1,37 @@
+## Table of Contents
+
+- [Obtaining a ZK-SNARK circuit (GROTH16)](#obtaining-a-zk-snark-circuit-groth16)
+   - [Prepare the project](#prepare-the-project)
+   - [Locally using `snarkjs` and `circom` commands:](#locally-using-snarkjs-and-circom-commands)
+   - [Phase 1 Trusted Setup](#phase-1-trusted-setup)
+   - [Phase 2 Trusted Setup](#phase-2-trusted-setup)
+   - [Testing ZK Verification Key](#testing-zk-verification-key)
+   - [Prepare ZK Verification Key to be used onchain](#prepare-zk-verification-key-to-be-used-onchain)
+   - [Compress G1 & G2 points](#compress-g1-and-g2-points)
+- [Start API Server](#start-http-api-server)
+   - [DB Connection](#database-connection)
+   - [Blockfrost](#blockfrost)
+   - [Collateral Provider](#collateral-provider)
+- [Use API Endpoint](#use-api-endpoints)
+   - [Mint ZK Circuit](#mint-circuit)
+   - [Create User Account](#create-user)
+   - [Send Funds](#send-funds)
+   - [Register & Delegate to Pool](#register-and-delegate-to-pool)
+   - [Delegate to Pool](#delegate-to-pool)
+   - [Delegate to DRep](#delegate-to-delegate-representative-drep)
+   - [Withdraw Rewards](#withdraw-rewards)
+- [User Guide](#user-guide)
+   - [Wallet Creation](#wallet-creation)
+   - [Receive Funds](#receive-funds)
+   - [Send Funds](#send-funds)
+   - [Delegate to Stake Pool](#delegate-to-stake-pool)
+   - [Delegate to DRep](#delegate-to-drep)
+   - [Withdraw Rewards](#withdraw-rewards)
+   - [Change Password](#change-password)
+- [Tests](#test)
+
+
+
 # Janus Wallet
 
 Simplified Cardano Onboarding with ZK Proofs
@@ -561,7 +595,7 @@ POST http://localhost:3001/wallets/{user_id}/send
 ```
 `redeemers` is an array containing the zk proof needed to validate against the circuit onchain, the rest of redeemers in the array are the one called ***bypass*** intended for transactions where there are more than one input from the wallet.
 
-**4. Register and Delegate to Pool**
+### Register and Delegate to Pool
 ```jsx
 POST http://localhost:3001/wallets/{user_id}/pools/{pool_id}/registerAndDelegate
 {}
@@ -576,7 +610,7 @@ Response will look like the following:
 ```
 In order to finally submit this transaction it must be signed (refer to Sign Transaction on step 2) and then be sent (refer to Send Transaction on step 3)
 
-**5. Delegate to Pool**
+### Delegate to Pool
 ```jsx
 POST http://localhost:3001/wallets/{user_id}/pools/{pool_id}/delegate
 {}
@@ -591,7 +625,7 @@ Response will look like the following:
 ```
 In order to finally submit this transaction it must be signed (refer to Sign Transaction on step 2) and then be sent (refer to Send Transaction on step 3)
 
-**6. Delegate to Delegate Representative (DRep)**
+### Delegate to Delegate Representative (DRep)
 ```jsx
 POST http://localhost:3001/wallets/{user_id}/dreps/{drep_id}/delegate
 {
@@ -610,7 +644,7 @@ Similar to the other endpoints presented above it will return a tx that need to 
 }
 ```
 
-**7. Withdraw Rewards**
+### Withdraw Rewards
 ```jsx
 POST http://localhost:3001/wallets/{user_id}/withdraw
 {
@@ -625,6 +659,119 @@ Similar to the other endpoints presented above it will return a tx that need to 
     "tx": "84a900828258205ae0ada6c3d2f461480b3d301b8444356c45fb6a09ebca32f49..."
 }
 ```
+
+# User Guide
+
+## Wallet Creation
+
+Creating a wallet is the first step to using the application. This wallet is built on zero-knowledge proofs (zk-SNARKs) and interacts with a smart contract on Cardano.
+> ⚠️ NOTE: you must have a wallet in preprod with enough funds to cover the minting of your user profile NFT
+
+### Steps to Create a Wallet
+
+1. **Navigate to the Signup Page**
+   - Visit the application’s homepage.
+   - Click on **"Sign Up"** button.
+
+2. **Choose a Username and Password**
+   - Enter a **unique username**.
+   - Choose a strong password. This password is used to generate a zk-SNARK proof for authentication.
+
+   > ⚠️ If the username already exists, you’ll see an error message prompting you to choose a different one.
+
+3. **Wallet Creation Behind the Scenes**
+   - Upon submission, the application:
+     - Deploys a smart contract with a UTxO holding your funds and address.
+     - Mint and send an NFT to your wallet address representing your user profile
+
+4. **Redirect to Dashboard**
+   - After successful wallet creation, you'll be redirected to the **Dashboard**. No additional confirmation or email is required.
+
+### Visual Walkthrough
+
+*Enter your username and password.*
+<img width="1718" height="987" alt="Screenshot 2025-07-26 at 6 14 49 PM" src="https://github.com/user-attachments/assets/1009c859-d885-4b66-aecf-15cabe7eacd7" />
+
+*You will be redirected to the dashboard after a successful signup.*
+
+
+### Wallet Overview
+
+Once on the dashboard, you’ll see:
+
+- **Wallet Address**: The address of your smart contract wallet.
+- **Balance**: Real-time ADA balance fetched from the blockchain.
+- **Navigation Menu**: A sidebar on the left lets you access:
+  - Send
+  - Receive
+  - Delegate
+  - Withdraw
+  - Settings
+
+*Main dashboard layout with left navigation sidebar.*
+<img width="1726" height="991" alt="Screenshot 2025-07-26 at 6 18 19 PM" src="https://github.com/user-attachments/assets/119c0e85-5d5f-40f6-8c1e-82a478859616" />
+
+### Receive Funds
+Click on **Receive** navigation item to see your address. You can copy or provide the QR code to the sender.
+<img width="1724" height="992" alt="Screenshot 2025-07-26 at 12 38 22 PM" src="https://github.com/user-attachments/assets/ae1349f8-ea1a-4b3b-b2d9-2eb80a50e277" />
+
+### Send Funds
+Click on **Send** navigation item to send funds to someone. Once there you can input: Recipient, Amount, Assets (not working yet). After that you'll be presented with the final fees to confirm. When confirm a model will prompt asking you to sing the transaction, *use the same password you enter when signup*. After tranasction is signed you'll see the progress until the transaction is successful and finally the transaction id will be shown so you can check it on-chain. 
+
+*Sign your transaction*
+<img width="1725" height="990" alt="Screenshot 2025-07-26 at 12 43 09 PM" src="https://github.com/user-attachments/assets/572c3a2c-927b-4281-9a6e-2aefc24010bf" />
+
+*Transaction successful*
+<img width="1726" height="992" alt="Screenshot 2025-07-26 at 12 40 20 PM" src="https://github.com/user-attachments/assets/d0423f3a-21c4-4d0d-b8c0-a3b757d2d5f9" />
+
+### Delegate to Stake Pool
+Click on **Earning** to select a pool to delegate. If you're delegating already information about current state like: what pool, rewards etc will be shown.
+
+*current delegation status*
+<img width="1726" height="991" alt="Screenshot 2025-07-26 at 5 27 26 PM" src="https://github.com/user-attachments/assets/82c23705-7968-4148-9826-4cd14086b127" />
+
+Select a pool from the list and click on **STAKE**.
+
+*List of pools* 
+<img width="1725" height="990" alt="Screenshot 2025-07-26 at 12 44 26 PM" src="https://github.com/user-attachments/assets/b849dfe1-e6d3-4331-9f78-c4b77f598d56" />
+
+After that you'll see delgation details to confirm. Same as with sending funds, you'll be prompted to sing the transaction.
+
+*Delegation details*
+<img width="1726" height="989" alt="Screenshot 2025-07-26 at 12 44 42 PM" src="https://github.com/user-attachments/assets/8800389e-c72d-40c8-ac2e-8ac6221d57a7" />
+
+Upon success a transaction id will be shown so you can check it on-chain.
+
+*Delegation successful*
+<img width="1728" height="988" alt="Screenshot 2025-07-26 at 6 41 42 PM" src="https://github.com/user-attachments/assets/b7da273b-a923-4f5c-9fe4-81e71bc8ff47" />
+
+
+### Delegate to DRep
+Delegating to a representative (DRep) is needed not just to participate in Cardano's governance system but to be able to withdraw your stake pool rewards as a delegator. You can find the list of DReps under "Governance / Dreps" on the side bar menu. In case you've already delegated to a DRep you'll see the details of your current delegation like: Voting Power, DRep Id (along with a link to verify on-chain) and actions to change your status.
+<img width="1726" height="992" alt="Screenshot 2025-07-27 at 5 16 17 PM" src="https://github.com/user-attachments/assets/b5437d83-6a05-48d2-aa2b-052811410f81" />
+
+From the DRep list you can choose one to delegate by click on "DELEGATE" button. A dialog will show up displaying some information about the DRep selected as well as your voting power, drep id and fees for delegating.
+
+### Withdraw Rewards
+To withdraw your rewards go to **Earning** section and click on "WITHDRAW" button. A confirmation dialog will prompt shwowing the entire amount to withdraw along with the fees you'll incur.
+> ⚠️ "WITHDRAW" button will only appear if there are rewards ready to be withdrawn (e.g after staking period had passed and pool had minted blocks).
+<img width="1725" height="989" alt="Screenshot 2025-07-27 at 5 03 32 PM" src="https://github.com/user-attachments/assets/47d24474-06a6-4534-8ec5-f39680ee241c" />
+
+
+### Change Password
+This is one of the most critical actions inside Janus Wallet since it carry some irreversible changes. If you decide to update your password you should go to the footer on the sidebar menu click on the 3 vertical dots icon and then on settings which will navigate you to the settings page.
+<img width="1726" height="993" alt="Screenshot 2025-07-27 at 5 22 19 PM" src="https://github.com/user-attachments/assets/0d82a027-2c5a-41e4-a3e3-0a9d11daf981" />
+
+On the settings page you'll see a *Danger Zone* section at the bottom. There is a buttom there to effectively change your passoword.
+> ⚠️ Make sure to read carefully all the information provided on that section since all funds received the old address once you've changed your password will be lost (can't be recovered).
+<img width="1727" height="992" alt="Screenshot 2025-07-27 at 5 27 33 PM" src="https://github.com/user-attachments/assets/b62236aa-6d57-4d18-99a5-39df6b89b1d4" />
+
+
+The process will ask you for your new password and confirmation to send the transaction(s) to change the password. 
+> NOTE: There could be more than one transaction in the case of a wallet having too many UTxOs causing to split the process into multiple transactions to transfer all funds to the new address
+<img width="1725" height="986" alt="Screenshot 2025-07-26 at 3 20 33 PM" src="https://github.com/user-attachments/assets/d25cf78a-6efd-4ce6-8047-2887548ad5f3" />
+
+After all transactions succeed, you'll be logout so you can login again with the new password.
 
 ## Test
 ```jsx
