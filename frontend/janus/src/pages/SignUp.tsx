@@ -2,7 +2,7 @@ import { Box, Button, List, ListItem, ListItemIcon, ListItemButton, ListItemText
 import { CARDANO_NETWORK, checkWalletNetwork, getMintAccountPrice, getSupportedWallets, getWalletFunds, openWallet, walletSignTx, type SupportedWallet, type Wallet } from '../utils/walletApi'
 import { NotificationsProvider, useNotifications } from '@toolpad/core'
 import Base64Icon from '../components/utility/Base64Icon'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import CheckIcon from '@mui/icons-material/Check'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
@@ -49,6 +49,7 @@ const passwordRules: Record<string, PassworRule> = {
 
 function ScopedContent() {
     const notifications = useNotifications()
+    const [supportedWallets, setSupportedWallets] = useState<SupportedWallet[]>([])
     const [activeStep, setActiveStep] = useState(0)
     const [wallet, setWallet] = useState<Wallet>()
     const [username, setUsername] = useState('')
@@ -75,9 +76,9 @@ function ScopedContent() {
 
             setWallet({ api: walletApi, code: wallet.code })
 
-        } catch (err) {
+        } catch (err: any) {
             console.log(err)
-            notifications.show(`An unknown error occurred `, {
+            notifications.show(err.message ?? `An unknown error occurred `, {
                 key: 'connection-error',
                 severity: 'error',
                 autoHideDuration: 5000
@@ -173,6 +174,15 @@ function ScopedContent() {
         event.preventDefault()
     }
 
+    useEffect(() => {
+        async function fetchWallets() {
+            const wallets = await getSupportedWallets()
+            setSupportedWallets(wallets)
+        }
+
+        fetchWallets()
+    }, [])
+
     return (
         <Box
             display="flex"
@@ -191,7 +201,7 @@ function ScopedContent() {
                     </Typography>
                     <Divider sx={{ padding: '10px 0' }} />
                     <List >
-                        {getSupportedWallets().map(w => (
+                        {supportedWallets.map(w => (
                             <ListItem
                                 key={w.code}
                                 disableGutters

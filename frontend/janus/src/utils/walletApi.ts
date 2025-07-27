@@ -52,8 +52,15 @@ export const wallets: SupportedWallet[] = [
 
 ]
 
-export function getSupportedWallets(): SupportedWallet[] {
-    return wallets.filter(w => window.cardano[w.code]).map(w => ({ ...w, src: window.cardano[w.code].icon }))
+export async function getSupportedWallets(): Promise<SupportedWallet[]> {
+    if (!window.cardano) return []
+    const supportedWallets = []
+    for (const w of wallets) {
+        if (window.cardano[w.code] && (await isEnable(w.code))) {
+            supportedWallets.push({ ...w, src: window.cardano[w.code].icon })
+        }
+    }
+    return supportedWallets
 }
 
 export async function openWallet(wallet: SupportedWallet): Promise<WalletApi> {
