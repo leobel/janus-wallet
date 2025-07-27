@@ -1,4 +1,4 @@
-import { Box, Button, List, ListItem, ListItemIcon, ListItemButton, ListItemText, Snackbar, styled, Typography, Stack, Divider, IconButton, TextField, StepContent, InputAdornment } from '@mui/material'
+import { Box, Button, List, ListItem, ListItemIcon, ListItemButton, ListItemText, Snackbar, styled, Typography, Stack, Divider, IconButton, TextField, StepContent, InputAdornment, StepButton } from '@mui/material'
 import { CARDANO_NETWORK, checkWalletNetwork, getMintAccountPrice, getSupportedWallets, getWalletFunds, openWallet, walletSignTx, type SupportedWallet, type Wallet } from '../utils/walletApi'
 import { NotificationsProvider, useNotifications } from '@toolpad/core'
 import Base64Icon from '../components/utility/Base64Icon'
@@ -133,8 +133,9 @@ function ScopedContent() {
                     severity: 'error',
                     autoHideDuration: 5000
                 })
+            } else {
+                nextStep()
             }
-            nextStep()
         } catch (error) {
             notifications.show(`An unknown error verifying username '${username}' occurred `, {
                 key: 'connection-error',
@@ -218,7 +219,11 @@ function ScopedContent() {
                     {wallet && (
                         <Stepper activeStep={activeStep} orientation="vertical">
                             <Step key="username" active={activeStep >= 0}>
-                                <StepLabel>Username</StepLabel>
+                                <StepButton onClick={() => setActiveStep(0)}>
+                                    <Stack>
+                                        <Typography>Username</Typography>
+                                    </Stack>
+                                </StepButton>
                                 <StepContent>
                                     <Box display="flex" flexDirection="column" sx={{ mb: '10px' }}>
                                         <Typography
@@ -246,7 +251,11 @@ function ScopedContent() {
                                 </StepContent>
                             </Step>
                             <Step active={activeStep >= 1}>
-                                <StepLabel>Password</StepLabel>
+                                <StepButton onClick={() => setActiveStep(1)}>
+                                    <Stack>
+                                        <Typography>Password</Typography>
+                                    </Stack>
+                                </StepButton>
                                 <StepContent>
                                     <Box display="flex" flexDirection="column" sx={{ mb: '10px' }}>
                                         <Typography
