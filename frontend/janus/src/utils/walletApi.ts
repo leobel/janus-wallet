@@ -56,7 +56,7 @@ export async function getSupportedWallets(): Promise<SupportedWallet[]> {
     if (!window.cardano) return []
     const supportedWallets = []
     for (const w of wallets) {
-        if (window.cardano[w.code] && (await isEnable(w.code))) {
+        if (window.cardano[w.code]) {
             supportedWallets.push({ ...w, src: window.cardano[w.code].icon })
         }
     }
