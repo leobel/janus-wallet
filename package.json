@@ -12,6 +12,7 @@
     "build": "tsc",
     "migrate": "npx knex migrate:latest --knexfile src/db/knexfile.js",
     "seed": "npx knex seed:run --knexfile src/db/knexfile.js",
+    "start-preprod": "DOTENV_CONFIG_PATH=.env.preprod nodemon --watch 'src/**/*.ts' --exec 'node --no-warnings --experimental-specifier-resolution=node --loader ts-node/esm' src/server.ts",
     "start": "nodemon --watch 'src/**/*.ts' --exec 'node --no-warnings --experimental-specifier-resolution=node --loader ts-node/esm' src/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

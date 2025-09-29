@@ -102,7 +102,6 @@ export async function getMintAccountPrice(api: WalletApi, username: string): Pro
     }
     const datum = Data.to(_datum, AccountDatum)
     console.log('Datum', datum)
-
     const minAda = getMinAda({ [`${CIRCUIT_POLICY}${tokenName}`]: 1n }, COINS_PER_UTXO_BYTE, FAKE_USER_ADDRESS, datum)
     const price = TRANSACTION_MAX_FEE + minAda
     console.log('MIN ADA:', minAda)
@@ -268,7 +267,7 @@ function mapAssets(multiAssets: CML.MultiAsset): Record<string, Record<string, n
     for (let i = 0; i < policies.len(); i++) {
         const policy = policies.get(i)
         const policyId = policy.to_hex()
-        if (result[policyId]) {
+        if (!result[policyId]) {
             result[policyId] = {}
         }
         const policyAssets = multiAssets.get_assets(policy)!

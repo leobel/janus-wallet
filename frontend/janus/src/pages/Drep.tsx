@@ -56,10 +56,10 @@ export function DrepPage() {
     }
 
     useEffect(() => {
-        if (session.user) {
+        if (session.user && activeTab == 0) {
             getStakeInfo(session.user.id)
         }
-    }, [session.user])
+    }, [session.user, activeTab])
 
     function DelegateAction() {
         return <ButtonGroup variant="outlined" aria-label="Delegate to drep" sx={{ mt: 2 }}>

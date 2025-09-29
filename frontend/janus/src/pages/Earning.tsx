@@ -67,10 +67,10 @@ export default function StakingPage() {
   }
 
   useEffect(() => {
-    if (session.user) {
+    if (session.user && activeTab == 0) {
       getStakeInfo(session.user.id)
     }
-  }, [session.user])
+  }, [session.user, activeTab])
 
   return (
     <Box display="flex" flexDirection="column" sx={{ p: 3 }}>

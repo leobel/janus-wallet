@@ -14,5 +14,10 @@ export function useAccountBalance(interval: number) {
     function stop() {
         worker.stop()
     }
-    return { data: worker.data, start, stop }
+
+    function refresh() {
+        worker.refresh();
+    }
+
+    return { data: worker.data, start, stop, refresh }
 }

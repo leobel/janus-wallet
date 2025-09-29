@@ -6,6 +6,7 @@ export type PollingMessage = {
 
 let timerId: NodeJS.Timeout | null = null
 let interval: number | undefined;
+let url: string;
 
 self.onmessage = async (e: MessageEvent<PollingMessage>) => {
     if (e.data.action == 'init') {
@@ -14,13 +15,18 @@ self.onmessage = async (e: MessageEvent<PollingMessage>) => {
         timerId = null
     }
     else if (e.data.action === 'start') {
-        const url = e.data.url!
+        url = e.data.url!
         await poll(url) // Initial fetch
         timerId = setInterval(() => poll(url), interval)
     }
     else if (e.data.action === 'stop') {
         if (timerId) clearInterval(timerId)
         timerId = null
+    }
+    else if (e.data.action === 'refresh') {
+        if (url) {
+            await poll(url) // fetch
+        }
     }
 }
 

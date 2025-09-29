@@ -4,7 +4,8 @@ type PollingResult<T> = {
   data: T | null;
   error: string | null;
   start: (url: string) => void
-  stop: () => void
+  stop: () => void,
+  refresh: () => void
 };
 
 export function usePollingWorker<T>(interval: number): PollingResult<T> {
@@ -46,5 +47,9 @@ export function usePollingWorker<T>(interval: number): PollingResult<T> {
     workerRef.current?.postMessage({action: 'stop'})
   }
 
-  return { data, error, start, stop };
+  function refresh() {
+    workerRef.current?.postMessage({action: 'refresh'})
+  }
+
+  return { data, error, start, stop, refresh };
 }

@@ -11,6 +11,8 @@ export interface AuthSession {
 interface AuthContextType {
     auth: AuthSession
     balance: UserBalance | null
+    lastBalanceTime: number | null
+    refreshBalance: () => void
     setAuth: (auth: AuthSession) => void
     signOut: () => void
 }
@@ -30,7 +32,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const storedAuth = localStorage.getItem(STORAGE_KEY);
         return storedAuth ? JSON.parse(storedAuth) : {};
     });
-    const { data, start, stop } = useAccountBalance(BALANCE_POLLING_INTERVAL);
+    const { data, start, stop, refresh } = useAccountBalance(BALANCE_POLLING_INTERVAL);
 
     // Save to localStorage whenever auth changes
     useEffect(() => {
@@ -46,7 +48,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
 
     const balance = useMemo(() => data, [data]);
-
+    const lastBalanceTime = useMemo(() => data ? Date.now() : null, [data]);
 
     const signOut = useCallback(() => {
         setAuth({})
@@ -59,7 +61,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     
 
     return (
-        <AuthContext.Provider value={{ auth, setAuth, signOut, balance }}>
+        <AuthContext.Provider value={{ auth, setAuth, signOut, balance, lastBalanceTime, refreshBalance: refresh }}>
             {children}
         </AuthContext.Provider>
     );

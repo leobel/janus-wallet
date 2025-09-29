@@ -11,7 +11,7 @@ const privateKey = CML.PrivateKey.from_bech32(collateralPrvKey)
 export async function initCollaterals() {
     if (!utxos) {
         const lucid = await getLucid;
-        utxos = await lucid.utxosAt(collateralAddress)
+        utxos = (await lucid.utxosAt(collateralAddress)).filter(utxo => utxo.assets.lovelace > 5000000n)
     }
 }
 

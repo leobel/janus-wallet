@@ -57,6 +57,7 @@ function ScopedContent() {
     const [showPassword, setShowPassword] = useState(false)
     const [isVerifyingUser, setIsVerifyingUser] = useState(false)
     const [validPassword, setValidPassword] = useState(false)
+    const [invalidUsername, setInValidUsername] = useState<string[]>([])
     const [validRules, setValidRules] = useState<Record<string, boolean>>({})
     const [signingTx, setSigningTx] = useState(false)
     const { setAuth } = useAuth()
@@ -152,6 +153,15 @@ function ScopedContent() {
         return Object.entries(passwordRules).filter(([_, rule]) => rule.validator(pwd)).map(([id]) => id)
     }
 
+    function verifyUsername(user: string) {
+        setUsername(user);
+        if (user.length > 64) {
+            setInValidUsername(["username can't exceed 64 characters"])
+        } else {
+            setInValidUsername([])
+        }
+    }
+
     function verifyPassword(pwd: string) {
         setPassword(pwd)
         const rules = checkPasswordRules(pwd)
@@ -240,17 +250,33 @@ function ScopedContent() {
                                             sx={{ paddingTop: '10px', paddingBottom: '30px' }}>
                                             Provide an unique username that's going to identify your account
                                         </Typography>
+                                        {invalidUsername.length > 0 && (
+                                            <Stack>
+                                                <List>
+                                                    {invalidUsername.map((error) => (
+                                                        <ListItem disableGutters key={error} sx={{ py: 0 }}>
+                                                            <ListItemIcon sx={{ minWidth: '4px', marginRight: '5px' }}>
+                                                               <CircleIcon color='error' fontSize='small'/>
+                                                            </ListItemIcon>
+                                                            <ListItemText slotProps={{
+                                                                primary: { color: 'red' }
+                                                            }} primary={error} />
+                                                        </ListItem>
+                                                    ))}
+                                                </List>
+                                            </Stack>
+                                        )}
                                         <Stack direction="row" spacing={2}>
                                             <TextField
                                                 fullWidth
                                                 id="standard-basic"
                                                 label=""
                                                 value={username}
-                                                onChange={(e) => setUsername(e.target.value)}
+                                                onChange={(e) => verifyUsername(e.target.value)}
                                             />
                                             <Button
                                                 variant="contained"
-                                                disabled={!username || activeStep != 0}
+                                                disabled={!username || activeStep != 0 || invalidUsername.length > 0}
                                                 loading={isVerifyingUser}
                                                 onClick={verifyUserExist}
                                             >
