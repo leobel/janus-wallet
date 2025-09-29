@@ -1,6 +1,6 @@
 import { Blockfrost, Data, fromText, Lucid } from "@lucid-evolution/lucid";
-import { readValidators } from "./prepare-contracts";
-import { generateMintPolicy } from "./utils/prepare-contracts"
+// import { readValidators } from "./prepare-contracts";
+import { generateMintPolicy, readValidators } from "./utils/prepare-contracts"
 import * as fs from 'fs';
 import { ZkDatum, ZkVerificationKey } from "./contract-types";
 import { MintRedeemer } from "./utils/contract-types";
