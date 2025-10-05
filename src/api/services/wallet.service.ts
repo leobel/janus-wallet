@@ -95,7 +95,11 @@ export async function getWalletAccount(userId: string): Promise<AccountBalance> 
         throw new Error('User not found')
     }
 
-    return getLedgerAccountBalance(user.spend_address)
+    const accountBalance = await getLedgerAccountBalance(user.spend_address)
+    return {
+        ...accountBalance,
+        lovelace: accountBalance.lovelace - BigInt(user.mint_utxo_ref.assets.lovelace)
+    }
 }
 
 export async function buildSpend(userId: string, amount: number, receiveAddress: string, network: Network, assets: Assets): Promise<{ tx: string }> {
