@@ -1,68 +1,117 @@
-# REPORT-FINAL
+# FINAL-REPORT
 
-## Project: Janus zk-wallet — Final Close-out Report
+## Janus zk-wallet — Project Close-out Report
 
-### Executive Summary
+**Project name & URL on IdeaScale / Fund:**  
+Janus Wallet: Simplified Cardano Onboarding with ZK Proof — https://projectcatalyst.io/funds/13/cardano-use-cases-concept/janus-wallet-simplified-cardano-onboarding-with-zk-proof
 
-This final report summarizes the Janus zk-wallet project from concept through mainnet deployment. The project delivered a password-based zero-knowledge wallet for the Cardano ecosystem that removes the need for seed phrases by using zk-SNARKs (Groth16) and on-chain verification. The wallet is live on Cardano mainnet and provides core wallet features, staking integration, and a password-change flow supported by generating new proofs and verification keys.
+**Project Number:**  
+#1300120
 
-### Milestone Outputs
+**Project Manager:**  
+Leobel Izquierdo Alvarez
 
-* **Functional wallet deployed on Cardano mainnet** (production-ready web application).
-* **Final Project Close-out Report** (this document).
-* **Final Demonstration Video** showcasing wallet features and real user interactions.
+**Date project started:**  
+February 2025
 
-### Achievements (high level)
+**Date project completed (close-out submission):**  
+Project development and mainnet deployment completed July 2025; final close-out submission: November, 2025.
 
-* **Mainnet deployment:** The Janus zk-wallet is publicly available and operational on Cardano mainnet. The application exposes a browser-accessible interface that performs all required flows without traditional seed-phrase management.
-* **Core features implemented and tested:** Wallet creation, send/receive transactions, stake key registration and delegation, stake reward withdrawal, and password change/update flows.
-* **Documentation and public transparency:** Full project documentation and progressive milestone reports (REPORT-M1, REPORT-M2, REPORT-M3) were published in the public repository.
-* **User testing and iteration:** The prototype testing rounds informed UI and UX improvements; actionable feedback was incorporated and validated through non-breaking updates.
+---
 
-### Core Functionalities (technical checklist)
+## 1. Short summary
 
-The wallet implements and demonstrates the following functionalities on Cardano mainnet:
+This project implemented a password-based zk-enabled wallet for the Cardano ecosystem that removes the need for seed phrases by using succinct zero-knowledge proofs and on-chain verification. The application was developed across four milestones (research, smart contract integration, prototype, and close-out) and is publicly available as a production web dApp on Cardano mainnet.
 
-* **Wallet creation** — password-based account creation, tied to an on-chain identity (NFT/UTxO pattern).
-* **Send/receive transactions** — building and submitting transactions that spend UTxOs associated with the zk-enabled wallet address; ZK proofs used to authenticate user actions.
-* **Register & delegate to stake pool** — stake key registration and delegation flows integrated with the wallet UI.
-* **Withdraw staking rewards** — retrieval of staking rewards through confirmed ZK-authenticated transactions.
-* **Change/update password** — secure password update flow that generates a new proof and updates verification parameters while preserving account continuity where applicable.
+Key outputs:
+- Live Janus wallet (mainnet): https://januswallet.xyz/
+- Preprod demo: https://preprod.januswallet.xyz/
+- Repository & docs: https://github.com/leobel/janus-wallet
+- Progressive milestone reports: [REPORT-M1](https://github.com/leobel/janus-wallet/blob/main/REPORT-M1.md), [REPORT-M2](https://github.com/leobel/janus-wallet/blob/main/REPORT-M2.md), [REPORT-M3](https://github.com/leobel/janus-wallet/blob/main/REPORT-M3.md)
+- Final close-out video: https://www.youtube.com/watch?v=sUqTIeuMycA
 
-### Technical Summary
+---
 
-* **ZK protocol selection:** Groth16 zk-SNARKs on the BLS12-381 curve were chosen for succinct proof size and fast verification, aligning with Cardano’s cryptographic environment. This allows compact proofs and efficient on-chain verification for wallet actions.
-* **Trusted setup:** A one-time trusted-setup (MPC/ceremony recommended) is required for Groth16. Mitigation strategies and best practices were followed during parameter generation.
-* **On-chain pattern:** The wallet architecture leverages UTxO-based identity storage (minted NFTs or dedicated UTxOs) and on-chain proof verification for user actions.
-* **Security considerations:** Attention was given to circuit correctness, cryptographic primitives implementation, and contract-level safety (validation of cross-chain communication and proof verification). Regression testing and audits were performed on critical code paths.
+## 2. List of challenge KPIs and how the project addressed them
 
-### User Testing & Feedback
+**Challenge:** Cardano Use Cases — simplify onboarding & support programmable wallets
 
-* **Prototype testing rounds:** Multiple rounds of user testing (including an initial prototype round with 12 participants) provided actionable feedback across wallet creation, transaction UX, delegation flows, and password update flows. Issues such as confusing circuit-generation steps, input formatting errors, and terminology clarity were addressed.
-* **Improvements implemented:** UI improvements (spinners and clearer progress indicators during proof generation), input validation, enhanced password-update UX (showing old vs new wallet addresses), and explanatory tooltips and documentation about delegation and CHANG rules were added.
+- **KPI:** Deliver a working password-based wallet prototype and progress it to mainnet.  
+  **Status:** Met. A working prototype (preprod) was published, iterated with user feedback [REPORT-M3](https://github.com/leobel/janus-wallet/blob/main/REPORT-M3.md) and the final wallet is deployed to Cardano mainnet.
 
-### Challenges and How They Were Addressed
+- **KPI:** Demonstrate on-chain wallet programmability and staking flows (register, delegate, withdraw).  
+  **Status:** Met. The wallet supports stake key registration, delegation to a stake pool or DRep, and reward withdrawals through the ZK-enabled flow.
 
-* **Circuit design complexity:** Circuit design is error-prone; robust unit testing for circuits and manual audits were incorporated to reduce risk.
-* **Cryptographic implementation risks:** Careful selection of libraries, code reviews, and test vectors were used to validate primitive implementations.
-* **On-chain resource constraints:** Groth16’s succinct proofs were selected to minimize on-chain cost; transactions were optimized to keep sizes and fees reasonable.
+- **KPI:** Open-source release of core components.  
+  **Status:** Met. The codebase and documentation are published under the GitHub repo and include README, ZK circuit notes, and milestone reports.
 
-### Deployment & Evidence of Completion
+---
 
-**Live wallet:** [https://januswallet.xyz/](https://januswallet.xyz/)
+## 3. List of project KPIs and how the project addressed them
 
-**Repository and documentation:** [https://github.com/leobel/janus-wallet](https://github.com/leobel/janus-wallet)
+- **KPI:** Wallet creation flow implemented (password-based).  
+  **Status:** Met. Password-based account creation implemented and tested on preprod and mainnet.
 
-**Progress milestone reports:**
+- **KPI:** Send/receive transactions supported and tested.  
+  **Status:** Met. Frontend builds and submits transactions on-chain; flows are demonstrated in the prototype and final video.
 
-* REPORT-M1.md (background on ZK, protocol selection and early technical notes)
-* REPORT-M2.md (intermediate progress and testing notes)
-* REPORT-M3.md (prototype user testing and updates)
-* FINAL-REPORT.md (this report)
+- **KPI:** Staking flows (register/delegate/withdraw rewards).  
+  **Status:** Met. Integrated delegation and rewards withdrawal flows verified during testing.
 
-### Acceptance Criteria — Status
+- **KPI:** Usability validation — at least 10 users in prototype testing.  
+  **Status:** Met. 12 users tested the prototype in M3; feedback incorporated.
 
-1. **Wallet application publicly available and operational on Cardano mainnet** (live mainnet URL provided).
-2. **Wallet supports creation, send/receive, register & delegate, withdraw rewards, and password updates** — *Met* (features implemented and tested).
-3. **Final close-out report publicly available** (this document and repository entries).
-4. **Final close-out video publicly available** [Youtube video](https://youtu.be/sUqTIeuMycA) exploring Janus Wallet main features.
+- **KPI:** Final close-out materials (report & short video) published.  
+  **Status:** Met — this document and the final video link included below.
+
+---
+
+## 4. Key achievements (collaboration & engagement)
+
+- Transitioned from research and prototype to a **mainnet-deployed wallet** with password-based authentication using ZK proofs.
+- Open-source release and transparent milestone reporting ([REPORT-M1](https://github.com/leobel/janus-wallet/blob/main/REPORT-M1.md), [REPORT-M2](https://github.com/leobel/janus-wallet/blob/main/REPORT-M2.md), [REPORT-M3](https://github.com/leobel/janus-wallet/blob/main/REPORT-M3.md)) enabled community inspection and reproducibility.
+- Prototype user testing rounds produced actionable feedback that informed UI/UX and technical fixes before mainnet deployment.
+
+---
+
+## 5. Key learnings
+
+- **Circuit & ZK complexity:** circuit design and trusted-setup processes require careful tooling and testing; developer docs and test vectors were added to the repo to reduce onboarding friction for contributors.
+- **User-facing latency during proof generation:** long-running proof steps can confuse users; UI spinners and progress indicators were implemented after M3 testing.
+- **Mainnet considerations:** UTxO management and transaction optimization are important for production; Groth16 succinct proofs and optimized transaction construction reduced on-chain footprint and fees.
+
+---
+
+## 6. What went differently than planned (scope, timetable)
+
+- The technical research phase required deeper investigation of circuit portability and proof compression than initially estimated. This added time to development but was absorbed within the planned milestone structure.
+- Transaction fees were expected to be between 0.2–0.4 ADA; however, observed mainnet transaction fees currently average around ~0.6 ADA per relevant flow, which increased operational cost compared to initial estimates.
+- The password update flow currently replaces the wallet address (generating a new on-chain identity/address) which was not part of the original workflow. This replacement impacts user experience (e.g., scheduled or incoming transfers to the old address are lost) and required additional UI/UX work to clarify consequences and provide migration guidance.
+
+---
+
+## 7. Next steps (product roadmap / sustainability)
+
+- **Maintenance & monitoring:** set up long-term monitoring for mainnet wallet availability and on-chain metrics (wallet creations, transactions, delegation actions).
+- **Transaction fee optimization**: investigate transaction construction and UTxO consolidation strategies to reduce per-action fees (optimize UTxO packing, batch operations where possible, explore alternative on-chain patterns and serialization optimizations). Implement monitoring and A/B testing to validate fee improvements and target bringing average transactional cost closer to the 0.2–0.4 ADA range originally expected.
+- **Password update UX improvements**: redesign the password-update flow to avoid silently replacing the on-chain wallet address or, if replacement is necessary for security, introduce a clear migration flow: show old vs. new addresses, warn users of implications (lost incoming transfers to old address), offer an address-forwarding or recovery notice, and provide step-by-step guidance to preserve continuity. Consider alternatives such as account linking or aliasing to maintain UX continuity while preserving security guarantees.
+- **Wallet contract abstraction**: abstract the wallet's smart contract logic into a wallet manager contract that allows users to opt in/out different validators. ZK-Proof verification will remain the core fallback validator. This approach enables the wallet to handle interactions with third-party smart contracts on behalf of users without forcing funds to be locked into external contracts—reducing UX friction and increasing composability and security.
+- **Dynamic collateral provider & operational resilience**: design and integrate a robust, dynamic collateral provider system to handle peaks in wallet operations (e.g., high proof-generation or batch transaction scenarios) without compromising on-chain transaction success. This solution should include automated scaling mechanisms for collateral provisioning, failover strategies, cost controls, and monitoring/alerting to ensure operations continue during spikes.
+
+---
+
+## 8. Final thoughts / comments
+
+Janus wallet demonstrates a production-ready path for password-based zk-wallets on Cardano. The project balanced research, prototyping and production work with open-source transparency. We welcome further community testing and will continue to publish updates and improvements in the public repo.
+
+---
+
+## 9. Links & Evidence (required)
+
+- **Project page (IdeaScale / Fund):** https://projectcatalyst.io/funds/13/cardano-use-cases-concept/janus-wallet-simplified-cardano-onboarding-with-zk-proof
+- **Project number:** #1300120
+- **Live mainnet wallet:** https://januswallet.xyz/
+- **Preprod demo:** https://preprod.januswallet.xyz/
+- **Repository & docs:** https://github.com/leobel/janus-wallet
+- **Milestone reports:** [REPORT-M1](https://github.com/leobel/janus-wallet/blob/main/REPORT-M1.md), [REPORT-M2](https://github.com/leobel/janus-wallet/blob/main/REPORT-M2.md), [REPORT-M3](https://github.com/leobel/janus-wallet/blob/main/REPORT-M3.md)
+- **Final close-out video:** https://www.youtube.com/watch?v=sUqTIeuMycA
